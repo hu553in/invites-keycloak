@@ -1,4 +1,4 @@
-package com.github.hu553in.invites_keycloak.config
+package com.github.hu553in.invites_keycloak.features.invite.config
 
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -8,9 +8,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.validation.annotation.Validated
 import java.time.Duration
 
-@ConfigurationProperties(prefix = "invites")
+@ConfigurationProperties(prefix = "invite")
 @Validated
-data class InvitesProps(
+data class InviteProps(
     @field:NotNull
     val defaultExpiry: Duration,
     @field:NotNull

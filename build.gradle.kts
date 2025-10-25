@@ -8,6 +8,8 @@ plugins {
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.kotlin.jpa)
+    alias(libs.plugins.kotlin.noarg)
+    alias(libs.plugins.kotlin.allopen)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kover)
     alias(libs.plugins.versions)
@@ -62,6 +64,12 @@ kotlin {
 }
 
 allOpen {
+    annotation("jakarta.persistence.Entity")
+    annotation("jakarta.persistence.MappedSuperclass")
+    annotation("jakarta.persistence.Embeddable")
+}
+
+noArg {
     annotation("jakarta.persistence.Entity")
     annotation("jakarta.persistence.MappedSuperclass")
     annotation("jakarta.persistence.Embeddable")

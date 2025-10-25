@@ -1,4 +1,4 @@
-package com.github.hu553in.invites_keycloak
+package com.github.hu553in.invites_keycloak.bootstrap.config
 
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection

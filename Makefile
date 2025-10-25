@@ -5,6 +5,8 @@ build_image:
 
 .PHONY: run_docker
 run_docker:
+	rm .env
+	cp .env.example.docker .env
 	docker compose up -d --wait
 
 .PHONY: run_docker_rebuild
@@ -26,6 +28,9 @@ logs_docker:
 
 .PHONY: run_local
 run_local:
+	rm .env
+	cp .env.example.local .env
+	docker compose up -d --wait db
 	./gradlew bootRun
 
 .PHONY: check

@@ -1,4 +1,4 @@
-package com.github.hu553in.invites_keycloak.config
+package com.github.hu553in.invites_keycloak.features.keycloak.config
 
 import jakarta.validation.constraints.NotBlank
 import org.hibernate.validator.constraints.URL
