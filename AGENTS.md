@@ -15,3 +15,5 @@
 - Check dependency health with `./gradlew dependencyUpdates`.
 - Implement any new changes as externally configurable through `.env` -> `docker-compose.yml` -> `application.yml`.
 - Add only really useful tests — no need to test obvious things just to have such tests.
+- Add any new important and useful rules and conventions to AGENTS.md.
+- Actualize any old rules and conventions in AGENTS.md if needed.

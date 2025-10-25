@@ -1,4 +1,4 @@
-package com.github.hu553in.invites_keycloak.bootstrap.config
+package com.github.hu553in.invites_keycloak.shared.config
 
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection
@@ -7,7 +7,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+class TestcontainersConfig {
 
     @Bean
     @ServiceConnection

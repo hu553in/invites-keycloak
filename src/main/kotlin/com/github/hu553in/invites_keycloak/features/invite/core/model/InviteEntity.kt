@@ -70,5 +70,5 @@ class InviteEntity(
     @JdbcTypeCode(SqlTypes.ARRAY)
     @field:NotEmpty
     @Column(nullable = false, updatable = false, columnDefinition = "text[]")
-    var roles: List<String>
+    var roles: Set<String>
 )
