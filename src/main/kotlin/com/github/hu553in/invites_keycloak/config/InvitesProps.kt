@@ -1,0 +1,29 @@
+package com.github.hu553in.invites_keycloak.config
+
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.NotNull
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.validation.annotation.Validated
+import java.time.Duration
+
+@ConfigurationProperties(prefix = "invites")
+@Validated
+data class InvitesProps(
+    @field:NotNull
+    val defaultExpiry: Duration,
+    @field:NotNull
+    val minExpiry: Duration,
+    @field:NotNull
+    val maxExpiry: Duration,
+    @field:Valid
+    @field:NotEmpty
+    val realms: Map<String, RealmConfig>
+) {
+    @Validated
+    data class RealmConfig(
+        @field:NotEmpty
+        val defaultRoles: Set<@NotBlank String>
+    )
+}

@@ -1,5 +1,6 @@
 import io.gitlab.arturbosch.detekt.getSupportedKotlinVersion
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -36,6 +37,7 @@ dependencies {
     implementation(libs.flyway.database.postgresql)
     implementation(libs.kotlin.reflect)
     implementation(libs.thymeleaf.extras.springsecurity6)
+    implementation(libs.spring.dotenv)
 
     runtimeOnly(libs.postgresql)
 
@@ -77,8 +79,9 @@ detekt {
 configurations.matching { it.name == "detekt" }.all {
     resolutionStrategy.eachDependency {
         if (requested.group == "org.jetbrains.kotlin") {
-            useVersion(getSupportedKotlinVersion())
-            because("detekt ${libs.versions.detekt.get()} requires Kotlin ${getSupportedKotlinVersion()}")
+            val kotlinVersion = getSupportedKotlinVersion()
+            useVersion(kotlinVersion)
+            because("detekt ${libs.versions.detekt.get()} requires Kotlin $kotlinVersion")
         }
     }
 }
@@ -109,4 +112,14 @@ tasks.named("check") {
     dependsOn("koverVerify")
     dependsOn("koverHtmlReport")
     dependsOn("koverXmlReport")
+}
+
+tasks.named<BootBuildImage>("bootBuildImage") {
+    environment.put("BP_HEALTH_CHECKER_ENABLED", "true")
+    buildpacks.set(
+        listOf(
+            "urn:cnb:builder:paketo-buildpacks/java",
+            "docker.io/paketobuildpacks/health-checker:latest"
+        )
+    )
 }

@@ -2,32 +2,53 @@ services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-invites}
-      POSTGRES_USER: ${POSTGRES_USER:-invites}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invites}
+      POSTGRES_DB: ${POSTGRES_DB:-invites-keycloak}
+      POSTGRES_USER: ${POSTGRES_USER:-invites-keycloak}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invites-keycloak}
     restart: always
+    ports:
+      - "127.0.0.1:5432:5432"
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER:-invites}", "-d", "${POSTGRES_DB:-invites}" ]
+      test:
+        [ "CMD", "pg_isready", "-U", "${POSTGRES_USER:-invites-keycloak}", "-d", "${POSTGRES_DB:-invites-keycloak}" ]
       interval: 10s
       timeout: 3s
       retries: 10
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - invites_keycloak_db_data:/var/lib/postgresql/data
     networks:
       - invites_keycloak_network
 
   app:
     image: hu553in/invites-keycloak:local
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-prod}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-invites}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-invites}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-invites}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+
+      POSTGRES_HOSTNAME: ${POSTGRES_HOSTNAME:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-invites-keycloak}
+      POSTGRES_USER: ${POSTGRES_USER:-invites-keycloak}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invites-keycloak}
+
+      SPRING_AUTOCONFIGURE_EXCLUDE: ${SPRING_AUTOCONFIGURE_EXCLUDE:-}
+
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:-}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:-}
+
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-invites-keycloak}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+
+      THC_PATH: /actuator/health
     restart: always
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
-      test: [ "CMD", "curl", "-fsS", "http://localhost:8080/actuator/health", "|", "grep", "UP", "||", "exit", "1" ]
+      test: [ "CMD", "/workspace/health-check" ]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -38,7 +59,7 @@ services:
       - invites_keycloak_network
 
 volumes:
-  db_data:
+  invites_keycloak_db_data:
 
 networks:
   invites_keycloak_network:

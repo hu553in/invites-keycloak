@@ -18,8 +18,18 @@
 - `./gradlew detekt` lints Kotlin sources after style-affecting changes.
 - `./gradlew koverXmlReport` writes XML coverage reports to `build/reports/kover`.
 - `./gradlew koverHtmlReport` writes HTML coverage reports to `build/reports/kover`.
-- `make build_image` assembles the container image; `make run_in_docker` starts the compose stack.
+- `make build_image` assembles the container image with the Paketo health-check buildpack; use `make run_docker` to
+  start the stack and `make run_docker_rebuild` to rebuild before boot.
+- `make stop_docker`, `make restart_docker[_rebuild]`, and `make logs_docker` manage the compose stack;
+  `make run_local` wraps `./gradlew bootRun` for parity.
 - `make check` powers the pre-commit hook.
+
+## Environment Configuration
+
+- `.env` is ignored by Git; copy `.env.example.local` (direct JVM) or `.env.example.docker` (Compose) to `.env` and
+  adjust secrets before running.
+- Set `SPRING_PROFILES_ACTIVE`, `POSTGRES_*`, `KEYCLOAK_*`, and optional mail keys via `.env`; uncomment
+  `SPRING_AUTOCONFIGURE_EXCLUDE` and comment `SPRING_MAIL_*` keys when SMTP is unavailable.
 
 ## Coding Style & Naming Conventions
 

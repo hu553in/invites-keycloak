@@ -8,3 +8,21 @@ spring:
     timeout-per-shutdown-phase: 30s
   jpa:
     open-in-view: true
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOSTNAME:db}:${POSTGRES_PORT:5432}/${POSTGRES_DB:invites-keycloak}
+    username: ${POSTGRES_USER:invites-keycloak}
+    password: ${POSTGRES_PASSWORD:invites-keycloak}
+
+invites:
+  default-expiry: 24h
+  min-expiry: 5m
+  max-expiry: 30d
+  realms:
+    master:
+      default-roles:
+        - default-admin-roles
+
+keycloak:
+  url: ${KEYCLOAK_URL}
+  client-id: ${KEYCLOAK_CLIENT_ID:invites-keycloak}
+  client-secret: ${KEYCLOAK_CLIENT_SECRET}
