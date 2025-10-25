@@ -55,6 +55,8 @@ services:
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-invites-keycloak}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
 
+      INVITE_TOKEN_SECRET: ${INVITE_TOKEN_SECRET}
+
       THC_PATH: /actuator/health
     ports:
       - "127.0.0.1:8080:8080"

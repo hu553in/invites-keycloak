@@ -17,3 +17,8 @@ naming:
 complexity:
   NamedArguments:
     active: true
+
+style:
+  MagicNumber:
+    active: true
+    ignoreAnnotation: true

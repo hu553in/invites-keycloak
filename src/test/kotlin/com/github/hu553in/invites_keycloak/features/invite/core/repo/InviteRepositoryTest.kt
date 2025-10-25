@@ -53,7 +53,7 @@ class InviteRepositoryTest(
         val found = inviteRepository.findValidByRealmAndTokenHash("master", "token-hash", now)
 
         // assert
-        assertThat(found).isPresent
+        assertThat(found).isPresent()
         assertThat(found.get().id).isEqualTo(saved.id)
         assertThat(found.get().roles).containsExactlyInAnyOrder("realm-admin")
         assertThat(found.get().expiresAt).isAfter(now)
@@ -85,7 +85,7 @@ class InviteRepositoryTest(
         val found = inviteRepository.findValidByRealmAndTokenHash("master", "token-hash", now)
 
         // assert
-        assertThat(found).isNotPresent
+        assertThat(found).isNotPresent()
     }
 
     @Test
@@ -114,7 +114,7 @@ class InviteRepositoryTest(
         val found = inviteRepository.findValidByRealmAndTokenHash("master", "token-hash", now)
 
         // assert
-        assertThat(found).isNotPresent
+        assertThat(found).isNotPresent()
     }
 
     @Test
@@ -143,7 +143,7 @@ class InviteRepositoryTest(
         val found = inviteRepository.findByRealmAndEmail("master", "user@example.com")
 
         // assert
-        assertThat(found).isPresent
+        assertThat(found).isPresent()
         assertThat(found.get().id).isEqualTo(saved.id)
         assertThat(found.get().roles).containsExactlyInAnyOrder("realm-admin")
         assertThat(found.get().expiresAt).isAfter(now)

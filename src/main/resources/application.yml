@@ -16,13 +16,19 @@ spring:
     password: ${POSTGRES_PASSWORD:invites-keycloak}
 
 invite:
-  default-expiry: 24h
-  min-expiry: 5m
-  max-expiry: 30d
+  expiry:
+    default: 24h
+    min: 5m
+    max: 30d
   realms:
     master:
       default-roles:
         - default-admin-roles
+  token:
+    secret: ${INVITE_TOKEN_SECRET}
+    bytes: 32
+    salt-bytes: 16
+    mac-algorithm: HmacSHA256
 
 keycloak:
   url: ${KEYCLOAK_URL}
