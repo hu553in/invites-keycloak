@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invites}
     restart: always
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-invites}", "-d", "${POSTGRES_DB:-invites}"]
+      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER:-invites}", "-d", "${POSTGRES_DB:-invites}" ]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -17,7 +17,7 @@ services:
       - invites_keycloak_network
 
   app:
-    image: hu553in/invites-keycloak:1.0.0
+    image: hu553in/invites-keycloak:local
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-invites}
@@ -27,7 +27,7 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health", "|", "grep", "UP", "||", "exit", "1"]
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8080/actuator/health", "|", "grep", "UP", "||", "exit", "1" ]
       interval: 10s
       timeout: 3s
       retries: 10
