@@ -1,11 +1,24 @@
+x-common: &common
+  restart: always
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "50m"
+      max-file: "4"
+      compress: "true"
+      mode: "non-blocking"
+      max-buffer-size: "4m"
+  networks:
+    - invites_keycloak_network
+
 services:
   db:
+    <<: [ *common ]
     image: postgres:17
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-invites-keycloak}
       POSTGRES_USER: ${POSTGRES_USER:-invites-keycloak}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invites-keycloak}
-    restart: always
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
@@ -16,10 +29,9 @@ services:
       retries: 10
     volumes:
       - invites_keycloak_db_data:/var/lib/postgresql/data
-    networks:
-      - invites_keycloak_network
 
   app:
+    <<: [ *common ]
     image: hu553in/invites-keycloak:local
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
@@ -44,7 +56,6 @@ services:
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
 
       THC_PATH: /actuator/health
-    restart: always
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
@@ -55,8 +66,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - invites_keycloak_network
 
 volumes:
   invites_keycloak_db_data:

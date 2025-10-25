@@ -26,3 +26,6 @@ keycloak:
   url: ${KEYCLOAK_URL}
   client-id: ${KEYCLOAK_CLIENT_ID:invites-keycloak}
   client-secret: ${KEYCLOAK_CLIENT_SECRET}
+
+logging:
+  config: classpath:logback-spring.xml
