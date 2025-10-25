@@ -7,5 +7,6 @@ import org.springframework.boot.runApplication
 class InvitesKeycloakApplication
 
 fun main(args: Array<String>) {
+    @Suppress("SpreadOperator")
     runApplication<InvitesKeycloakApplication>(*args)
 }

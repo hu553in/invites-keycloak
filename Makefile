@@ -4,3 +4,6 @@ build_image:
 
 run_in_docker: build_image
 	docker compose up -d
+
+check:
+	./gradlew check

@@ -10,5 +10,6 @@ class InvitesKeycloakApplicationTests {
 
     @Test
     fun sampleTest() {
+        // sample
     }
 }

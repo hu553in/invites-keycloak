@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import io.gitlab.arturbosch.detekt.getSupportedKotlinVersion
 
 plugins {
 	alias(libs.plugins.kotlin.jvm)
@@ -6,6 +7,9 @@ plugins {
 	alias(libs.plugins.spring.boot)
 	alias(libs.plugins.spring.dependency.management)
 	alias(libs.plugins.kotlin.jpa)
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.kover)
+    alias(libs.plugins.versions)
 }
 
 group = "com.github.hu553in"
@@ -16,10 +20,6 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
 	}
-}
-
-repositories {
-	mavenCentral()
 }
 
 dependencies {
@@ -47,6 +47,8 @@ dependencies {
 	testImplementation(libs.testcontainers.postgresql)
 
 	testRuntimeOnly(libs.junit.platform.launcher)
+
+    detektPlugins(libs.detekt.formatting)
 }
 
 kotlin {
@@ -64,4 +66,47 @@ allOpen {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    parallel = true
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+}
+
+configurations.matching { it.name == "detekt" }.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin") {
+            useVersion(getSupportedKotlinVersion())
+            because("detekt ${libs.versions.detekt.get()} requires Kotlin ${getSupportedKotlinVersion()}")
+        }
+    }
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes("InvitesKeycloakApplication")
+            }
+        }
+
+        total {
+            xml { onCheck = true }
+            html { onCheck = true }
+
+            verify {
+                rule {
+                    minBound(0)
+                }
+            }
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn("detekt")
+    dependsOn("koverVerify")
+    dependsOn("koverHtmlReport")
+    dependsOn("koverXmlReport")
 }

@@ -1,0 +1,19 @@
+processors:
+  active: true
+
+config:
+  validation: true
+
+formatting:
+  active: true
+  android: false
+  PackageName:
+    active: false
+
+naming:
+  PackageNaming:
+    active: false
+
+complexity:
+  NamedArguments:
+    active: true
