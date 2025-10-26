@@ -18,3 +18,5 @@
 - Add any new important and useful rules and conventions to AGENTS.md.
 - Actualize any old rules and conventions in AGENTS.md if needed.
 - This project is related to security, so implement all things with the highest level of security in mind.
+- When interacting with other APIs, use `WebClient`.
+- Ensure any secrets are never logged unmasked.

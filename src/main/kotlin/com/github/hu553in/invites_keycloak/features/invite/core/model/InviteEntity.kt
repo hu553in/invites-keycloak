@@ -1,6 +1,6 @@
 package com.github.hu553in.invites_keycloak.features.invite.core.model
 
-import com.github.hu553in.invites_keycloak.features.invite.core.service.InviteInvalid
+import com.github.hu553in.invites_keycloak.features.invite.core.service.InvalidInviteException
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -74,7 +74,7 @@ class InviteEntity(
 ) {
     fun incrementUses() {
         if (uses + 1 > maxUses) {
-            throw InviteInvalid("Invite has already been used >= maxUses")
+            throw InvalidInviteException()
         }
         uses += 1
     }

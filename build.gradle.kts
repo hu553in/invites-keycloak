@@ -34,6 +34,7 @@ dependencies {
     implementation(libs.spring.boot.starter.thymeleaf)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.web)
+    implementation(libs.spring.boot.starter.webflux)
     implementation(libs.jackson.module.kotlin)
     implementation(libs.flyway.core)
     implementation(libs.flyway.database.postgresql)
@@ -48,6 +49,7 @@ dependencies {
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.spring.security.test)
+    testImplementation(libs.wiremock.standalone)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
 

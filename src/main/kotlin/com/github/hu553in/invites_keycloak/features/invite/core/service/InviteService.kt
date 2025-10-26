@@ -81,20 +81,20 @@ class InviteService(
         val tokenHash = tokenService.hashToken(token, salt)
 
         return inviteRepository.findValidByRealmAndTokenHash(realm, tokenHash, clock.instant())
-            .orElseThrow { InviteInvalid() }
+            .orElseThrow { InvalidInviteException() }
     }
 
     @Transactional
     fun useOnce(inviteId: UUID): InviteEntity {
         return inviteRepository.findValidByIdForUpdate(inviteId, clock.instant())
-            .orElseThrow { InviteInvalid() }
+            .orElseThrow { InvalidInviteException() }
             .also { it.incrementUses() }
     }
 
     private fun parseRawToken(rawToken: String): Pair<String, String> {
         val parts = rawToken.split(RAW_TOKEN_DELIMITER, limit = 2)
         if (parts.size != 2 || parts.any { it.isBlank() }) {
-            throw InviteInvalid()
+            throw InvalidInviteException()
         }
         return parts[0] to parts[1]
     }

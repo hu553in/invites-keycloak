@@ -21,3 +21,4 @@ a scaffolded API with Gradle-based tooling, Docker packaging, and quality gates 
 - [ ] Rate limiting
 - [ ] Configure realms for invites through environment variables
 - [ ] Internationalization
+- [ ] Handle all TODOs

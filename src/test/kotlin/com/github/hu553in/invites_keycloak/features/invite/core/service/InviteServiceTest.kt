@@ -67,7 +67,7 @@ class InviteServiceTest(
     }
 
     @Test
-    fun `validateToken throws InviteInvalid when invite is expired`() {
+    fun `validateToken throws InvalidInviteException when invite is expired`() {
         // arrange
         val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
         val (saved, rawToken) = inviteService.createInvite(
@@ -87,7 +87,7 @@ class InviteServiceTest(
         // act
         assertThatThrownBy { inviteService.validateToken("master", rawToken) }
             // assert
-            .isInstanceOf(InviteInvalid::class.java)
+            .isInstanceOf(InvalidInviteException::class.java)
     }
 
     @Test
@@ -127,7 +127,7 @@ class InviteServiceTest(
                 if (result.isSuccess) {
                     successCount.incrementAndGet()
                 } else {
-                    assertThat(result.exceptionOrNull()).isInstanceOf(InviteInvalid::class.java)
+                    assertThat(result.exceptionOrNull()).isInstanceOf(InvalidInviteException::class.java)
                 }
             }
         } finally {
