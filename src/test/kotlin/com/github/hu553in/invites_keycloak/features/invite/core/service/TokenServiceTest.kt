@@ -25,9 +25,9 @@ class TokenServiceTest {
     @Test
     fun `different salts produce different hashes`() {
         // arrange
-        val token = "integration-token"
-        val saltOne = "first-salt"
-        val saltTwo = "second-salt"
+        val token = tokenService.generateToken()
+        val saltOne = tokenService.generateSalt()
+        val saltTwo = tokenService.generateSalt()
 
         // act
         val hashOne = tokenService.hashToken(token, saltOne)
@@ -42,8 +42,8 @@ class TokenServiceTest {
     @Test
     fun `hash is deterministic for identical input`() {
         // arrange
-        val token = "integration-token"
-        val salt = "repeatable-salt"
+        val token = tokenService.generateToken()
+        val salt = tokenService.generateSalt()
 
         // act
         val hashOne = tokenService.hashToken(token, salt)
@@ -88,8 +88,10 @@ class TokenServiceTest {
     @Test
     fun `constant time equals matches normal equality for identical hashes`() {
         // arrange
-        val h1 = tokenService.hashToken("t", "s")
-        val h2 = tokenService.hashToken("t", "s")
+        val token = tokenService.generateToken()
+        val salt = tokenService.generateSalt()
+        val h1 = tokenService.hashToken(token, salt)
+        val h2 = tokenService.hashToken(token, salt)
 
         // act
         val ok = TokenService.hashesEqualConstantTime(h1, h2)

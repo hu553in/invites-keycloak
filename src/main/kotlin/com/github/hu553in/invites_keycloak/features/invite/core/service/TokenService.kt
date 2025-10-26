@@ -29,8 +29,11 @@ class TokenService(
     companion object {
         private const val MIN_TOKEN_SECRET_BYTES = 16
 
+        private val alphabetRegex = Regex("^[A-Za-z0-9_-]+$")
+
         private val random = SecureRandom()
         private val base64Encoder = Base64.getUrlEncoder().withoutPadding()
+        private val base64Decoder = Base64.getUrlDecoder()
         private val hexFormat = HexFormat.of()
 
         @JvmStatic
@@ -51,8 +54,20 @@ class TokenService(
     fun generateSalt(): String = generateRandomString(inviteProps.token.saltBytes)
 
     fun hashToken(token: String, salt: String): String {
+        validateHashTokenArg(token, "token", inviteProps.token.bytes)
+        validateHashTokenArg(salt, "salt", inviteProps.token.saltBytes)
+
         val bytes = mac().doFinal(payload(token, salt))
         return hexFormat.formatHex(bytes)
+    }
+
+    private fun validateHashTokenArg(arg: String, argName: String, bytes: Int) {
+        require(
+            arg.isNotBlank() &&
+                base64Decoder.decode(arg).size == bytes &&
+                !arg.contains("=") &&
+                arg.matches(alphabetRegex)
+        ) { "$argName is invalid" }
     }
 
     private fun generateRandomString(size: Int): String {

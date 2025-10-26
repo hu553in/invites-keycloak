@@ -1,5 +1,6 @@
 package com.github.hu553in.invites_keycloak.features.invite.core.model
 
+import com.github.hu553in.invites_keycloak.features.invite.core.service.InviteInvalid
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -20,7 +21,6 @@ import java.util.*
 
 @Entity
 @Table(name = "invite")
-@Suppress("LongParameterList")
 class InviteEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -71,4 +71,11 @@ class InviteEntity(
     @field:NotEmpty
     @Column(nullable = false, updatable = false, columnDefinition = "text[]")
     var roles: Set<String>
-)
+) {
+    fun incrementUses() {
+        if (uses + 1 > maxUses) {
+            throw InviteInvalid("Invite has already been used >= maxUses")
+        }
+        uses += 1
+    }
+}

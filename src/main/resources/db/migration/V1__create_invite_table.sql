@@ -13,6 +13,6 @@ create table if not exists invite (
     roles text[] not null
 );
 
-create unique index if not exists invite_email_realm_uidx on invite (email, realm);
+create unique index if not exists invite_realm_email_uidx on invite (realm, email);
+create unique index if not exists invite_realm_token_hash_uidx on invite (realm, token_hash);
 create index if not exists invite_expires_at_idx on invite (expires_at);
-create index if not exists invite_realm_idx on invite (realm);
