@@ -12,6 +12,8 @@ data class KeycloakProps(
     @field:URL
     val url: String,
     @field:NotBlank
+    val realm: String,
+    @field:NotBlank
     val clientId: String,
     @field:NotBlank
     val clientSecret: String

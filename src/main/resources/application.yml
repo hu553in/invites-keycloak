@@ -32,6 +32,7 @@ invite:
 
 keycloak:
   url: ${KEYCLOAK_URL}
+  realm: ${KEYCLOAK_REALM:master}
   client-id: ${KEYCLOAK_CLIENT_ID:invites-keycloak}
   client-secret: ${KEYCLOAK_CLIENT_SECRET}
 
