@@ -2,23 +2,24 @@
 
 > Invites for your Keycloak. 💌 🗝
 
-Spring Boot / Kotlin service that streamlines issuing invitation links for Keycloak realms. The project is currently
-a scaffolded API with Gradle-based tooling, Docker packaging, and quality gates already wired in.
+Spring Boot service that streamlines issuing invitation links for Keycloak realms.
 
 ## Tech Stack
 
 > Check [libs.versions.toml](gradle/libs.versions.toml) and [docker-compose.yml](docker-compose.yml) for details.
 
-- Spring Boot 3
 - Kotlin 2
 - Gradle 9
+- Spring Boot 3
 - PostgreSQL 17
 
 ## Roadmap
 
+- [ ] Implement MVP
+- [ ] Fill readme
+- [ ] Handle all TODOs
 - [ ] Metrics
 - [ ] OpenTelemetry
 - [ ] Rate limiting
 - [ ] Configure realms for invites through environment variables
 - [ ] Internationalization
-- [ ] Handle all TODOs
