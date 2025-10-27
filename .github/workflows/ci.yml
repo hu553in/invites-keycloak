@@ -17,6 +17,26 @@ jobs:
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v5
       - run: make check
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/test
+            build/test-results/test
+          overwrite: true
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: kover-reports
+          path: build/reports/kover
+          overwrite: true
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: detekt-reports
+          path: build/reports/detekt
+          overwrite: true
 
   build-and-push:
     needs: check
