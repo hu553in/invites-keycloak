@@ -79,6 +79,7 @@ noArg {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    systemProperty("spring.profiles.active", "test")
 }
 
 detekt {

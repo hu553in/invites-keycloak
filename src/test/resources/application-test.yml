@@ -1,0 +1,9 @@
+invite:
+  token:
+    secret: example-very-long-secret
+
+keycloak:
+  url: https://id.example.com
+  realm: master
+  client-id: invites-keycloak
+  client-secret: example-secret
