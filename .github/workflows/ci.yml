@@ -16,7 +16,10 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v5
-      - run: make check
+      - run: |
+          set -euo pipefail
+          rm -f .env
+          make check
       - if: always()
         uses: actions/upload-artifact@v5
         with:

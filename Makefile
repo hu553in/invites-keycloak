@@ -33,4 +33,5 @@ run_local:
 
 .PHONY: check
 check:
+	cp --update=none .env.example.local .env
 	./gradlew check
