@@ -10,7 +10,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
-import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.test.context.TestConstructor
 import java.time.Clock
 import java.time.Duration
@@ -29,7 +29,7 @@ class InviteServiceTest(
     private val inviteRepository: InviteRepository,
     private val inviteProps: InviteProps,
     private val clock: Clock,
-    private val jdbcTemplate: JdbcTemplate
+    private val jdbcClient: JdbcClient
 ) {
 
     @AfterEach
@@ -74,7 +74,6 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             expiresAt = expiresAt,
-            maxUses = 1,
             roles = setOf("user"),
             createdBy = "creator"
         )
@@ -82,7 +81,9 @@ class InviteServiceTest(
         val pastExpiresAt = clock.instant().minus(Duration.ofMinutes(20))
 
         // column is not updatable in JPA -> use JDBC
-        jdbcTemplate.execute("update invite set expires_at = '$pastExpiresAt' where id = '${saved.id}'")
+        jdbcClient
+            .sql("update invite set expires_at = '$pastExpiresAt' where id = '${saved.id}'")
+            .update()
 
         // act
         assertThatThrownBy { inviteService.validateToken("master", rawToken) }
@@ -98,7 +99,6 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             expiresAt = expiresAt,
-            maxUses = 1,
             roles = setOf("user"),
             createdBy = "creator"
         ).invite

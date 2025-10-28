@@ -1,3 +1,15 @@
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+        use_sql_comments: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 100
+
 invite:
   token:
     secret: example-very-long-secret
@@ -7,3 +19,10 @@ keycloak:
   realm: master
   client-id: invites-keycloak
   client-secret: example-secret
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.orm.jdbc.extract: TRACE
+    org.hibernate.SQL_SLOW: INFO

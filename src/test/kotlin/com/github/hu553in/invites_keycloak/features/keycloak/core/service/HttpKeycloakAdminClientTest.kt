@@ -214,7 +214,7 @@ class HttpKeycloakAdminClientTest {
         )
 
         // act
-        client.executeActionsEmail("invite-realm", "user-id", setOf("UPDATE_PASSWORD", "VERIFY_EMAIL"))
+        client.executeActionsEmail("invite-realm", "user-id")
 
         // assert
         server.verify(1, postRequestedFor(urlEqualTo("/realms/master/protocol/openid-connect/token")))

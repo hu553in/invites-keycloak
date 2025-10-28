@@ -47,8 +47,6 @@ class InviteRepositoryTest(
             createdAt = now,
             expiresAt = expiresAt,
             maxUses = 2,
-            uses = 0,
-            revoked = false,
             roles = setOf("realm-admin")
         )
 
@@ -78,7 +76,6 @@ class InviteRepositoryTest(
             createdAt = now,
             expiresAt = expiresAt,
             maxUses = 2,
-            uses = 0,
             revoked = true,
             roles = setOf("realm-admin")
         )
@@ -107,7 +104,6 @@ class InviteRepositoryTest(
             expiresAt = expiresAt,
             maxUses = 2,
             uses = 2,
-            revoked = false,
             roles = setOf("realm-admin")
         )
 
@@ -134,8 +130,6 @@ class InviteRepositoryTest(
             createdAt = now,
             expiresAt = expiresAt,
             maxUses = 2,
-            uses = 0,
-            revoked = false,
             roles = setOf("realm-admin")
         )
 
@@ -165,7 +159,6 @@ class InviteRepositoryTest(
             createdAt = now,
             expiresAt = expiresAt,
             maxUses = 2,
-            uses = 0,
             revoked = true,
             roles = setOf("realm-admin")
         )
@@ -194,7 +187,6 @@ class InviteRepositoryTest(
             expiresAt = expiresAt,
             maxUses = 2,
             uses = 2,
-            revoked = false,
             roles = setOf("realm-admin")
         )
 

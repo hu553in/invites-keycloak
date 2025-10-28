@@ -70,4 +70,10 @@ keycloak:
   min-backoff: PT2S
 
 logging:
-  config: classpath:logback-spring.xml
+  structured:
+    format:
+      console: ecs
+      file: ecs
+    ecs:
+      service:
+        environment: ${SPRING_PROFILES_ACTIVE:prod}

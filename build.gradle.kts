@@ -41,7 +41,6 @@ dependencies {
     implementation(libs.kotlin.reflect)
     implementation(libs.thymeleaf.extras.springsecurity6)
     implementation(libs.spring.dotenv)
-    implementation(libs.logstash.logback.encoder)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
 
     runtimeOnly(libs.postgresql)

@@ -156,7 +156,10 @@ class HttpKeycloakAdminClient(
         )
 
         val userId = extractUserId(response?.headers?.location)
-        log.debug("Created Keycloak user {} in realm {}", userId, normalizedRealm)
+        log.atInfo()
+            .addKeyValue("user.id") { userId }
+            .addKeyValue("realm") { normalizedRealm }
+            .log { "Created Keycloak user" }
         return userId
     }
 
@@ -215,12 +218,11 @@ class HttpKeycloakAdminClient(
             }
         )
 
-        log.debug(
-            "Assigned roles [{}] to user {} in realm {}",
-            roleRepresentations.mapNotNull { it.name }.joinToString(),
-            normalizedUserId,
-            normalizedRealm
-        )
+        log.atInfo()
+            .addKeyValue("roles") { roleRepresentations.mapNotNull { it.name }.joinToString(", ") }
+            .addKeyValue("user.id") { normalizedUserId }
+            .addKeyValue("realm") { normalizedRealm }
+            .log { "Assigned roles to Keycloak user" }
     }
 
     override fun executeActionsEmail(realm: String, userId: String, actions: Set<String>) {
@@ -251,12 +253,11 @@ class HttpKeycloakAdminClient(
             }
         )
 
-        log.debug(
-            "Triggered execute-actions-email for user {} in realm {} with actions [{}]",
-            normalizedUserId,
-            normalizedRealm,
-            normalizedActions.joinToString()
-        )
+        log.atInfo()
+            .addKeyValue("actions") { normalizedActions.joinToString(", ") }
+            .addKeyValue("user.id") { normalizedUserId }
+            .addKeyValue("realm") { normalizedRealm }
+            .log { "Triggered execute-actions-email for Keycloak user" }
     }
 
     private fun obtainAccessToken(): String {

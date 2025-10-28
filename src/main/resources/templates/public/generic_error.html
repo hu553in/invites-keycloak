@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${error_message ?: 'Unknown error'}">Unknown error</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff5f5;
+            color: #9b1c1c;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        main {
+            margin: 0 2rem;
+            max-width: 32rem;
+            padding: 2.5rem;
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 1.25rem 2.5rem rgba(185, 28, 28, 0.1);
+            border: 1px solid rgba(185, 28, 28, 0.3);
+        }
+
+        h1, p {
+            margin: 16px 0;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+        }
+
+        p {
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <h1 th:text="${error_message ?: 'Unknown error'}">Unknown error</h1>
+    <p th:text="${error_details ?: 'Please contact your administrator.'}">Please contact your administrator.</p>
+</main>
+</body>
+</html>
