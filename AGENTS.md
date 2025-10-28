@@ -7,7 +7,7 @@
 - Integration tests rely on Testcontainers.
 - Tests for external API calls rely on WireMock.
 - `make run_docker[_rebuild]` runs the composed stack; `make stop_docker` stops it.
-- Detekt rules are in `config/detekt/detekt.yml`.
+- Detekt rules are in `config/detekt.yml`.
 - Keep constructor injection.
 - Follow Conventional Commits.
 - Link docs/tests to behavior changes.

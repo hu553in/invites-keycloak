@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.thymeleaf.extras.springsecurity6)
     implementation(libs.spring.dotenv)
     implementation(libs.logstash.logback.encoder)
+    implementation(libs.springdoc.openapi.starter.webmvc.ui)
 
     runtimeOnly(libs.postgresql)
 
@@ -85,7 +86,7 @@ tasks.withType<Test> {
 detekt {
     buildUponDefaultConfig = true
     parallel = true
-    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    config.setFrom(files("$rootDir/config/detekt.yml"))
 }
 
 configurations.matching { it.name == "detekt" }.all {

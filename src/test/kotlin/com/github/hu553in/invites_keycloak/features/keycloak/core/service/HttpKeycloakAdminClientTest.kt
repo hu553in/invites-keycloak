@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.web.reactive.function.client.WebClient
 import java.time.Clock
+import java.time.Duration
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class HttpKeycloakAdminClientTest {
@@ -50,7 +51,9 @@ class HttpKeycloakAdminClientTest {
                 url = server.baseUrl(),
                 realm = "master",
                 clientId = "admin-cli",
-                clientSecret = "s3cr3t"
+                clientSecret = "s3cr3t",
+                maxAttempts = 3,
+                minBackoff = Duration.ofSeconds(2)
             ),
             clock = Clock.systemUTC(),
             webClientBuilder = WebClient.builder()

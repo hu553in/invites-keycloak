@@ -1,7 +1,18 @@
 server:
   shutdown: graceful
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
 
 spring:
+  mvc:
+    problemdetails:
+      enabled: true
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
   application:
     name: invites-keycloak
   lifecycle:
@@ -14,6 +25,26 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOSTNAME:db}:${POSTGRES_PORT:5432}/${POSTGRES_DB:invites-keycloak}
     username: ${POSTGRES_USER:invites-keycloak}
     password: ${POSTGRES_PASSWORD:invites-keycloak}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+        add-additional-paths: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
+  health:
+    diskspace:
+      enabled: true
 
 invite:
   expiry:
@@ -35,6 +66,8 @@ keycloak:
   realm: ${KEYCLOAK_REALM:master}
   client-id: ${KEYCLOAK_CLIENT_ID:invites-keycloak}
   client-secret: ${KEYCLOAK_CLIENT_SECRET}
+  max-attempts: 3
+  min-backoff: PT2S
 
 logging:
   config: classpath:logback-spring.xml

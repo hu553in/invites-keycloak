@@ -2,10 +2,10 @@ package com.github.hu553in.invites_keycloak.features.keycloak.core.service
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.hu553in.invites_keycloak.features.keycloak.config.KeycloakProps
+import com.github.hu553in.invites_keycloak.shared.util.logger
 import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
-import org.slf4j.LoggerFactory
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
@@ -18,6 +18,7 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
 import reactor.netty.http.client.HttpClient
+import reactor.util.retry.Retry
 import java.net.URI
 import java.time.Clock
 import java.time.Duration
@@ -60,7 +61,17 @@ class HttpKeycloakAdminClient(
         private const val RESPONSE_TIMEOUT_SECONDS = 10L
     }
 
-    private val logger = LoggerFactory.getLogger(HttpKeycloakAdminClient::class.java)
+    private val log by logger()
+
+    private val retry = Retry
+        .backoff(keycloakProps.maxAttempts, keycloakProps.minBackoff)
+        .filter { e -> e is RetryableException }
+        .onRetryExhaustedThrow { _, _ ->
+            throw KeycloakAdminClientException(
+                "Keycloak is unavailable after max retries",
+                HttpStatus.SERVICE_UNAVAILABLE
+            )
+        }
 
     private val httpClient = HttpClient.create()
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECT_TIMEOUT_MILLIS)
@@ -104,7 +115,9 @@ class HttpKeycloakAdminClient(
                     .headers { headers -> headers.setBearerAuth(accessToken) }
                     .accept(APPLICATION_JSON)
                     .retrieve()
+                    .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
                     .bodyToMono(userListType)
+                    .retryWhen(retry)
                     .block()
             }
         ).isNullOrEmpty()
@@ -135,13 +148,15 @@ class HttpKeycloakAdminClient(
                     .onStatus({ it.isSameCodeAs(HttpStatus.CONFLICT) }) {
                         Mono.error(KeycloakAdminClientException("User already exists on realm $normalizedRealm"))
                     }
+                    .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
                     .toBodilessEntity()
+                    .retryWhen(retry)
                     .block()
             }
         )
 
         val userId = extractUserId(response?.headers?.location)
-        logger.debug("Created Keycloak user {} in realm {}", userId, normalizedRealm)
+        log.debug("Created Keycloak user {} in realm {}", userId, normalizedRealm)
         return userId
     }
 
@@ -163,9 +178,11 @@ class HttpKeycloakAdminClient(
                             when {
                                 resp.statusCode().is2xxSuccessful -> resp.bodyToMono(RoleRepresentation::class.java)
                                 resp.statusCode().isSameCodeAs(HttpStatus.NOT_FOUND) -> Mono.empty()
+                                resp.statusCode().is5xxServerError -> Mono.error(RetryableException())
                                 else -> resp.createException().flatMap { Mono.error(it) }
                             }
                         }
+                        .retryWhen(retry)
                         .block()
                 }
             )?.also {
@@ -191,12 +208,14 @@ class HttpKeycloakAdminClient(
                     .accept(APPLICATION_JSON)
                     .bodyValue(roleRepresentations)
                     .retrieve()
+                    .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
                     .toBodilessEntity()
+                    .retryWhen(retry)
                     .block()
             }
         )
 
-        logger.debug(
+        log.debug(
             "Assigned roles [{}] to user {} in realm {}",
             roleRepresentations.mapNotNull { it.name }.joinToString(),
             normalizedUserId,
@@ -225,12 +244,14 @@ class HttpKeycloakAdminClient(
                     .accept(APPLICATION_JSON)
                     .bodyValue(normalizedActions)
                     .retrieve()
+                    .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
                     .toBodilessEntity()
+                    .retryWhen(retry)
                     .block()
             }
         )
 
-        logger.debug(
+        log.debug(
             "Triggered execute-actions-email for user {} in realm {} with actions [{}]",
             normalizedUserId,
             normalizedRealm,
@@ -262,7 +283,9 @@ class HttpKeycloakAdminClient(
                         .accept(APPLICATION_JSON)
                         .body(body)
                         .retrieve()
+                        .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
                         .bodyToMono(TokenResponse::class.java)
+                        .retryWhen(retry)
                         .block()
                 }
             )
@@ -347,4 +370,6 @@ class HttpKeycloakAdminClient(
     )
 
     private data class CachedAccessToken(val value: String, val expiresAtEpochSec: Long?)
+
+    private class RetryableException : RuntimeException()
 }
