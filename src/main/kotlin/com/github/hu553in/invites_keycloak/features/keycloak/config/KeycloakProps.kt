@@ -20,6 +20,8 @@ data class KeycloakProps(
     val clientId: String,
     @field:NotBlank
     val clientSecret: String,
+    @field:NotBlank
+    val requiredRole: String,
     @field:NotNull
     @field:Positive
     val maxAttempts: Long,

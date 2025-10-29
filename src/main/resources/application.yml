@@ -66,6 +66,7 @@ keycloak:
   realm: ${KEYCLOAK_REALM:master}
   client-id: ${KEYCLOAK_CLIENT_ID:invites-keycloak}
   client-secret: ${KEYCLOAK_CLIENT_SECRET}
+  required-role: ${KEYCLOAK_REQUIRED_ROLE:invite-admin}
   max-attempts: 3
   min-backoff: PT2S
 

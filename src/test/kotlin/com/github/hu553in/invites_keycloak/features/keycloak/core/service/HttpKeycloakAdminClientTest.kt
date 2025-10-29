@@ -52,6 +52,7 @@ class HttpKeycloakAdminClientTest {
                 realm = "master",
                 clientId = "admin-cli",
                 clientSecret = "s3cr3t",
+                requiredRole = "invite-admin",
                 maxAttempts = 3,
                 minBackoff = Duration.ofSeconds(2)
             ),
