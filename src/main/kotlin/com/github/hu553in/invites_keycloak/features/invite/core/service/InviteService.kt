@@ -19,6 +19,11 @@ class InviteService(
     private val clock: Clock
 ) {
 
+    @Transactional(readOnly = true)
+    fun listInvites(): List<InviteEntity> {
+        return inviteRepository.findAllByOrderByCreatedAtDesc()
+    }
+
     @Transactional
     fun createInvite(
         realm: String,
@@ -89,6 +94,19 @@ class InviteService(
         return inviteRepository.findValidByIdForUpdate(inviteId, clock.instant())
             .orElseThrow { InvalidInviteException() }
             .also { it.incrementUses() }
+    }
+
+    @Transactional
+    fun revoke(inviteId: UUID) {
+        val invite = inviteRepository.findById(inviteId)
+            .orElseThrow { InviteNotFoundException(inviteId) }
+        invite.revoked = true
+    }
+
+    @Transactional(readOnly = true)
+    fun get(inviteId: UUID): InviteEntity {
+        return inviteRepository.findById(inviteId)
+            .orElseThrow { InviteNotFoundException(inviteId) }
     }
 
     private fun parseRawToken(rawToken: String): Pair<String, String> {

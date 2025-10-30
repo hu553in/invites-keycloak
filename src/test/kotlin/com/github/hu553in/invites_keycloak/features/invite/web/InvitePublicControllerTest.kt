@@ -1,6 +1,7 @@
 package com.github.hu553in.invites_keycloak.features.invite.web
 
 import com.github.hu553in.invites_keycloak.bootstrap.InvitesKeycloakApplication
+import com.github.hu553in.invites_keycloak.features.invite.config.TestClientRegistrationRepositoryConfig
 import com.github.hu553in.invites_keycloak.features.invite.core.model.InviteEntity
 import com.github.hu553in.invites_keycloak.features.invite.core.service.InvalidInviteException
 import com.github.hu553in.invites_keycloak.features.invite.core.service.InviteService
@@ -28,7 +29,7 @@ import java.util.*
 @WebMvcTest(InvitePublicController::class)
 @AutoConfigureMockMvc(addFilters = false)
 @ContextConfiguration(classes = [InvitesKeycloakApplication::class])
-@Import(ControllerExceptionHandler::class)
+@Import(ControllerExceptionHandler::class, TestClientRegistrationRepositoryConfig::class)
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 class InvitePublicControllerTest(
     private val mockMvc: MockMvc

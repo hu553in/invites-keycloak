@@ -25,6 +25,17 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOSTNAME:db}:${POSTGRES_PORT:5432}/${POSTGRES_DB:invites-keycloak}
     username: ${POSTGRES_USER:invites-keycloak}
     password: ${POSTGRES_PASSWORD:invites-keycloak}
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${keycloak.client-id}
+            client-secret: ${keycloak.client-secret}
+            scope: openid, profile, email
+        provider:
+          keycloak:
+            issuer-uri: ${keycloak.url}/realms/${keycloak.realm}
 
 management:
   endpoints:

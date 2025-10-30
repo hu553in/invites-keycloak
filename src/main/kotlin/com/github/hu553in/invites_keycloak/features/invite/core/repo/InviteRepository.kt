@@ -10,6 +10,8 @@ import java.util.*
 
 interface InviteRepository : JpaRepository<InviteEntity, UUID> {
 
+    fun findAllByOrderByCreatedAtDesc(): List<InviteEntity>
+
     @Query(
         """
         select invite
