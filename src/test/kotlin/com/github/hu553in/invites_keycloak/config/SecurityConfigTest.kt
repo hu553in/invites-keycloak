@@ -43,7 +43,7 @@ import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
-import java.time.Instant
+import java.time.Clock
 import java.util.*
 import com.github.tomakehurst.wiremock.client.WireMock.get as wireMockGet
 import com.github.tomakehurst.wiremock.client.WireMock.post as wireMockPost
@@ -56,7 +56,8 @@ import com.github.tomakehurst.wiremock.client.WireMock.post as wireMockPost
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SecurityConfigTest(
-    private val mockMvc: MockMvc
+    private val mockMvc: MockMvc,
+    private val clock: Clock
 ) {
 
     companion object {
@@ -145,25 +146,25 @@ class SecurityConfigTest(
     @Test
     fun `user without required role receives 403 after login`() {
         // arrange
-        val context = initiateAuthorizationFlow()
+        val ctx = initiateAuthorizationFlow()
 
-        val subject = stubTokenResponse(context.nonce, emptySet())
+        val subject = stubTokenResponse(ctx.nonce, emptySet())
         stubUserInfoResponse(emptySet(), subject)
 
         // act
         val loginResult = mockMvc.perform(
             get("/login/oauth2/code/keycloak")
-                .session(context.session)
-                .withCookiesIfPresent(context.cookies)
+                .session(ctx.session)
+                .withCookiesIfPresent(ctx.cookies)
                 .param("code", "test-code")
-                .param("state", context.state)
+                .param("state", ctx.state)
         )
             // assert
             .andExpect(status().is3xxRedirection)
             .andReturn()
 
         val authenticatedSession = loginResult.request.session as MockHttpSession
-        val authenticatedCookies = mergeCookies(context.cookies, loginResult.response.cookies.toList())
+        val authenticatedCookies = mergeCookies(ctx.cookies, loginResult.response.cookies.toList())
 
         // act
         mockMvc.perform(
@@ -178,25 +179,25 @@ class SecurityConfigTest(
     @Test
     fun `user with required role gains access to admin area`() {
         // arrange
-        val context = initiateAuthorizationFlow()
+        val ctx = initiateAuthorizationFlow()
 
-        val subject = stubTokenResponse(context.nonce, setOf(REQUIRED_ROLE))
+        val subject = stubTokenResponse(ctx.nonce, setOf(REQUIRED_ROLE))
         stubUserInfoResponse(setOf(REQUIRED_ROLE), subject)
 
         // act
         val loginResult = mockMvc.perform(
             get("/login/oauth2/code/keycloak")
-                .session(context.session)
-                .withCookiesIfPresent(context.cookies)
+                .session(ctx.session)
+                .withCookiesIfPresent(ctx.cookies)
                 .param("code", "test-code")
-                .param("state", context.state)
+                .param("state", ctx.state)
         )
             // assert
             .andExpect(status().is3xxRedirection)
             .andReturn()
 
         val authenticatedSession = loginResult.request.session as MockHttpSession
-        val authenticatedCookies = mergeCookies(context.cookies, loginResult.response.cookies.toList())
+        val authenticatedCookies = mergeCookies(ctx.cookies, loginResult.response.cookies.toList())
 
         // act
         mockMvc.perform(
@@ -293,7 +294,7 @@ class SecurityConfigTest(
     }
 
     private fun buildIdToken(nonce: String, roles: Set<String>, subject: String): String {
-        val now = Instant.now()
+        val now = clock.instant()
         val claims = JWTClaimsSet.Builder()
             .issuer(issuer)
             .subject(subject)

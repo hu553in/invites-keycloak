@@ -1,6 +1,78 @@
 package com.github.hu553in.invites_keycloak.service
 
+import com.github.hu553in.invites_keycloak.util.logger
+import jakarta.mail.MessagingException
+import org.springframework.beans.factory.ObjectProvider
+import org.springframework.mail.MailException
+import org.springframework.mail.javamail.JavaMailSender
+import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.stereotype.Service
+import org.thymeleaf.context.Context
+import org.thymeleaf.spring6.SpringTemplateEngine
+import java.time.Instant
 
 @Service
-class MailService
+class MailService(
+    private val senderProvider: ObjectProvider<JavaMailSender>,
+    private val templateEngine: SpringTemplateEngine
+) {
+
+    private val log by logger()
+
+    fun sendInviteEmail(data: InviteMailData): MailSendStatus {
+        val sender = senderProvider.ifAvailable
+            ?: return MailSendStatus.NOT_CONFIGURED.also {
+                log.atWarn()
+                    .log { "Mail sender is not configured" }
+            }
+
+        return try {
+            val msg = sender.createMimeMessage().also {
+                MimeMessageHelper(it, Charsets.UTF_8.name()).also { helper ->
+                    helper.setTo(data.email)
+                    helper.setSubject("Invitation to ${data.target}")
+                    helper.setText(renderBody(data), true)
+                }
+            }
+
+            sender.send(msg)
+            MailSendStatus.OK
+        } catch (e: MailException) {
+            MailSendStatus.FAIL.also {
+                log.atError()
+                    .setCause(e)
+                    .log { "Failed to send invite email" }
+            }
+        } catch (e: MessagingException) {
+            MailSendStatus.FAIL.also {
+                log.atError()
+                    .setCause(e)
+                    .log { "Failed to build invite email" }
+            }
+        }
+    }
+
+    private fun renderBody(data: InviteMailData): String {
+        return templateEngine.process(
+            "mail/invite",
+            Context().apply {
+                setVariable("link", data.link)
+                setVariable("target", data.target)
+                setVariable("expiresAt", data.expiresAt)
+            }
+        )
+    }
+
+    data class InviteMailData(
+        val email: String,
+        val target: String,
+        val link: String,
+        val expiresAt: Instant
+    )
+
+    enum class MailSendStatus {
+        NOT_CONFIGURED,
+        OK,
+        FAIL
+    }
+}

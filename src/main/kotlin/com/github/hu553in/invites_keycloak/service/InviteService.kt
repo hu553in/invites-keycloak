@@ -5,6 +5,8 @@ import com.github.hu553in.invites_keycloak.entity.InviteEntity
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.repo.InviteRepository
+import com.github.hu553in.invites_keycloak.util.normalizeString
+import com.github.hu553in.invites_keycloak.util.normalizeStrings
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -26,6 +28,7 @@ class InviteService(
         return inviteRepository.findAllByOrderByCreatedAtDesc()
     }
 
+    @Suppress("ForbiddenComment")
     @Transactional
     fun createInvite(
         realm: String,
@@ -37,8 +40,10 @@ class InviteService(
     ): CreatedInvite {
         require(maxUses >= 1) { "maxUses must be >= 1" }
 
-        val realmConfig = inviteProps.realms[realm]
-        require(realmConfig != null) { "Realm $realm is not configured for invite" }
+        val normalizedRealm = normalizeString(realm, "realm must not be blank")
+
+        val realmConfig = inviteProps.realms[normalizedRealm]
+        require(realmConfig != null) { "Realm $normalizedRealm is not configured for invite" }
 
         val now = clock.instant()
         val minExpiresAt = now.plus(inviteProps.expiry.min)
@@ -50,23 +55,26 @@ class InviteService(
                 "(accepted: $minExpiresAt .. $maxExpiresAt)"
         }
 
-        val rolesToPersist = roles.ifEmpty { realmConfig.defaultRoles }
-        require(rolesToPersist.isNotEmpty()) {
-            "Invite must contain at least one role (either provided or realm default)"
+        // TODO: looks like expired invites also should not cause conflicts?
+        val normalizedEmail = normalizeString(email, "email must not be blank", true)
+        require(!inviteRepository.existsByRealmAndEmailAndRevokedFalse(normalizedRealm, normalizedEmail)) {
+            "Active invite already exists for $normalizedEmail in realm $normalizedRealm"
         }
 
-        val normalizedEmail = email.trim().lowercase(Locale.ROOT)
-        require(email.isNotBlank()) { "email must not be blank" }
-
-        val normalizedCreatedBy = createdBy.trim()
-        require(normalizedCreatedBy.isNotBlank()) { "createdBy must not be blank" }
+        val normalizedCreatedBy = normalizeString(createdBy, "createdBy must not be blank")
 
         val token = tokenService.generateToken()
         val salt = tokenService.generateSalt()
         val tokenHash = tokenService.hashToken(token, salt)
 
+        val normalizedRoles = normalizeStrings(
+            strings = roles,
+            message = "Invite must contain at least one role (either provided or realm default)",
+            default = realmConfig.defaultRoles
+        )
+
         val invite = InviteEntity(
-            realm = realm,
+            realm = normalizedRealm,
             tokenHash = tokenHash,
             salt = salt,
             email = normalizedEmail,
@@ -74,7 +82,7 @@ class InviteService(
             createdAt = now,
             expiresAt = targetExpiresAt,
             maxUses = maxUses,
-            roles = rolesToPersist
+            roles = normalizedRoles
         )
 
         val saved = inviteRepository.save(invite)
@@ -103,6 +111,27 @@ class InviteService(
         val invite = inviteRepository.findById(inviteId)
             .orElseThrow { InviteNotFoundException(inviteId) }
         invite.revoked = true
+    }
+
+    @Transactional
+    fun resendInvite(inviteId: UUID, createdBy: String): CreatedInvite {
+        val current = inviteRepository.findById(inviteId)
+            .orElseThrow { InviteNotFoundException(inviteId) }
+
+        require(!current.revoked) { "Invite $inviteId is already revoked" }
+
+        current.revoked = true
+        inviteRepository.flush()
+
+        @Suppress("ForbiddenComment")
+        return createInvite(
+            realm = current.realm,
+            email = current.email,
+            // TODO: expiration must be configured in form
+            maxUses = current.maxUses,
+            roles = current.roles,
+            createdBy = createdBy
+        )
     }
 
     @Transactional(readOnly = true)

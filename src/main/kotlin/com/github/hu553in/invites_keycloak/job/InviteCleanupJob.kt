@@ -29,7 +29,8 @@ class InviteCleanupJob(
         if (deleted > 0) {
             log.atInfo()
                 .addKeyValue("deleted_count") { deleted }
-                .log { "Deleted expired invites older than $RETENTION_DAYS days" }
+                .addKeyValue("retention_days") { RETENTION_DAYS }
+                .log { "Cleaned up expired invites prior to retention period" }
         }
     }
 }

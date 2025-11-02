@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.hu553in.invites_keycloak.config.props.KeycloakProps
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
 import com.github.hu553in.invites_keycloak.util.logger
+import com.github.hu553in.invites_keycloak.util.normalizeString
+import com.github.hu553in.invites_keycloak.util.normalizeStrings
 import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
@@ -23,7 +25,6 @@ import reactor.util.retry.Retry
 import java.net.URI
 import java.time.Clock
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
@@ -101,7 +102,7 @@ class HttpKeycloakAdminClient(
         val accessToken = obtainAccessToken()
 
         return !execute(
-            context = "Failed to verify whether user exists in realm $normalizedRealm",
+            ctx = "Failed to verify whether user exists in realm $normalizedRealm",
             block = {
                 webClient.get()
                     .uri { builder ->
@@ -131,7 +132,7 @@ class HttpKeycloakAdminClient(
         val accessToken = obtainAccessToken()
 
         val response = execute(
-            context = "Failed to create user in realm $normalizedRealm",
+            ctx = "Failed to create user in realm $normalizedRealm",
             block = {
                 webClient.post()
                     .uri("/admin/realms/{realm}/users", normalizedRealm)
@@ -172,7 +173,7 @@ class HttpKeycloakAdminClient(
 
         val roleRepresentations = normalizedRoles.map { role ->
             execute(
-                context = "Failed to resolve role $role in realm $normalizedRealm",
+                ctx = "Failed to resolve role $role in realm $normalizedRealm",
                 block = {
                     webClient.get()
                         .uri("/admin/realms/{realm}/roles/{role}", normalizedRealm, role)
@@ -199,7 +200,7 @@ class HttpKeycloakAdminClient(
         }
 
         execute(
-            context = "Failed to assign roles to user $normalizedUserId in realm $normalizedRealm",
+            ctx = "Failed to assign roles to user $normalizedUserId in realm $normalizedRealm",
             block = {
                 webClient.post()
                     .uri(
@@ -233,7 +234,7 @@ class HttpKeycloakAdminClient(
         val accessToken = obtainAccessToken()
 
         execute(
-            context = "Failed to trigger execute-actions-email for user $normalizedUserId " +
+            ctx = "Failed to trigger execute-actions-email for user $normalizedUserId " +
                 "in realm $normalizedRealm with actions $actions",
             block = {
                 webClient.put()
@@ -277,7 +278,7 @@ class HttpKeycloakAdminClient(
                 .with("client_secret", keycloakProps.clientSecret)
 
             val response = execute(
-                context = "Failed to obtain access token for realm ${keycloakProps.realm}",
+                ctx = "Failed to obtain access token for realm ${keycloakProps.realm}",
                 block = {
                     webClient.post()
                         .uri("/realms/{realm}/protocol/openid-connect/token", keycloakProps.realm)
@@ -320,31 +321,14 @@ class HttpKeycloakAdminClient(
         return userId
     }
 
-    private fun <T> execute(context: String, block: () -> T): T {
+    private fun <T> execute(ctx: String, block: () -> T): T {
         return try {
             block()
         } catch (e: WebClientResponseException) {
-            throw KeycloakAdminClientException(context, e.statusCode, e)
+            throw KeycloakAdminClientException(ctx, e.statusCode, e)
         } catch (e: WebClientRequestException) {
-            throw KeycloakAdminClientException(context, e)
+            throw KeycloakAdminClientException(ctx, e)
         }
-    }
-
-    private fun normalizeString(string: String, message: String, lowercase: Boolean = false): String {
-        var normalized = string.trim()
-        if (lowercase) {
-            normalized = normalized.lowercase(Locale.ROOT)
-        }
-        require(normalized.isNotBlank()) { message }
-        return normalized
-    }
-
-    private fun normalizeStrings(strings: Set<String>, message: String): Set<String> {
-        val normalized = strings
-            .map { it.trim() }
-            .filterTo(mutableSetOf()) { it.isNotBlank() }
-        require(normalized.isNotEmpty()) { message }
-        return normalized
     }
 
     private data class TokenResponse(
