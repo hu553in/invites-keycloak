@@ -9,6 +9,7 @@ import kotlin.test.Test
 class TokenServiceTest {
 
     private val inviteProps = InviteProps(
+        publicBaseUrl = "https://app.example.com",
         expiry = mock(),
         realms = mock(),
         token = InviteProps.TokenProps(

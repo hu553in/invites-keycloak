@@ -12,6 +12,8 @@ interface InviteRepository : JpaRepository<InviteEntity, UUID> {
 
     fun findAllByOrderByCreatedAtDesc(): List<InviteEntity>
 
+    fun existsByRealmAndEmailAndRevokedFalse(realm: String, email: String): Boolean
+
     @Query(
         """
         select invite
@@ -37,4 +39,6 @@ interface InviteRepository : JpaRepository<InviteEntity, UUID> {
         """
     )
     fun findValidByIdForUpdate(id: UUID, now: Instant): Optional<InviteEntity>
+
+    fun deleteByExpiresAtBefore(cutoff: Instant): Long
 }

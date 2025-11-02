@@ -11,6 +11,7 @@ spring:
               LOG_QUERIES_SLOWER_THAN_MS: 100
 
 invite:
+  public-base-url: https://app.example.com
   token:
     secret: example-very-long-secret
 
