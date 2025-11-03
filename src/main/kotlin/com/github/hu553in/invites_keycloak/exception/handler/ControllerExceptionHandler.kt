@@ -20,7 +20,7 @@ class ControllerExceptionHandler {
         log.warn("${InvalidInviteException::class.simpleName} exception occurred", e)
         model.addAttribute("error_message", "Invite is invalid")
         resp.status = HttpStatus.UNAUTHORIZED.value()
-        return "public/generic_error"
+        return "generic_error"
     }
 
     @ExceptionHandler(KeycloakAdminClientException::class)
@@ -32,7 +32,7 @@ class ControllerExceptionHandler {
         log.error("${KeycloakAdminClientException::class.simpleName} exception occurred", e)
         model.addAttribute("error_message", "Service is not available")
         resp.status = HttpStatus.SERVICE_UNAVAILABLE.value()
-        return "public/generic_error"
+        return "generic_error"
     }
 
     @ExceptionHandler(Exception::class)
@@ -40,6 +40,6 @@ class ControllerExceptionHandler {
         log.error("Unknown exception led to 500 response code", e)
         model.addAttribute("error_message", "Unknown error")
         resp.status = HttpStatus.INTERNAL_SERVER_ERROR.value()
-        return "public/generic_error"
+        return "generic_error"
     }
 }

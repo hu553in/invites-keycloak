@@ -86,7 +86,7 @@ class InvitePublicControllerTest(
         // assert
         result.andExpect {
             status { isConflict() }
-            view { name("public/generic_error") }
+            view { name("generic_error") }
             model {
                 attribute("error_message", "Account already exists")
                 attribute(
@@ -114,7 +114,7 @@ class InvitePublicControllerTest(
         // assert
         result.andExpect {
             status { isUnauthorized() }
-            view { name("public/generic_error") }
+            view { name("generic_error") }
             model { attribute("error_message", "Invite is invalid") }
         }
 
@@ -138,7 +138,7 @@ class InvitePublicControllerTest(
         // assert
         result.andExpect {
             status { isServiceUnavailable() }
-            view { name("public/generic_error") }
+            view { name("generic_error") }
             model { attribute("error_message", "Service is not available") }
         }
 
@@ -167,7 +167,7 @@ class InvitePublicControllerTest(
         // assert
         result.andExpect {
             status { isInternalServerError() }
-            view { name("public/generic_error") }
+            view { name("generic_error") }
             model { attribute("error_message", "Unknown error") }
         }
 

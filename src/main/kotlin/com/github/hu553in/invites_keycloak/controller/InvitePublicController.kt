@@ -43,7 +43,7 @@ class InvitePublicController(
                     "If you believe this is an error, please contact your administrator."
             )
             resp.status = HttpStatus.CONFLICT.value()
-            return "public/generic_error"
+            return "generic_error"
         }
 
         val userId = keycloakAdminClient.createUser(realm, email, email)
