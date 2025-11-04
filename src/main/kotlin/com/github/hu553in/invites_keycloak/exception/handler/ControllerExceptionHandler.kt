@@ -1,6 +1,7 @@
 package com.github.hu553in.invites_keycloak.exception.handler
 
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
+import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
 import com.github.hu553in.invites_keycloak.util.logger
 import jakarta.servlet.http.HttpServletResponse
@@ -32,6 +33,18 @@ class ControllerExceptionHandler {
         log.error("${KeycloakAdminClientException::class.simpleName} exception occurred", e)
         model.addAttribute("error_message", "Service is not available")
         resp.status = HttpStatus.SERVICE_UNAVAILABLE.value()
+        return "generic_error"
+    }
+
+    @ExceptionHandler(InviteNotFoundException::class)
+    fun handleInviteNotFound(
+        e: InviteNotFoundException,
+        model: Model,
+        resp: HttpServletResponse
+    ): String {
+        log.warn("${InviteNotFoundException::class.simpleName} exception occurred", e)
+        model.addAttribute("error_message", e.message ?: "Invite is not found")
+        resp.status = HttpStatus.NOT_FOUND.value()
         return "generic_error"
     }
 
