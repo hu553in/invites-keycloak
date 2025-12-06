@@ -40,6 +40,8 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
   - Client secret: copy to `KEYCLOAK_CLIENT_SECRET`.
 - Role: realm role `invite-admin` (or `KEYCLOAK_REQUIRED_ROLE`) granted to the user who will sign in to the
   admin UI.
+- Token claims: include roles in the ID token. Attach the built-in `roles` client scope or add a mapper for
+  `realm_access.roles` (multivalued, in ID token, access token, and userinfo).
 
 ### Reverse proxy / HTTPS termination
 

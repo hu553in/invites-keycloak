@@ -33,7 +33,7 @@ spring:
           keycloak:
             client-id: ${keycloak.client-id}
             client-secret: ${keycloak.client-secret}
-            scope: openid, profile, email
+            scope: openid, profile, email, roles
         provider:
           keycloak:
             issuer-uri: ${keycloak.url}/realms/${keycloak.realm}
