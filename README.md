@@ -29,6 +29,18 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 - Mail: SMTP settings optional; when absent, invite emails are skipped with a warning, links still displayed.
 - Database: PostgreSQL reachable via JDBC; Flyway runs on startup to create the `invite` table and indexes.
 
+### Keycloak setup (all environments)
+
+- Realm: use `master` or set `KEYCLOAK_REALM` to match.
+- Client: confidential client named `invites-keycloak` (or set `KEYCLOAK_CLIENT_ID`).
+  - Standard Flow enabled.
+  - Redirect URIs: `http://<app-host>/login/oauth2/code/keycloak`
+    - Example for local: `http://localhost:8080/login/oauth2/code/keycloak`.
+  - Web Origins: `http://<app-host>` (add the scheme/port the app is served on).
+  - Client secret: copy to `KEYCLOAK_CLIENT_SECRET`.
+- Role: realm role `invite-admin` (or `KEYCLOAK_REQUIRED_ROLE`) granted to the user who will sign in to the
+  admin UI.
+
 ## Local development
 
 - Prerequisites: Java 21, Docker, Docker Compose plugin, and [lefthook](https://github.com/evilmartians/lefthook).
@@ -36,6 +48,13 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 - Run the app locally (starts Postgres via Compose, then Boot): `make run_local`.
 - Fast dev loop: keep `docker compose up -d db` running; use `./gradlew bootRun` for hot restarts.
 - Tests: `make test` (unit/integration). Full lint + coverage: `make check`.
+
+### Routes and UI
+
+- `/` redirects to `/admin/invite` (login required).
+- `/admin/invite/**` is the admin UI to create/resend/revoke invites; protected via Keycloak OAuth2 login.
+- `/invite/{realm}/{token}` is public: validates the token, creates the Keycloak user, assigns roles, sends
+  required-actions email, and marks the invite used.
 
 ## Deploying to a VPS with Docker
 

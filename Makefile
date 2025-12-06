@@ -5,7 +5,9 @@ build_image:
 
 .PHONY: run_docker
 run_docker:
-	cp --update=none .env.example.docker .env
+	@if [ ! -e .env ]; then \
+	    cp .env.example.docker .env; \
+	fi
 	docker compose up -d --wait
 
 .PHONY: run_docker_rebuild
@@ -27,7 +29,9 @@ logs_docker:
 
 .PHONY: run_local
 run_local:
-	cp --update=none .env.example.local .env
+	@if [ ! -e .env ]; then \
+	    cp .env.example.local .env; \
+	fi
 	docker compose up -d --wait db
 	./gradlew bootRun
 
