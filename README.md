@@ -42,6 +42,9 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
   admin UI.
 - Token claims: include roles in the ID token. Attach the built-in `roles` client scope or add a mapper for
   `realm_access.roles` (multivalued, in ID token, access token, and userinfo).
+- Service account: enable it for the client and grant realm-management roles needed by the backend admin API
+  (minimum: `manage-users`, `view-realm` and `manage-realm`). Missing these will cause 403s when listing
+  roles or creating users.
 
 ### Reverse proxy / HTTPS termination
 
@@ -97,6 +100,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 
 ## Future roadmap
 
+- [ ] Fix all styling issues
 - [ ] Add detailed docs
 - [ ] Cover everything with logs
 - [ ] Add metrics

@@ -4,11 +4,12 @@ import com.github.hu553in.invites_keycloak.client.KeycloakAdminClient
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
 import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.RoleFetchResult
 import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.addExpiryMetadata
-import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.defaultRoles
+import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.configuredRoles
 import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.ensureFormPresent
 import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.nameOrSystem
 import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.populateFormMetadata
 import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.resolveRealmOrDefault
+import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.rolesForView
 import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.validateExpiryMinutes
 import com.github.hu553in.invites_keycloak.controller.InviteAdminFormSupport.validateRealm
 import com.github.hu553in.invites_keycloak.controller.InviteAdminMappings.buildInviteLink
@@ -86,7 +87,7 @@ class InviteAdminController(
             val realmForForm = validatedRealm ?: resolveRealmOrDefault(inviteForm.realm, inviteProps)
             inviteForm.realm = realmForForm
             if (inviteForm.roles.isEmpty()) {
-                inviteForm.roles.addAll(defaultRoles(realmForForm, inviteProps))
+                inviteForm.roles.addAll(configuredRoles(realmForForm, inviteProps))
             }
             prepareForm(model, realmForForm)
             "admin/invite/new"
@@ -252,12 +253,19 @@ class InviteAdminController(
 
     private fun prepareForm(model: Model, realm: String) {
         val roleFetch = fetchRoles(realm)
-        ensureFormPresent(model, realm, inviteProps, rolesAvailable = roleFetch.available)
+        val roleOptions = rolesForView(realm, inviteProps, roleFetch)
+        ensureFormPresent(
+            model,
+            realm,
+            inviteProps,
+            rolesAvailable = roleFetch.available,
+            allowedRoles = roleOptions.toSet()
+        )
         if (!roleFetch.available) {
             val form = model.getAttribute("inviteForm") as? InviteForm
             form?.roles?.clear()
         }
-        populateFormMetadata(model, realm, inviteProps, roleFetch)
+        populateFormMetadata(model, realm, inviteProps, roleFetch, roleOptions)
     }
 
     private fun fetchRoles(realm: String): RoleFetchResult {
@@ -289,12 +297,12 @@ class InviteAdminController(
             }
             .getOrNull()
 
-        val sanitized = requestedRoles
+        val sanitizedRoles = requestedRoles
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .toCollection(LinkedHashSet())
 
-        val rolesToUse = if (sanitized.isEmpty()) defaultRoles(realm, inviteProps) else sanitized
+        val rolesToUse = if (sanitizedRoles.isEmpty()) configuredRoles(realm, inviteProps) else sanitizedRoles
         if (rolesToUse.isEmpty()) {
             bindingResult.rejectValue("roles", "roles.empty", "At least one role must be selected")
         }

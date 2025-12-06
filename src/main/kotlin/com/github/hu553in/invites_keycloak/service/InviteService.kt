@@ -73,7 +73,7 @@ class InviteService(
         val normalizedRoles = normalizeStrings(
             strings = roles,
             message = "Invite must contain at least one role (either provided or realm default)",
-            default = realmConfig.defaultRoles
+            default = realmConfig.roles
         )
 
         val invite = InviteEntity(

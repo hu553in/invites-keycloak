@@ -39,7 +39,7 @@ data class InviteProps(
     @Validated
     data class RealmProps(
         @field:NotEmpty
-        val defaultRoles: Set<@NotBlank String>
+        val roles: Set<@NotBlank String>
     )
 
     @Validated

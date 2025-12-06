@@ -211,7 +211,6 @@
                 <label>
                     <input type="checkbox" th:field="*{roles}" th:value="${role}" th:disabled="${!rolesAvailable}"/>
                     <span th:text="${role}">realm-role</span>
-                    <small th:if="${defaultRoles.contains(role)}">(default)</small>
                 </label>
             </div>
         </div>

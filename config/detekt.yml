@@ -19,6 +19,8 @@ complexity:
     active: false
   NamedArguments:
     active: true
+  TooManyFunctions:
+    active: false
 
 style:
   MagicNumber:

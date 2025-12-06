@@ -62,7 +62,7 @@ class InviteServiceTest(
         assertThat(validated.id).isEqualTo(saved.id)
         assertThat(validated.email).isEqualTo("user@example.com")
         assertThat(validated.roles).containsExactlyInAnyOrderElementsOf(
-            inviteProps.realms.getValue("master").defaultRoles
+            inviteProps.realms.getValue("master").roles
         )
         assertThat(validated.uses).isZero()
         assertThat(rawToken).contains(".")

@@ -19,23 +19,36 @@ object InviteAdminFormSupport {
         model.addAttribute("expiryMaxMinutes", inviteProps.expiry.max.toMinutes())
     }
 
-    fun ensureFormPresent(model: Model, realm: String, inviteProps: InviteProps, rolesAvailable: Boolean = true) {
+    fun ensureFormPresent(
+        model: Model,
+        realm: String,
+        inviteProps: InviteProps,
+        rolesAvailable: Boolean = true,
+        allowedRoles: Set<String>? = null
+    ) {
+        val configuredRoles = filteredConfiguredRoles(realm, inviteProps, allowedRoles)
+
         if (!model.containsAttribute("inviteForm")) {
-            model.addAttribute("inviteForm", createDefaultForm(realm, inviteProps, rolesAvailable))
+            model.addAttribute("inviteForm", createDefaultForm(realm, inviteProps, rolesAvailable, configuredRoles))
             return
         }
 
         val attribute = model.getAttribute("inviteForm")
         if (attribute is InviteAdminController.InviteForm) {
             attribute.realm = realm
-            if (rolesAvailable && attribute.roles.isEmpty()) {
-                attribute.roles.addAll(defaultRoles(realm, inviteProps))
+            if (rolesAvailable) {
+                if (allowedRoles != null) {
+                    attribute.roles.retainAll(allowedRoles)
+                }
+                if (attribute.roles.isEmpty()) {
+                    attribute.roles.addAll(configuredRoles)
+                }
             }
             if (!rolesAvailable) {
                 attribute.roles.clear()
             }
         } else {
-            model.addAttribute("inviteForm", createDefaultForm(realm, inviteProps, rolesAvailable))
+            model.addAttribute("inviteForm", createDefaultForm(realm, inviteProps, rolesAvailable, configuredRoles))
         }
     }
 
@@ -43,16 +56,15 @@ object InviteAdminFormSupport {
         model: Model,
         realm: String,
         inviteProps: InviteProps,
-        roleFetch: RoleFetchResult
+        roleFetch: RoleFetchResult,
+        roleOptions: List<String>
     ) {
         val availableRealms = inviteProps.realms.keys.toList()
-        val defaultsForView = if (roleFetch.available) defaultRoles(realm, inviteProps) else emptySet()
 
         model.addAttribute("realmOptions", availableRealms)
         model.addAttribute("selectedRealm", realm)
-        model.addAttribute("roleOptions", roleFetch.roles)
+        model.addAttribute("roleOptions", roleOptions)
         model.addAttribute("rolesFetchError", roleFetch.errorMessage)
-        model.addAttribute("defaultRoles", defaultsForView)
         model.addAttribute("rolesAvailable", roleFetch.available)
         addExpiryMetadata(model, inviteProps)
     }
@@ -110,24 +122,47 @@ object InviteAdminFormSupport {
     fun createDefaultForm(
         realm: String,
         inviteProps: InviteProps,
-        rolesAvailable: Boolean = true
+        rolesAvailable: Boolean = true,
+        configuredOverride: Set<String>? = null
     ): InviteAdminController.InviteForm {
-        val defaults = if (rolesAvailable) defaultRoles(realm, inviteProps) else emptySet()
+        val configured = if (rolesAvailable) configuredOverride ?: configuredRoles(realm, inviteProps) else emptySet()
         return InviteAdminController.InviteForm(
             realm = realm,
             email = "",
             expiryMinutes = inviteProps.expiry.default.toMinutes(),
             maxUses = 1,
-            roles = LinkedHashSet(defaults)
+            roles = LinkedHashSet(configured)
         )
     }
 
-    fun defaultRoles(realm: String, inviteProps: InviteProps): Set<String> {
-        val configured = inviteProps.realms[realm]?.defaultRoles.orEmpty()
-        return configured
+    fun configuredRoles(realm: String, inviteProps: InviteProps): Set<String> {
+        return inviteProps.realms[realm]
+            ?.roles
+            .orEmpty()
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .toCollection(LinkedHashSet())
+    }
+
+    fun rolesForView(realm: String, inviteProps: InviteProps, roleFetch: RoleFetchResult): List<String> {
+        if (!roleFetch.available) return emptyList()
+
+        val configuredRoles = configuredRoles(realm, inviteProps)
+        val keycloakRoles = roleFetch.roles.toSet()
+        return configuredRoles.filter { keycloakRoles.contains(it) }
+    }
+
+    private fun filteredConfiguredRoles(
+        realm: String,
+        inviteProps: InviteProps,
+        allowedRoles: Set<String>?
+    ): Set<String> {
+        val configuredRoles = configuredRoles(realm, inviteProps)
+        return if (allowedRoles != null) {
+            configuredRoles.filterTo(LinkedHashSet()) { allowedRoles.contains(it) }
+        } else {
+            configuredRoles
+        }
     }
 
     fun Authentication?.nameOrSystem(): String {

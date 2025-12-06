@@ -66,7 +66,7 @@ invite:
     max: 30d
   realms:
     master:
-      default-roles:
+      roles:
         - default-admin-roles
   token:
     secret: ${INVITE_TOKEN_SECRET}
