@@ -2,6 +2,7 @@ package com.github.hu553in.invites_keycloak.service
 
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
 import com.github.hu553in.invites_keycloak.entity.InviteEntity
+import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.repo.InviteRepository
@@ -49,16 +50,18 @@ class InviteService(
         val minExpiresAt = now.plus(inviteProps.expiry.min)
         val maxExpiresAt = now.plus(inviteProps.expiry.max)
 
+        val normalizedEmail = normalizeString(email, "email must not be blank", true)
+        inviteRepository.revokeExpired(normalizedRealm, normalizedEmail, now)
+        inviteRepository.revokeOverused(normalizedRealm, normalizedEmail)
+
         val targetExpiresAt = expiresAt ?: now.plus(inviteProps.expiry.default)
         require(!targetExpiresAt.isBefore(minExpiresAt) && !targetExpiresAt.isAfter(maxExpiresAt)) {
             "expiresAt must be between ${inviteProps.expiry.min} and ${inviteProps.expiry.max} from now " +
                 "(accepted: $minExpiresAt .. $maxExpiresAt)"
         }
 
-        // TODO: looks like expired invites also should not cause conflicts?
-        val normalizedEmail = normalizeString(email, "email must not be blank", true)
-        require(!inviteRepository.existsByRealmAndEmailAndRevokedFalse(normalizedRealm, normalizedEmail)) {
-            "Active invite already exists for $normalizedEmail in realm $normalizedRealm"
+        if (inviteRepository.existsActiveByRealmAndEmail(normalizedRealm, normalizedEmail, now)) {
+            throw ActiveInviteExistsException(normalizedRealm, normalizedEmail)
         }
 
         val normalizedCreatedBy = normalizeString(createdBy, "createdBy must not be blank")
@@ -114,7 +117,7 @@ class InviteService(
     }
 
     @Transactional
-    fun resendInvite(inviteId: UUID, createdBy: String): CreatedInvite {
+    fun resendInvite(inviteId: UUID, expiresAt: Instant, createdBy: String): CreatedInvite {
         val current = inviteRepository.findById(inviteId)
             .orElseThrow { InviteNotFoundException(inviteId) }
 
@@ -127,7 +130,7 @@ class InviteService(
         return createInvite(
             realm = current.realm,
             email = current.email,
-            // TODO: expiration must be configured in form
+            expiresAt = expiresAt,
             maxUses = current.maxUses,
             roles = current.roles,
             createdBy = createdBy

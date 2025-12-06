@@ -1,13 +1,13 @@
 [versions]
 kotlin = "2.2.21"
-spring-boot = "3.5.7"
+spring-boot = "3.5.8"
 spring-dependency-management = "1.1.7"
 kover = "0.9.3"
 detekt = "1.23.8"
 versions = "0.53.0"
 spring-dotenv = "4.0.0"
-wiremock = "3.13.1"
-springdoc = "2.8.13"
+wiremock = "3.13.2"
+springdoc = "2.8.14"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

@@ -34,3 +34,7 @@ run_local:
 .PHONY: check
 check:
 	./gradlew check
+
+.PHONY: test
+test:
+	./gradlew test

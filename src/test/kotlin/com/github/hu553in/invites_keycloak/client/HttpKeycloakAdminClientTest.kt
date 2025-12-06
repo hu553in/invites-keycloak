@@ -5,8 +5,11 @@ import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientExceptio
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
+import com.github.tomakehurst.wiremock.client.WireMock.delete
+import com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.noContent
 import com.github.tomakehurst.wiremock.client.WireMock.okJson
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
@@ -222,6 +225,77 @@ class HttpKeycloakAdminClientTest {
         server.verify(1, postRequestedFor(urlEqualTo("/realms/master/protocol/openid-connect/token")))
     }
 
+    @Test
+    fun `listRealmRoles returns sorted unique names`() {
+        // arrange
+        server.stubFor(
+            get(urlPathEqualTo("/admin/realms/invite-realm/roles"))
+                .withQueryParam("first", equalTo("0"))
+                .withQueryParam("max", equalTo("1000"))
+                .withHeader("Authorization", equalTo("Bearer admin-token"))
+                .willReturn(
+                    okJson(
+                        """
+                        [
+                            {"id":"1", "name":"viewer"},
+                            {"id":"2", "name":"admin"},
+                            {"id":"3", "name":"viewer"}
+                        ]
+                        """.trimIndent()
+                    )
+                )
+        )
+
+        // act
+        val roles = client.listRealmRoles("invite-realm")
+
+        // assert
+        assertThat(roles).containsExactly("admin", "viewer")
+    }
+
+    @Test
+    fun `listRealmRoles paginates when realm has many roles`() {
+        // arrange
+        server.stubFor(
+            get(urlPathEqualTo("/admin/realms/huge-realm/roles"))
+                .withQueryParam("first", equalTo("0"))
+                .withQueryParam("max", equalTo("1000"))
+                .withHeader("Authorization", equalTo("Bearer admin-token"))
+                .willReturn(okJson(roleArrayJson(1000, "role")))
+        )
+        server.stubFor(
+            get(urlPathEqualTo("/admin/realms/huge-realm/roles"))
+                .withQueryParam("first", equalTo("1000"))
+                .withQueryParam("max", equalTo("1000"))
+                .withHeader("Authorization", equalTo("Bearer admin-token"))
+                .willReturn(okJson("""[{"id":"x","name":"extra-role"}]"""))
+        )
+
+        // act
+        val roles = client.listRealmRoles("huge-realm")
+
+        // assert
+        assertThat(roles).contains("role-0", "role-999", "extra-role")
+        assertThat(roles).doesNotHaveDuplicates()
+    }
+
+    @Test
+    fun `deleteUser removes user`() {
+        // arrange
+        stubToken()
+        server.stubFor(
+            delete(urlEqualTo("/admin/realms/master/users/uid"))
+                .withHeader("Authorization", equalTo("Bearer admin-token"))
+                .willReturn(noContent())
+        )
+
+        // act
+        client.deleteUser("master", "uid")
+
+        // assert
+        server.verify(1, deleteRequestedFor(urlEqualTo("/admin/realms/master/users/uid")))
+    }
+
     private fun stubToken(token: String = "admin-token") {
         server.stubFor(
             post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
@@ -231,5 +305,12 @@ class HttpKeycloakAdminClientTest {
                 .withRequestBody(containing("client_secret=s3cr3t"))
                 .willReturn(okJson("""{"access_token":"$token","expires_in":300}"""))
         )
+    }
+
+    private fun roleArrayJson(size: Int, prefix: String): String {
+        val body = (0 until size).joinToString(",", prefix = "[", postfix = "]") { i ->
+            """{"id":"$i","name":"$prefix-$i"}"""
+        }
+        return body
     }
 }

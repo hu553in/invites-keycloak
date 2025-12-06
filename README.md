@@ -8,6 +8,7 @@ Spring Boot service that streamlines issuing invitation links for Keycloak realm
 
 > Check [libs.versions.toml](gradle/libs.versions.toml) and [docker-compose.yml](docker-compose.yml) for details.
 
+- Java 21
 - Kotlin 2
 - Gradle 9
 - Spring Boot 3
@@ -15,12 +16,15 @@ Spring Boot service that streamlines issuing invitation links for Keycloak realm
 
 ## Roadmap
 
+- [x] Mask sensitive data in logs
 - [ ] Implement an MVP
 - [ ] Fill readme
+- [ ] Add detailed docs
 - [ ] Handle all TODOs
 - [ ] Metrics
 - [ ] OpenTelemetry
 - [ ] Log all requests
+- [ ] Cache Keycloak roles or fall back to configured defaults when Keycloak is unavailable
 - [ ] Rate limiting
 - [ ] Configure realms for invites through environment variables
 - [ ] Internationalization

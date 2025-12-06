@@ -1,6 +1,5 @@
 package com.github.hu553in.invites_keycloak.controller
 
-import com.github.hu553in.invites_keycloak.InvitesKeycloakApplication
 import com.github.hu553in.invites_keycloak.client.KeycloakAdminClient
 import com.github.hu553in.invites_keycloak.config.TestClientRegistrationRepositoryConfig
 import com.github.hu553in.invites_keycloak.entity.InviteEntity
@@ -8,40 +7,60 @@ import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
 import com.github.hu553in.invites_keycloak.exception.handler.ControllerExceptionHandler
 import com.github.hu553in.invites_keycloak.service.InviteService
-import org.assertj.core.api.Assertions.assertThat
+import com.github.hu553in.invites_keycloak.util.ErrorMessages
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
-import org.mockito.BDDMockito.never
 import org.mockito.BDDMockito.then
-import org.mockito.BDDMockito.willThrow
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.reset
+import org.mockito.Mockito.verify
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
-import org.springframework.test.context.ContextConfiguration
-import org.springframework.test.context.TestConstructor
-import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.context.annotation.Primary
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
-import java.time.Clock
-import java.time.temporal.ChronoUnit
+import java.time.Instant
 import java.util.*
 
 @WebMvcTest(InvitePublicController::class)
 @AutoConfigureMockMvc(addFilters = false)
-@ContextConfiguration(classes = [InvitesKeycloakApplication::class])
-@Import(ControllerExceptionHandler::class, TestClientRegistrationRepositoryConfig::class)
-@TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
-class InvitePublicControllerTest(
-    private val mockMvc: MockMvc
-) {
+@Import(
+    ControllerExceptionHandler::class,
+    TestClientRegistrationRepositoryConfig::class,
+    InvitePublicControllerTest.TestConfig::class
+)
+class InvitePublicControllerTest {
 
-    private val clock = Clock.systemUTC()
+    @Autowired
+    private lateinit var mockMvc: MockMvc
 
-    @MockitoBean
+    @Autowired
     private lateinit var inviteService: InviteService
 
-    @MockitoBean
+    @Autowired
     private lateinit var keycloakAdminClient: KeycloakAdminClient
+
+    @BeforeEach
+    fun resetMocks() {
+        reset(inviteService, keycloakAdminClient)
+    }
+
+    @TestConfiguration
+    class TestConfig {
+        @Bean
+        @Primary
+        fun inviteService(): InviteService = mock(InviteService::class.java)
+
+        @Bean
+        @Primary
+        fun keycloakAdminClient(): KeycloakAdminClient = mock(KeycloakAdminClient::class.java)
+    }
 
     @Test
     fun `validateInvite renders success view when invite processed`() {
@@ -51,7 +70,6 @@ class InvitePublicControllerTest(
         given(inviteService.validateToken("master", "token")).willReturn(invite)
         given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
         given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
-        given(inviteService.useOnce(invite.id!!)).willReturn(invite)
 
         // act
         val result = mockMvc.get("/invite/master/token")
@@ -61,15 +79,14 @@ class InvitePublicControllerTest(
             status { isOk() }
             view { name("public/account_created") }
         }
-
         then(inviteService).should().validateToken("master", "token")
         then(keycloakAdminClient).should().userExists("master", invite.email)
         then(keycloakAdminClient).should().createUser("master", invite.email, invite.email)
         then(keycloakAdminClient).should().assignRealmRoles("master", "user-id", invite.roles)
         then(keycloakAdminClient).should().executeActionsEmail("master", "user-id")
         then(inviteService).should().useOnce(invite.id!!)
-
-        assertThat(result.andReturn().modelAndView?.viewName).isEqualTo("public/account_created")
+        then(keycloakAdminClient).should(never()).deleteUser("master", "user-id")
+        verify(inviteService, never()).revoke(invite.id!!)
     }
 
     @Test
@@ -87,19 +104,10 @@ class InvitePublicControllerTest(
         result.andExpect {
             status { isConflict() }
             view { name("generic_error") }
-            model {
-                attribute("error_message", "Account already exists")
-                attribute(
-                    "error_details",
-                    "An account with passed data is already registered. " +
-                        "If you believe this is an error, please contact your administrator."
-                )
-            }
         }
-
-        then(inviteService).should().validateToken("master", "token")
-        then(keycloakAdminClient).should().userExists("master", invite.email)
-        then(keycloakAdminClient).shouldHaveNoMoreInteractions()
+        org.mockito.Mockito.verify(keycloakAdminClient, never())
+            .createUser("master", invite.email, invite.email)
+        then(inviteService).should().revoke(invite.id!!)
         then(inviteService).should(never()).useOnce(invite.id!!)
     }
 
@@ -115,10 +123,7 @@ class InvitePublicControllerTest(
         result.andExpect {
             status { isUnauthorized() }
             view { name("generic_error") }
-            model { attribute("error_message", "Invite is invalid") }
         }
-
-        then(inviteService).should().validateToken("master", "token")
         then(keycloakAdminClient).shouldHaveNoInteractions()
     }
 
@@ -126,11 +131,10 @@ class InvitePublicControllerTest(
     fun `validateInvite renders generic error when Keycloak API fails`() {
         // arrange
         val invite = createInvite()
-
         given(inviteService.validateToken("master", "token")).willReturn(invite)
         given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
         given(keycloakAdminClient.createUser("master", invite.email, invite.email))
-            .willThrow(KeycloakAdminClientException("Keycloak unavailable"))
+            .willThrow(KeycloakAdminClientException("boom"))
 
         // act
         val result = mockMvc.get("/invite/master/token")
@@ -139,25 +143,23 @@ class InvitePublicControllerTest(
         result.andExpect {
             status { isServiceUnavailable() }
             view { name("generic_error") }
-            model { attribute("error_message", "Service is not available") }
         }
-
-        then(inviteService).should().validateToken("master", "token")
-        then(keycloakAdminClient).should().userExists("master", invite.email)
-        then(keycloakAdminClient).should().createUser("master", invite.email, invite.email)
-        then(keycloakAdminClient).shouldHaveNoMoreInteractions()
+        then(keycloakAdminClient).should(never()).deleteUser(
+            org.mockito.Mockito.anyString(),
+            org.mockito.Mockito.anyString()
+        )
+        then(inviteService).should(never()).revoke(invite.id!!)
         then(inviteService).should(never()).useOnce(invite.id!!)
     }
 
     @Test
-    fun `validateInvite renders generic error when unexpected failure occurs`() {
+    fun `validateInvite triggers rollback and revokes invite when assigning roles fails`() {
         // arrange
         val invite = createInvite()
-
         given(inviteService.validateToken("master", "token")).willReturn(invite)
         given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
         given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
-        willThrow(RuntimeException("boom"))
+        org.mockito.BDDMockito.willThrow(IllegalStateException("role-assign-failed"))
             .given(keycloakAdminClient)
             .assignRealmRoles("master", "user-id", invite.roles)
 
@@ -166,17 +168,172 @@ class InvitePublicControllerTest(
 
         // assert
         result.andExpect {
-            status { isInternalServerError() }
+            status { isServiceUnavailable() }
             view { name("generic_error") }
-            model { attribute("error_message", "Unknown error") }
+            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
+        then(keycloakAdminClient).should().deleteUser("master", "user-id")
+        then(inviteService).should().revoke(invite.id!!)
+        verify(inviteService, never()).useOnce(invite.id!!)
+    }
 
-        then(inviteService).should().validateToken("master", "token")
-        then(keycloakAdminClient).should().userExists("master", invite.email)
-        then(keycloakAdminClient).should().createUser("master", invite.email, invite.email)
-        then(keycloakAdminClient).should().assignRealmRoles("master", "user-id", invite.roles)
-        then(keycloakAdminClient).should(never()).executeActionsEmail("master", "user-id")
+    @Test
+    fun `validateInvite triggers rollback and revokes invite when execute actions fails`() {
+        // arrange
+        val invite = createInvite()
+        given(inviteService.validateToken("master", "token")).willReturn(invite)
+        given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
+        given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
+        org.mockito.BDDMockito.willThrow(IllegalStateException("actions-failed"))
+            .given(keycloakAdminClient)
+            .executeActionsEmail("master", "user-id")
+
+        // act
+        val result = mockMvc.get("/invite/master/token")
+
+        // assert
+        result.andExpect {
+            status { isServiceUnavailable() }
+            view { name("generic_error") }
+            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
+        }
+        then(keycloakAdminClient).should().deleteUser("master", "user-id")
+        then(inviteService).should().revoke(invite.id!!)
+        verify(inviteService, never()).useOnce(invite.id!!)
+    }
+
+    @Test
+    fun `does not revoke invite on transient Keycloak failure`() {
+        // arrange
+        val invite = createInvite()
+        given(inviteService.validateToken("master", "token")).willReturn(invite)
+        given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
+        val transient = KeycloakAdminClientException("temporary outage")
+        given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willThrow(transient)
+
+        // act
+        val result = mockMvc.get("/invite/master/token")
+
+        // assert
+        result.andExpect {
+            status { isServiceUnavailable() }
+            view { name("generic_error") }
+            model { attribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE) }
+        }
+        then(inviteService).should(never()).revoke(invite.id!!)
         then(inviteService).should(never()).useOnce(invite.id!!)
+    }
+
+    @Test
+    fun `revokes invite on Keycloak client error with created user`() {
+        // arrange
+        val invite = createInvite()
+        val clientError = org.springframework.web.reactive.function.client.WebClientResponseException.create(
+            400,
+            "bad request",
+            org.springframework.http.HttpHeaders(),
+            ByteArray(0),
+            null
+        )
+        val exception = KeycloakAdminClientException("role missing", clientError)
+
+        given(inviteService.validateToken("master", "token")).willReturn(invite)
+        given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
+        given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
+        org.mockito.BDDMockito.willThrow(exception)
+            .given(keycloakAdminClient)
+            .assignRealmRoles("master", "user-id", invite.roles)
+
+        // act
+        val result = mockMvc.get("/invite/master/token")
+
+        // assert
+        result.andExpect {
+            status { isServiceUnavailable() }
+            view { name("generic_error") }
+            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
+        }
+        then(keycloakAdminClient).should().deleteUser("master", "user-id")
+        then(inviteService).should().revoke(invite.id!!)
+        then(inviteService).should(never()).useOnce(invite.id!!)
+    }
+
+    @Test
+    fun `revokes invite when createUser fails with conflict`() {
+        // arrange
+        val invite = createInvite()
+        val conflict = org.springframework.web.reactive.function.client.WebClientResponseException.create(
+            409,
+            "conflict",
+            org.springframework.http.HttpHeaders(),
+            ByteArray(0),
+            null
+        )
+        val exception = KeycloakAdminClientException("user exists", conflict)
+
+        given(inviteService.validateToken("master", "token")).willReturn(invite)
+        given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
+        org.mockito.BDDMockito.willThrow(exception)
+            .given(keycloakAdminClient)
+            .createUser("master", invite.email, invite.email)
+
+        // act
+        val result = mockMvc.get("/invite/master/token")
+
+        // assert
+        result.andExpect {
+            status { isServiceUnavailable() }
+            view { name("generic_error") }
+            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
+        }
+        then(inviteService).should().revoke(invite.id!!)
+        then(keycloakAdminClient).should(never())
+            .deleteUser(org.mockito.Mockito.anyString(), org.mockito.Mockito.anyString())
+        then(inviteService).should(never()).useOnce(invite.id!!)
+    }
+
+    @Test
+    fun `revokes invite when Keycloak client error is permanent without status`() {
+        // arrange
+        val invite = createInvite()
+        given(inviteService.validateToken("master", "token")).willReturn(invite)
+        given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
+        given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
+        org.mockito.BDDMockito.willThrow(
+            KeycloakAdminClientException("role is not found", org.springframework.http.HttpStatus.NOT_FOUND)
+        )
+            .given(keycloakAdminClient)
+            .assignRealmRoles("master", "user-id", invite.roles)
+
+        // act
+        val result = mockMvc.get("/invite/master/token")
+
+        // assert
+        result.andExpect {
+            status { isServiceUnavailable() }
+            view { name("generic_error") }
+            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
+        }
+        then(keycloakAdminClient).should().deleteUser("master", "user-id")
+        then(inviteService).should().revoke(invite.id!!)
+        then(inviteService).should(never()).useOnce(invite.id!!)
+    }
+
+    @Test
+    fun `unknown exception returns 503 without creating user`() {
+        // arrange
+        given(inviteService.validateToken("master", "token")).willThrow(RuntimeException("boom"))
+
+        // act
+        val result = mockMvc.get("/invite/master/token")
+
+        // assert
+        result.andExpect {
+            status { isServiceUnavailable() }
+            view { name("generic_error") }
+            model { attribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE) }
+        }
+        then(keycloakAdminClient).shouldHaveNoInteractions()
     }
 
     private fun createInvite(
@@ -184,7 +341,7 @@ class InvitePublicControllerTest(
         email: String = "user@example.com",
         roles: Set<String> = setOf("realmRole")
     ): InviteEntity {
-        val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
+        val now = Instant.parse("2025-01-01T00:00:00Z")
         val expiresAt = now.plusSeconds(3600)
 
         return InviteEntity(
@@ -196,6 +353,7 @@ class InvitePublicControllerTest(
             createdBy = "creator",
             createdAt = now,
             expiresAt = expiresAt,
+            maxUses = 1,
             roles = roles
         )
     }

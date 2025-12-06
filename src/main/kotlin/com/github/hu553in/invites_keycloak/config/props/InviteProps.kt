@@ -1,6 +1,7 @@
 package com.github.hu553in.invites_keycloak.config.props
 
 import jakarta.validation.Valid
+import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
@@ -27,7 +28,14 @@ data class InviteProps(
     @field:Valid
     @field:NotNull
     val token: TokenProps,
+    @field:Valid
+    @field:NotNull
+    val cleanup: CleanupProps
 ) {
+    @get:AssertTrue(message = "invite.expiry must satisfy min <= default <= max")
+    val isExpiryRangeValid: Boolean
+        get() = expiry.default >= expiry.min && expiry.default <= expiry.max
+
     @Validated
     data class RealmProps(
         @field:NotEmpty
@@ -61,5 +69,12 @@ data class InviteProps(
         val saltBytes: Int,
         @field:NotBlank
         val macAlgorithm: String
+    )
+
+    @Validated
+    data class CleanupProps(
+        @field:NotNull
+        @field:DurationMin(days = 1)
+        val retention: Duration
     )
 }

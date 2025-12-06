@@ -90,6 +90,58 @@ class InviteRepositoryTest(
     }
 
     @Test
+    fun `existsActiveByRealmAndEmail respects expiry`() {
+        // arrange
+        val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
+        val expiresAt = now.plusSeconds(3600)
+        val invite = InviteEntity(
+            realm = "master",
+            tokenHash = "token-hash",
+            salt = "salt-value",
+            email = "user@example.com",
+            createdBy = "creator",
+            createdAt = now,
+            expiresAt = expiresAt,
+            roles = setOf("realm-admin")
+        )
+        inviteRepository.saveAndFlush(invite)
+
+        // act & assert
+        assertThat(
+            inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", clock.instant())
+        ).isTrue()
+
+        val pastInstant = clock.instant().plusSeconds(7200)
+        assertThat(
+            inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", pastInstant)
+        ).isFalse()
+    }
+
+    @Test
+    fun `existsActiveByRealmAndEmail ignores overused invites`() {
+        // arrange
+        val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
+        val invite = InviteEntity(
+            realm = "master",
+            tokenHash = "token-hash",
+            salt = "salt-value",
+            email = "user@example.com",
+            createdBy = "creator",
+            createdAt = now,
+            expiresAt = now.plusSeconds(3600),
+            maxUses = 1,
+            uses = 1,
+            roles = setOf("realm-admin")
+        )
+        inviteRepository.saveAndFlush(invite)
+
+        // act & assert
+        assertThat(
+            inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", clock.instant())
+        ).isFalse()
+    }
+
+    @Test
     fun `findValidByRealmAndTokenHash does not return overused invite`() {
         // arrange
         val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)

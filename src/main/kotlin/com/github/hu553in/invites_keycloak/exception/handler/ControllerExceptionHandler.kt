@@ -3,6 +3,7 @@ package com.github.hu553in.invites_keycloak.exception.handler
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
+import com.github.hu553in.invites_keycloak.util.ErrorMessages
 import com.github.hu553in.invites_keycloak.util.logger
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpStatus
@@ -19,7 +20,9 @@ class ControllerExceptionHandler {
     @ExceptionHandler(InvalidInviteException::class)
     fun handleInvalidInvite(e: InvalidInviteException, model: Model, resp: HttpServletResponse): String {
         log.warn("${InvalidInviteException::class.simpleName} exception occurred", e)
-        model.addAttribute("error_message", "Invite is invalid")
+        if (!model.containsAttribute("error_message")) {
+            model.addAttribute("error_message", "Invite is invalid")
+        }
         resp.status = HttpStatus.UNAUTHORIZED.value()
         return "generic_error"
     }
@@ -31,7 +34,8 @@ class ControllerExceptionHandler {
         resp: HttpServletResponse
     ): String {
         log.error("${KeycloakAdminClientException::class.simpleName} exception occurred", e)
-        model.addAttribute("error_message", "Service is not available")
+        model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
+        model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
         resp.status = HttpStatus.SERVICE_UNAVAILABLE.value()
         return "generic_error"
     }
@@ -43,16 +47,25 @@ class ControllerExceptionHandler {
         resp: HttpServletResponse
     ): String {
         log.warn("${InviteNotFoundException::class.simpleName} exception occurred", e)
-        model.addAttribute("error_message", e.message ?: "Invite is not found")
+        if (!model.containsAttribute("error_message")) {
+            model.addAttribute("error_message", e.message ?: "Invite is not found")
+        }
         resp.status = HttpStatus.NOT_FOUND.value()
         return "generic_error"
     }
 
     @ExceptionHandler(Exception::class)
     fun handleUnknown(e: Exception, model: Model, resp: HttpServletResponse): String {
-        log.error("Unknown exception led to 500 response code", e)
-        model.addAttribute("error_message", "Unknown error")
-        resp.status = HttpStatus.INTERNAL_SERVER_ERROR.value()
+        log.error("Unknown exception handled at controller layer", e)
+        model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
+        model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
+        resp.status = HttpStatus.SERVICE_UNAVAILABLE.value()
         return "generic_error"
+    }
+}
+
+private fun Model.addAttributeIfAbsent(name: String, value: Any) {
+    if (!this.containsAttribute(name)) {
+        this.addAttribute(name, value)
     }
 }

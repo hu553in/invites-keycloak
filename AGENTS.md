@@ -1,22 +1,38 @@
-# Project Rules
+# Project rules
 
-- Code lives in `src/main/kotlin/com/github/hu553in/invites_keycloak`; tests mirror it under `src/test`.
-- Shared assets sit in `src/main/resources`.
-- Run locally with `make run_local` (note: this will occupy the current shell — run detached if needed).
-- Build, test and verify everything via `make check`.
-- Integration tests rely on Testcontainers.
-- Tests for external API calls rely on WireMock.
-- `make run_docker[_rebuild]` runs the composed stack; `make stop_docker` stops it.
-- Detekt rules are in `config/detekt.yml`.
-- Keep constructor injection.
-- Follow Conventional Commits.
-- Link docs/tests to behavior changes.
-- Never commit secrets.
-- Check dependency health with `./gradlew dependencyUpdates`.
-- Implement any new changes as externally configurable through `.env` -> `docker-compose.yml` -> `application.yml`.
-- Add only really useful tests — no need to test obvious things just to have such tests.
-- Add any new (only important and really useful) rules and conventions to AGENTS.md.
-- Actualize any old rules and conventions in AGENTS.md if needed.
+## General
+
+- Please ask questions before doing any changes if you have any doubts about anything.
+
+## Testing and checking
+
+- Always use `make test` command for testing.
+- Always use `make check` command for full checking (testing, linting, etc.)
+
+## git
+
+- Always check staged and unstaged changes before doing any work to have a clear context.
+- Don't stage/unstage any changes and don't do any commits until explicitly asked.
+
+## DB
+
+- Always consider performance and complexity and try to use existing or create new indexes.
+
+## Docs
+
+- In any Markdown file please consider the max line length equal 120 (excluding tables, long links
+  or code blocks, etc.)
+- After doing any changes in project, check that any existing docs must be actualized:
+    - `AGENTS.md`
+    - `README.md`
+    - code comments
+
+## Security
+
+- Never log any sensitive data.
 - This project is related to security, so implement all things with the highest level of security in mind.
-- When interacting with other APIs, use `WebClient`.
-- Ensure any secrets are never logged unmasked.
+
+## Code conventions
+
+- Follow defined code style rules (see `config/detekt.yml` and `.editorconfig`).
+- Verify everything via `make check`.

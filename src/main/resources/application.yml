@@ -18,7 +18,7 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
   jpa:
-    open-in-view: true
+    open-in-view: false
     hibernate:
       ddl-auto: validate
   datasource:
@@ -72,6 +72,8 @@ invite:
     bytes: 32
     salt-bytes: 16
     mac-algorithm: HmacSHA256
+  cleanup:
+    retention: ${INVITE_CLEANUP_RETENTION:30d}
 
 keycloak:
   url: ${KEYCLOAK_URL}

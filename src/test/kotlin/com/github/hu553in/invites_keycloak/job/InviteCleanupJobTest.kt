@@ -1,5 +1,6 @@
 package com.github.hu553in.invites_keycloak.job
 
+import com.github.hu553in.invites_keycloak.config.props.InviteProps
 import com.github.hu553in.invites_keycloak.repo.InviteRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -7,8 +8,10 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.then
 import org.mockito.Mock
+import org.mockito.Mockito.mock
 import org.mockito.junit.jupiter.MockitoExtension
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -21,11 +24,19 @@ class InviteCleanupJobTest {
     @Mock
     private lateinit var clock: Clock
 
+    private lateinit var inviteProps: InviteProps
     private lateinit var job: InviteCleanupJob
 
     @BeforeEach
     fun setUp() {
-        job = InviteCleanupJob(inviteRepository, clock)
+        inviteProps = InviteProps(
+            publicBaseUrl = "https://app.example.com",
+            expiry = mock(),
+            realms = mock(),
+            token = mock(),
+            cleanup = InviteProps.CleanupProps(retention = Duration.ofDays(30))
+        )
+        job = InviteCleanupJob(inviteRepository, clock, inviteProps)
     }
 
     @Test

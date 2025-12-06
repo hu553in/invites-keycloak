@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Create invite</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fb;
+            margin: 0;
+            padding: 0;
+            color: #111827;
+        }
+
+        header {
+            background-color: #111827;
+            color: #fff;
+            padding: 1.5rem;
+        }
+
+        main {
+            padding: 2rem;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        form {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08);
+        }
+
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.35rem;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="number"] {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            border: 1px solid #cbd5f5;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .field-error {
+            color: #b91c1c;
+            font-size: 0.85rem;
+            margin-top: -0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .helper {
+            font-size: 0.85rem;
+            color: #4b5563;
+            margin-bottom: 0.75rem;
+        }
+
+        .roles {
+            margin-bottom: 1.25rem;
+        }
+
+        .roles label {
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .roles div {
+            padding: 0.35rem 0;
+        }
+
+        .realm-switcher {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .realm-switcher select {
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.375rem;
+            border: 1px solid #cbd5f5;
+            font-size: 1rem;
+        }
+
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+
+        .alert.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert.info {
+            background-color: #e0f2fe;
+            color: #0f172a;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        button.primary {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            background-color: #2563eb;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        a.secondary {
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            border: 1px solid #cbd5f5;
+            color: #111827;
+            font-size: 1rem;
+        }
+
+        .roles-error {
+            color: #92400e;
+            background-color: #fef3c7;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Create invite</h1>
+</header>
+<main>
+    <div class="realm-switcher">
+        <form method="get" th:action="@{/admin/invite/new}">
+            <label for="realmSelect">Realm</label>
+            <select id="realmSelect" name="realm" onchange="this.form.submit()">
+                <option th:each="realmOption : ${realmOptions}"
+                        th:value="${realmOption}"
+                        th:text="${realmOption}"
+                        th:selected="${realmOption == selectedRealm}">
+                    master
+                </option>
+            </select>
+        </form>
+        <div class="helper">Roles update when another realm is selected.</div>
+    </div>
+
+    <div th:if="${rolesFetchError}" class="alert error" th:text="${rolesFetchError}">
+        Roles could not be fetched.
+    </div>
+
+    <form th:action="@{/admin/invite}" th:object="${inviteForm}" method="post">
+        <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" th:field="*{realm}"/>
+
+        <div th:if="${#fields.hasGlobalErrors()}" class="alert error"
+             th:each="err : ${#fields.globalErrors()}" th:text="${err}">
+            Form has errors
+        </div>
+
+        <div>
+            <label for="email">Email</label>
+            <input id="email" type="email" placeholder="user@example.com" th:field="*{email}"/>
+            <div th:if="${#fields.hasErrors('email')}" class="field-error" th:errors="*{email}">Invalid email</div>
+        </div>
+
+        <div>
+            <label for="expiry">Expiry (minutes)</label>
+            <input id="expiry" type="number" th:field="*{expiryMinutes}"
+                   th:attr="min=${expiryMinMinutes},max=${expiryMaxMinutes},step=5"/>
+            <div class="helper">
+                Default: <span th:text="${expiryDefaultMinutes}">1440</span> minutes.
+                Allowed range: <span th:text="${expiryMinMinutes}">5</span> -
+                <span th:text="${expiryMaxMinutes}">43200</span> minutes.
+            </div>
+            <div th:if="${#fields.hasErrors('expiryMinutes')}" class="field-error" th:errors="*{expiryMinutes}">
+                Invalid expiry
+            </div>
+        </div>
+
+        <div>
+            <label for="maxUses">Max uses</label>
+            <input id="maxUses" type="number" min="1" th:field="*{maxUses}"/>
+            <div th:if="${#fields.hasErrors('maxUses')}" class="field-error" th:errors="*{maxUses}">
+                Invalid max uses
+            </div>
+        </div>
+
+        <div class="roles">
+            <label>Roles</label>
+            <div th:if="${!rolesAvailable}" class="roles-error">
+                Roles are unavailable right now. Retry after Keycloak is reachable.
+            </div>
+            <div th:each="role : ${roleOptions}">
+                <label>
+                    <input type="checkbox" th:field="*{roles}" th:value="${role}" th:disabled="${!rolesAvailable}"/>
+                    <span th:text="${role}">realm-role</span>
+                    <small th:if="${defaultRoles.contains(role)}">(default)</small>
+                </label>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button type="submit" class="primary" th:disabled="${!rolesAvailable}">Create invite</button>
+            <a class="secondary" th:href="@{/admin/invite}">Cancel</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

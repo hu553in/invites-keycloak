@@ -3,6 +3,7 @@ package com.github.hu553in.invites_keycloak.service
 import com.github.hu553in.invites_keycloak.InvitesKeycloakApplication
 import com.github.hu553in.invites_keycloak.config.TestcontainersConfig
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
+import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.repo.InviteRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -13,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.test.context.TestConstructor
+import java.sql.Timestamp
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -83,7 +85,9 @@ class InviteServiceTest(
 
         // column is not updatable in JPA -> use JDBC
         jdbcClient
-            .sql("update invite set expires_at = '$pastExpiresAt' where id = '${saved.id}'")
+            .sql("update invite set expires_at = ? where id = ?")
+            .param(pastExpiresAt.toSqlTimestamp())
+            .param(saved.id)
             .update()
 
         // act
@@ -140,9 +144,116 @@ class InviteServiceTest(
         assertThat(persisted.uses).isEqualTo(1)
     }
 
+    @Test
+    fun `createInvite allows issuing new invite after previous expired`() {
+        // arrange
+        val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
+        val first = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            expiresAt = expiresAt,
+            roles = setOf("user"),
+            createdBy = "creator"
+        ).invite
+
+        val pastExpiresAt = clock.instant().minus(Duration.ofMinutes(5))
+        jdbcClient
+            .sql("update invite set expires_at = ? where id = ?")
+            .param(pastExpiresAt.toSqlTimestamp())
+            .param(first.id)
+            .update()
+
+        // act
+        val second = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator"
+        ).invite
+
+        // assert
+        assertThat(second.id).isNotEqualTo(first.id)
+    }
+
+    @Test
+    fun `resendInvite uses provided expiry and revokes original invite`() {
+        // arrange
+        val original = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator"
+        ).invite
+        val newExpiry = clock.instant().plus(Duration.ofHours(6))
+
+        // act
+        val resent = inviteService.resendInvite(
+            inviteId = original.id!!,
+            expiresAt = newExpiry,
+            createdBy = "resender"
+        )
+
+        // assert
+        val revokedOriginal = inviteRepository.findById(original.id!!).orElseThrow()
+        assertThat(revokedOriginal.revoked).isTrue()
+        assertThat(resent.invite.id).isNotEqualTo(original.id)
+        assertThat(resent.invite.expiresAt).isEqualTo(newExpiry)
+        assertThat(resent.invite.email).isEqualTo(original.email)
+    }
+
+    @Test
+    fun `createInvite allows new invite after max uses reached`() {
+        // arrange
+        val initial = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+            maxUses = 1
+        ).invite
+
+        inviteService.useOnce(initial.id!!)
+
+        // act
+        val replacement = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator"
+        ).invite
+
+        // assert
+        val original = inviteRepository.findById(initial.id!!).orElseThrow()
+        assertThat(original.revoked).isTrue()
+        assertThat(replacement.id).isNotEqualTo(initial.id)
+    }
+
+    @Test
+    fun `createInvite rejects when active invite already exists`() {
+        // arrange
+        inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator"
+        )
+
+        // act & assert
+        assertThatThrownBy {
+            inviteService.createInvite(
+                realm = "master",
+                email = "user@example.com",
+                roles = setOf("user"),
+                createdBy = "another"
+            )
+        }.isInstanceOf(ActiveInviteExistsException::class.java)
+    }
+
     private fun futureExpiresAt(minBuffer: Duration): Instant {
         return clock.instant()
             .plus(inviteProps.expiry.min)
             .plus(minBuffer)
     }
+
+    private fun Instant.toSqlTimestamp(): Timestamp = Timestamp.from(this)
 }

@@ -26,7 +26,7 @@ import java.net.URI
 import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.locks.ReentrantReadWriteLock
 
 interface KeycloakAdminClient {
 
@@ -45,6 +45,10 @@ interface KeycloakAdminClient {
         userId: String,
         actions: Set<String> = defaultActions
     )
+
+    fun deleteUser(realm: String, userId: String)
+
+    fun listRealmRoles(realm: String): List<String>
 }
 
 @Service
@@ -56,11 +60,13 @@ class HttpKeycloakAdminClient(
 
     companion object {
         private val userListType = object : ParameterizedTypeReference<List<UserRepresentation>>() {}
+        private val roleListType = object : ParameterizedTypeReference<List<RoleRepresentation>>() {}
 
         private const val ACCESS_TOKEN_SKEW_SECONDS = 60
 
         private const val CONNECT_TIMEOUT_MILLIS = 5_000
         private const val RESPONSE_TIMEOUT_SECONDS = 10L
+        private const val ROLE_PAGE_SIZE = 1_000
     }
 
     private val log by logger()
@@ -92,16 +98,16 @@ class HttpKeycloakAdminClient(
 
     private var cachedAccessToken: CachedAccessToken? = null
 
-    @Suppress("ForbiddenComment")
-    // TODO: replace with ReentrantReadWriteLock
-    private val cachedAccessTokenLock = ReentrantLock()
+    private val cachedAccessTokenLock = ReentrantReadWriteLock()
+    private val cachedAccessTokenReadLock = cachedAccessTokenLock.readLock()
+    private val cachedAccessTokenWriteLock = cachedAccessTokenLock.writeLock()
 
     override fun userExists(realm: String, email: String): Boolean {
         val normalizedRealm = normalizeString(realm, "realm must not be blank")
         val normalizedEmail = normalizeString(email, "email must not be blank", lowercase = true)
         val accessToken = obtainAccessToken()
 
-        return !execute(
+        return !executeRequest(
             ctx = "Failed to verify whether user exists in realm $normalizedRealm",
             block = {
                 webClient.get()
@@ -131,7 +137,7 @@ class HttpKeycloakAdminClient(
         val normalizedUsername = normalizeString(username, "username must not be blank")
         val accessToken = obtainAccessToken()
 
-        val response = execute(
+        val response = executeRequest(
             ctx = "Failed to create user in realm $normalizedRealm",
             block = {
                 webClient.post()
@@ -148,7 +154,12 @@ class HttpKeycloakAdminClient(
                     )
                     .retrieve()
                     .onStatus({ it.isSameCodeAs(HttpStatus.CONFLICT) }) {
-                        Mono.error(KeycloakAdminClientException("User already exists on realm $normalizedRealm"))
+                        Mono.error(
+                            KeycloakAdminClientException(
+                                message = "User already exists on realm $normalizedRealm",
+                                status = HttpStatus.CONFLICT
+                            )
+                        )
                     }
                     .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
                     .toBodilessEntity()
@@ -172,34 +183,10 @@ class HttpKeycloakAdminClient(
         val accessToken = obtainAccessToken()
 
         val roleRepresentations = normalizedRoles.map { role ->
-            execute(
-                ctx = "Failed to resolve role $role in realm $normalizedRealm",
-                block = {
-                    webClient.get()
-                        .uri("/admin/realms/{realm}/roles/{role}", normalizedRealm, role)
-                        .headers { headers -> headers.setBearerAuth(accessToken) }
-                        .accept(APPLICATION_JSON)
-                        .exchangeToMono { resp ->
-                            when {
-                                resp.statusCode().is2xxSuccessful -> resp.bodyToMono(RoleRepresentation::class.java)
-                                resp.statusCode().isSameCodeAs(HttpStatus.NOT_FOUND) -> Mono.empty()
-                                resp.statusCode().is5xxServerError -> Mono.error(RetryableException())
-                                else -> resp.createException().flatMap { Mono.error(it) }
-                            }
-                        }
-                        .retryWhen(retry)
-                        .block()
-                }
-            )?.also {
-                if (it.id.isNullOrBlank() || it.name.isNullOrBlank()) {
-                    throw KeycloakAdminClientException(
-                        "Role $role has incomplete representation in realm $normalizedRealm"
-                    )
-                }
-            } ?: throw KeycloakAdminClientException("Role $role is not found in realm $normalizedRealm")
+            fetchRoleRepresentation(normalizedRealm, role, accessToken)
         }
 
-        execute(
+        executeRequest(
             ctx = "Failed to assign roles to user $normalizedUserId in realm $normalizedRealm",
             block = {
                 webClient.post()
@@ -227,13 +214,47 @@ class HttpKeycloakAdminClient(
             .log { "Assigned roles to Keycloak user" }
     }
 
+    private fun fetchRoleRepresentation(realm: String, role: String, accessToken: String): RoleRepresentation {
+        val representation = executeRequest(
+            ctx = "Failed to resolve role $role in realm $realm",
+            block = {
+                webClient.get()
+                    .uri("/admin/realms/{realm}/roles/{role}", realm, role)
+                    .headers { headers -> headers.setBearerAuth(accessToken) }
+                    .accept(APPLICATION_JSON)
+                    .exchangeToMono { resp ->
+                        when {
+                            resp.statusCode().is2xxSuccessful -> resp.bodyToMono(RoleRepresentation::class.java)
+                            resp.statusCode().isSameCodeAs(HttpStatus.NOT_FOUND) -> Mono.empty()
+                            resp.statusCode().is5xxServerError -> Mono.error(RetryableException())
+                            else -> resp.createException().flatMap { Mono.error(it) }
+                        }
+                    }
+                    .retryWhen(retry)
+                    .block()
+            }
+        ) ?: throw KeycloakAdminClientException(
+            message = "Role $role is not found in realm $realm",
+            status = HttpStatus.NOT_FOUND
+        )
+
+        if (representation.id.isNullOrBlank() || representation.name.isNullOrBlank()) {
+            throw KeycloakAdminClientException(
+                message = "Role $role has incomplete representation in realm $realm",
+                status = HttpStatus.BAD_REQUEST
+            )
+        }
+
+        return representation
+    }
+
     override fun executeActionsEmail(realm: String, userId: String, actions: Set<String>) {
         val normalizedRealm = normalizeString(realm, "realm must not be blank")
         val normalizedUserId = normalizeString(userId, "userId must not be blank")
         val normalizedActions = normalizeStrings(actions, "actions must not be empty")
         val accessToken = obtainAccessToken()
 
-        execute(
+        executeRequest(
             ctx = "Failed to trigger execute-actions-email for user $normalizedUserId " +
                 "in realm $normalizedRealm with actions $actions",
             block = {
@@ -262,46 +283,77 @@ class HttpKeycloakAdminClient(
             .log { "Triggered execute-actions-email for Keycloak user" }
     }
 
-    private fun obtainAccessToken(): String {
-        cachedAccessTokenLock.lock()
-        try {
-            val now = clock.instant().epochSecond
-            cachedAccessToken?.let { (accessToken, expiresAt) ->
-                if (expiresAt != null && now < expiresAt - ACCESS_TOKEN_SKEW_SECONDS) {
-                    return accessToken
-                }
+    override fun deleteUser(realm: String, userId: String) {
+        val normalizedRealm = normalizeString(realm, "realm must not be blank")
+        val normalizedUserId = normalizeString(userId, "userId must not be blank")
+        val accessToken = obtainAccessToken()
+
+        executeRequest(
+            ctx = "Failed to delete user $normalizedUserId in realm $normalizedRealm",
+            block = {
+                webClient.delete()
+                    .uri("/admin/realms/{realm}/users/{userId}", normalizedRealm, normalizedUserId)
+                    .headers { headers -> headers.setBearerAuth(accessToken) }
+                    .retrieve()
+                    .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
+                    .toBodilessEntity()
+                    .retryWhen(retry)
+                    .block()
             }
+        )
 
-            val body = BodyInserters
-                .fromFormData("grant_type", "client_credentials")
-                .with("client_id", keycloakProps.clientId)
-                .with("client_secret", keycloakProps.clientSecret)
+        log.atInfo()
+            .addKeyValue("user.id") { normalizedUserId }
+            .addKeyValue("realm") { normalizedRealm }
+            .log { "Deleted Keycloak user" }
+    }
 
-            val response = execute(
-                ctx = "Failed to obtain access token for realm ${keycloakProps.realm}",
+    override fun listRealmRoles(realm: String): List<String> {
+        val normalizedRealm = normalizeString(realm, "realm must not be blank")
+        val accessToken = obtainAccessToken()
+
+        val allRoles = mutableListOf<RoleRepresentation>()
+        var first = 0
+
+        do {
+            val page = executeRequest(
+                ctx = "Failed to list roles for realm $normalizedRealm (page starting at $first)",
                 block = {
-                    webClient.post()
-                        .uri("/realms/{realm}/protocol/openid-connect/token", keycloakProps.realm)
-                        .contentType(APPLICATION_FORM_URLENCODED)
+                    webClient.get()
+                        .uri { builder ->
+                            builder
+                                .path("/admin/realms/{realm}/roles")
+                                .queryParam("first", first)
+                                .queryParam("max", ROLE_PAGE_SIZE)
+                                .build(normalizedRealm)
+                        }
+                        .headers { headers -> headers.setBearerAuth(accessToken) }
                         .accept(APPLICATION_JSON)
-                        .body(body)
                         .retrieve()
                         .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
-                        .bodyToMono(TokenResponse::class.java)
+                        .bodyToMono(roleListType)
                         .retryWhen(retry)
                         .block()
                 }
-            )
+            ).orEmpty()
 
-            val accessToken = response?.accessToken
-            if (accessToken.isNullOrBlank()) {
-                throw KeycloakAdminClientException(
-                    "Keycloak returned an empty access token for realm ${keycloakProps.realm}"
-                )
-            }
+            allRoles += page
+            first += ROLE_PAGE_SIZE
+        } while (page.size == ROLE_PAGE_SIZE)
 
-            cachedAccessToken = response.expiresIn?.let { CachedAccessToken(accessToken, now + it) }
-            return accessToken
+        return allRoles
+            .mapNotNull { it.name?.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+    }
+
+    private fun obtainAccessToken(): String {
+        readCachedToken()?.let { return it }
+
+        cachedAccessTokenWriteLock.lock()
+        return try {
+            readCachedToken() ?: fetchAndCacheAccessToken()
         } catch (
             @Suppress("TooGenericExceptionCaught")
             e: Exception
@@ -309,25 +361,57 @@ class HttpKeycloakAdminClient(
             cachedAccessToken = null
             throw e
         } finally {
-            cachedAccessTokenLock.unlock()
+            cachedAccessTokenWriteLock.unlock()
         }
     }
 
-    private fun extractUserId(location: URI?): String {
-        val userId = location?.path?.substringAfterLast('/')?.trim()
-        if (userId.isNullOrBlank()) {
-            throw KeycloakAdminClientException("Unable to resolve user id from Location header: $location")
+    private fun fetchAndCacheAccessToken(): String {
+        val now = clock.instant().epochSecond
+        val body = BodyInserters
+            .fromFormData("grant_type", "client_credentials")
+            .with("client_id", keycloakProps.clientId)
+            .with("client_secret", keycloakProps.clientSecret)
+
+        val response = executeRequest(
+            ctx = "Failed to obtain access token for realm ${keycloakProps.realm}",
+            block = {
+                webClient.post()
+                    .uri("/realms/{realm}/protocol/openid-connect/token", keycloakProps.realm)
+                    .contentType(APPLICATION_FORM_URLENCODED)
+                    .accept(APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
+                    .bodyToMono(TokenResponse::class.java)
+                    .retryWhen(retry)
+                    .block()
+            }
+        )
+
+        val accessToken = response?.accessToken
+        if (accessToken.isNullOrBlank()) {
+            throw KeycloakAdminClientException(
+                "Keycloak returned an empty access token for realm ${keycloakProps.realm}"
+            )
         }
-        return userId
+
+        cachedAccessToken = response.expiresIn?.let { CachedAccessToken(accessToken, now + it) }
+        return accessToken
     }
 
-    private fun <T> execute(ctx: String, block: () -> T): T {
+    private fun readCachedToken(): String? {
+        cachedAccessTokenReadLock.lock()
         return try {
-            block()
-        } catch (e: WebClientResponseException) {
-            throw KeycloakAdminClientException(ctx, e.statusCode, e)
-        } catch (e: WebClientRequestException) {
-            throw KeycloakAdminClientException(ctx, e)
+            val now = clock.instant().epochSecond
+            cachedAccessToken?.let { (accessToken, expiresAt) ->
+                if (expiresAt != null && now < expiresAt - ACCESS_TOKEN_SKEW_SECONDS) {
+                    accessToken
+                } else {
+                    null
+                }
+            }
+        } finally {
+            cachedAccessTokenReadLock.unlock()
         }
     }
 
@@ -358,4 +442,22 @@ class HttpKeycloakAdminClient(
     private data class CachedAccessToken(val value: String, val expiresAtEpochSec: Long?)
 
     private class RetryableException : RuntimeException()
+}
+
+private fun extractUserId(location: URI?): String {
+    val userId = location?.path?.substringAfterLast('/')?.trim()
+    if (userId.isNullOrBlank()) {
+        throw KeycloakAdminClientException("Unable to resolve user id from Location header: $location")
+    }
+    return userId
+}
+
+private fun <T> executeRequest(ctx: String, block: () -> T): T {
+    return try {
+        block()
+    } catch (e: WebClientResponseException) {
+        throw KeycloakAdminClientException(ctx, e.statusCode, e)
+    } catch (e: WebClientRequestException) {
+        throw KeycloakAdminClientException(ctx, e)
+    }
 }
