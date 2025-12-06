@@ -34,12 +34,26 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 - Realm: use `master` or set `KEYCLOAK_REALM` to match.
 - Client: confidential client named `invites-keycloak` (or set `KEYCLOAK_CLIENT_ID`).
   - Standard Flow enabled.
-  - Redirect URIs: `http://<app-host>/login/oauth2/code/keycloak`
+  - Redirect URIs: `<app-base-url>/login/oauth2/code/keycloak`
     - Example for local: `http://localhost:8080/login/oauth2/code/keycloak`.
-  - Web Origins: `http://<app-host>` (add the scheme/port the app is served on).
+  - Web Origins: `<app-base-url>` (add the scheme/port the app is served on).
   - Client secret: copy to `KEYCLOAK_CLIENT_SECRET`.
 - Role: realm role `invite-admin` (or `KEYCLOAK_REQUIRED_ROLE`) granted to the user who will sign in to the
   admin UI.
+
+### Reverse proxy / HTTPS termination
+
+- The app respects forwarded headers (`server.forward-headers-strategy=framework` is set). Make sure your proxy
+  sends them, otherwise OAuth redirects may downgrade to HTTP.
+- Required headers: `Host`, `X-Forwarded-Proto`, `X-Forwarded-Port`, `X-Forwarded-For`.
+- nginx example:
+
+```
+proxy_set_header Host $host;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Port $server_port;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
 
 ## Local development
 

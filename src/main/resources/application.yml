@@ -1,5 +1,6 @@
 server:
   shutdown: graceful
+  forward-headers-strategy: framework
   error:
     include-message: never
     include-binding-errors: never
