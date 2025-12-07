@@ -107,7 +107,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 
 - [x] Add admin logout
 - [x] Add admin invite deletion
-- [ ] Timestamps must be shown in the browser's time zone (in the UI and email, if possible)
+- [x] Timestamps must be shown in the browser's time zone (in the UI and email, if possible)
 - [ ] Truncate IDs in the table and show the full ID on hover
 - [ ] Test everything and fix all functional issues
     - [ ] All invites must be resendable

@@ -6,22 +6,53 @@
     <title th:text="|Invitation to ${target ?: 'example'}|">Invitation to example</title>
 </head>
 <body>
+
 <h1>You're invited! 🎉</h1>
+
 <p>
     You have been invited to
     <strong th:text="${target ?: 'example'}">example</strong>.
 </p>
+
 <p>Click the link below to accept your invitation:</p>
+
 <p>
     <a th:attr="href=${link ?: 'https://example.org/invite/realm/token'}"
        th:text="${link ?: 'https://example.org/invite/realm/token'}">
         https://example.org/invite/realm/token
     </a>
 </p>
+
 <p>
     The invite expires at
-    <strong th:text="${#temporals.format(expiresAt, 'yyyy-MM-dd HH:mm:ss z')}">2025-01-01 12:00:00 UTC</strong>.
+    <time th:data-local-datetime="${expiresAt}"
+          th:title="${#temporals.format(expiresAt, 'yyyy-MM-dd HH:mm:ss z')}"
+          th:text="${#temporals.format(expiresAt, 'yyyy-MM-dd HH:mm:ss z')}">
+        <strong>2025-01-01 12:00:00 UTC</strong>.
+    </time>
 </p>
+
 <p>If you did not expect this email, you can safely ignore it.</p>
+
+<script>
+    const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short'
+    });
+
+    document.querySelectorAll('[data-local-datetime]').forEach((element) => {
+        const value = element.getAttribute('data-local-datetime');
+        const date = value ? new Date(value) : null;
+        if (!date || Number.isNaN(date.getTime())) {
+            return;
+        }
+        element.textContent = dateTimeFormatter.format(date);
+    });
+</script>
 </body>
 </html>

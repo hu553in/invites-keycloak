@@ -161,17 +161,23 @@
                 <td class="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-800">
                     <code th:text="${invite.id}">id</code>
                 </td>
-                <td class="whitespace-nowrap px-4 py-3 text-slate-700"
-                    th:text="${#temporals.format(invite.createdAt, 'yyyy-MM-dd HH:mm:ss z')}">
-                    2025-01-01 12:00:00 UTC
+                <td class="whitespace-nowrap px-4 py-3 text-slate-700">
+                    <time th:data-local-datetime="${invite.createdAt}"
+                          th:title="${#temporals.format(invite.createdAt, 'yyyy-MM-dd HH:mm:ss z')}"
+                          th:text="${#temporals.format(invite.createdAt, 'yyyy-MM-dd HH:mm:ss z')}">
+                        2025-01-01 12:00:00 UTC
+                    </time>
                 </td>
                 <td class="px-4 py-3 text-slate-800 break-all sm:break-normal" th:text="${invite.email}">
                     user@example.com
                 </td>
                 <td class="px-4 py-3 text-slate-700" th:text="${invite.realm}">master</td>
-                <td class="whitespace-nowrap px-4 py-3 text-slate-700"
-                    th:text="${#temporals.format(invite.expiresAt, 'yyyy-MM-dd HH:mm:ss z')}">
-                    2025-01-02 12:00:00 UTC
+                <td class="whitespace-nowrap px-4 py-3 text-slate-700">
+                    <time th:data-local-datetime="${invite.expiresAt}"
+                          th:title="${#temporals.format(invite.expiresAt, 'yyyy-MM-dd HH:mm:ss z')}"
+                          th:text="${#temporals.format(invite.expiresAt, 'yyyy-MM-dd HH:mm:ss z')}">
+                        2025-01-01 12:00:00 UTC
+                    </time>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3 text-slate-700" th:text="|${invite.uses} / ${invite.maxUses}|">
                     0 / 1
@@ -259,7 +265,27 @@
         </table>
     </div>
 </main>
+
 <script>
+    const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short'
+    });
+
+    document.querySelectorAll('[data-local-datetime]').forEach((element) => {
+        const value = element.getAttribute('data-local-datetime');
+        const date = value ? new Date(value) : null;
+        if (!date || Number.isNaN(date.getTime())) {
+            return;
+        }
+        element.textContent = dateTimeFormatter.format(date);
+    });
+
     document.querySelectorAll('[data-copy-target]').forEach((button) => {
         button.addEventListener('click', async () => {
             const targetId = button.getAttribute('data-copy-target');
