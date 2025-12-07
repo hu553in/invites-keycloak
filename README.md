@@ -121,11 +121,11 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
     - [x] Some issues with roles
     - [ ] Some issues with `obtainAccessToken()`
 - [ ] Fix all styling issues
-- [ ] Add detailed docs
 - [ ] Cover everything with logs
+- [ ] Configure realms for invites through env vars
+- [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency
+- [ ] Add detailed docs
 - [ ] Add metrics
 - [ ] Add tracing
 - [ ] Add rate limiting
-- [ ] Configure realms for invites through env vars
 - [ ] Add i18n
-- [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency
