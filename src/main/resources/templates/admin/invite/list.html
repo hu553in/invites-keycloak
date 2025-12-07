@@ -144,22 +144,47 @@
          class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow shadow-slate-200/80">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50 text-slate-700">
-            <tr>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">ID</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Created</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Email</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Realm</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Expires</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Uses</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Status</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Roles</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Actions</th>
-            </tr>
+                <tr>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                        ID
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                        Created
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                        Email
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                        Realm
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                        Expires
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                        Uses
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                        Status
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                        Roles
+                    </th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                        Actions
+                    </th>
+                </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 bg-white">
             <tr th:each="invite : ${invites}" class="hover:bg-slate-50/70">
-                <td class="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-800">
-                    <code th:text="${invite.id}">id</code>
+                <td class="px-4 py-3 text-slate-800">
+                    <code class="inline-flex max-w-[8ch] items-center rounded bg-slate-100 px-2 py-1
+                                 font-mono text-xs text-slate-800"
+                          th:title="${invite.id}"
+                          th:attr="aria-label=${invite.id}">
+                        <span class="block truncate" th:text="${invite.id}" th:title="${invite.id}">
+                            8a0331ea-9ee5-41d9-944c-917137786725
+                        </span>
+                    </code>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3 text-slate-700">
                     <time th:data-local-datetime="${invite.createdAt}"
