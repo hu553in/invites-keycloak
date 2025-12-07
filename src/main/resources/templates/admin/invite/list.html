@@ -58,8 +58,8 @@
                 <dd class="text-slate-600">Usable invite</dd>
             </div>
             <div class="flex items-center gap-2">
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold
-                             text-slate-700 ring-1 ring-slate-600/20">
+                <span class="inline-flex items-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-1 text-xs
+                             font-semibold text-slate-700 ring-1 ring-slate-600/20">
                     Used up
                 </span>
                 <dd class="text-slate-600">Max uses reached (issue new invite)</dd>
@@ -85,9 +85,21 @@
          class="flex items-start rounded-xl border border-lime-200 bg-lime-50 px-4 py-3
                 text-lime-900 shadow-sm shadow-lime-100">
         <div class="flex flex-col gap-2">
-            <p class="text-sm font-semibold">Invite link</p>
-            <code class="block max-w-full overflow-x-auto rounded-lg bg-slate-900 px-3 py-2 text-xs text-lime-100"
-                  th:text="${inviteLink}">https://example.org/invite/realm/token</code>
+            <div class="flex-1">
+                <p class="text-sm font-semibold">Invite link</p>
+                <code id="inviteLinkValue"
+                      class="mt-1 block max-w-full overflow-x-auto rounded-lg bg-slate-900
+                             px-3 py-2 text-xs text-lime-100"
+                      th:text="${inviteLink}">https://example.org/invite/realm/token</code>
+            </div>
+            <button type="button"
+                    data-copy-target="inviteLinkValue"
+                    class="self-start rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white
+                           shadow-sm shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+                           focus-visible:outline-indigo-500">
+                Copy
+            </button>
         </div>
     </div>
 
@@ -109,7 +121,7 @@
     </div>
 
     <div th:if="${!#lists.isEmpty(invites)}"
-         class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow shadow-slate-200/80">
+         class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow shadow-slate-200/80">
         <table class="min-w-full divide-y divide-slate-200">
             <thead class="bg-brand-50 text-slate-700">
             <tr>
@@ -144,7 +156,8 @@
                 </td>
                 <td class="px-4 py-3">
                     <span th:text="${invite.statusLabel}"
-                          th:class="|inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1
+                          th:class="|inline-flex items-center whitespace-nowrap rounded-full px-3 py-1
+                                    text-xs font-semibold ring-1
                                     ${invite.statusClass} == 'active'
                                         ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
                                         : (${invite.statusClass} == 'revoked'
@@ -209,5 +222,29 @@
         </table>
     </div>
 </main>
+<script>
+    document.querySelectorAll('[data-copy-target]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const targetId = button.getAttribute('data-copy-target');
+            const target = targetId ? document.getElementById(targetId) : null;
+            if (!target) {
+                return;
+            }
+
+            const value = target.textContent ? target.textContent.trim() : '';
+            try {
+                await navigator.clipboard.writeText(value);
+            } catch {
+                const range = document.createRange();
+                range.selectNodeContents(target);
+                const selection = window.getSelection();
+                selection?.removeAllRanges();
+                selection?.addRange(range);
+                document.execCommand('copy');
+                selection?.removeAllRanges();
+            }
+        });
+    });
+</script>
 </body>
 </html>
