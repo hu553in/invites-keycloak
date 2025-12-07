@@ -154,6 +154,25 @@ class InviteAdminController(
         }
     }
 
+    @PostMapping("/{id}/delete")
+    fun deleteInvite(
+        @PathVariable id: UUID,
+        redirectAttributes: RedirectAttributes
+    ): String {
+        return runCatching {
+            val deleted = inviteService.delete(id)
+            redirectAttributes.addFlashAttribute("successMessage", "Invite deleted for ${deleted.email}")
+            "redirect:/admin/invite"
+        }.getOrElse {
+            log.atWarn()
+                .addKeyValue("invite.id") { id }
+                .setCause(it)
+                .log { "Failed to delete invite" }
+            redirectAttributes.addFlashAttribute("errorMessage", it.message ?: "Failed to delete invite")
+            "redirect:/admin/invite"
+        }
+    }
+
     @PostMapping("/{id}/resend")
     fun resendInvite(
         @PathVariable id: UUID,

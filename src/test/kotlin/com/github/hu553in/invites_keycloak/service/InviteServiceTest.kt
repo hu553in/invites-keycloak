@@ -229,6 +229,41 @@ class InviteServiceTest(
     }
 
     @Test
+    fun `delete removes revoked invite`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator"
+        ).invite
+        inviteService.revoke(invite.id!!)
+
+        // act
+        val deleted = inviteService.delete(invite.id!!)
+
+        // assert
+        assertThat(deleted.id).isEqualTo(invite.id)
+        assertThat(inviteRepository.findById(invite.id!!)).isEmpty()
+    }
+
+    @Test
+    fun `delete rejects active invite`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator"
+        ).invite
+
+        // act & assert
+        assertThatThrownBy { inviteService.delete(invite.id!!) }
+            .isInstanceOf(IllegalStateException::class.java)
+        assertThat(inviteRepository.findById(invite.id!!)).isPresent()
+    }
+
+    @Test
     fun `createInvite rejects when active invite already exists`() {
         // arrange
         inviteService.createInvite(

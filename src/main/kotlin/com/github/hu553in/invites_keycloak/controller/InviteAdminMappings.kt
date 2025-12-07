@@ -15,6 +15,7 @@ object InviteAdminMappings {
         val uses: Int,
         val maxUses: Int,
         val revoked: Boolean,
+        val active: Boolean,
         val roles: Set<String>,
         val statusClass: String,
         val statusLabel: String
@@ -23,6 +24,7 @@ object InviteAdminMappings {
     fun InviteEntity.toView(now: Instant): InviteView {
         val expired = expiresAt.isBefore(now)
         val usedUp = uses >= maxUses
+        val active = !revoked && !expired && !usedUp
         val (statusLabel, statusClass) = when {
             revoked -> "Revoked" to "revoked"
             expired -> "Expired" to "expired"
@@ -39,6 +41,7 @@ object InviteAdminMappings {
             uses = uses,
             maxUses = maxUses,
             revoked = revoked,
+            active = active,
             roles = roles,
             statusClass = statusClass,
             statusLabel = statusLabel

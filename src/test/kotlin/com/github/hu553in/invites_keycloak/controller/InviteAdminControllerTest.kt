@@ -404,6 +404,45 @@ class InviteAdminControllerTest(
         verifyNoInteractions(inviteService)
     }
 
+    @Test
+    fun `delete invite success redirects with message`() {
+        // arrange
+        val inviteId = UUID.randomUUID()
+        val invite = sampleInviteEntity(id = inviteId, email = "user@example.com").apply { revoked = true }
+        given(inviteService.delete(inviteId)).willReturn(invite)
+
+        // act
+        val result = mockMvc.post("/admin/invite/$inviteId/delete")
+
+        // assert
+        result.andExpect {
+            status { is3xxRedirection() }
+            redirectedUrl("/admin/invite")
+            flash { attribute("successMessage", "Invite deleted for user@example.com") }
+        }
+        then(inviteService).should().delete(inviteId)
+    }
+
+    @Test
+    fun `delete invite shows error when active`() {
+        // arrange
+        val inviteId = UUID.randomUUID()
+        given(inviteService.delete(inviteId)).willThrow(
+            IllegalStateException("Invite $inviteId is active; revoke it before deleting.")
+        )
+
+        // act
+        val result = mockMvc.post("/admin/invite/$inviteId/delete")
+
+        // assert
+        result.andExpect {
+            status { is3xxRedirection() }
+            redirectedUrl("/admin/invite")
+            flash { attributeExists("errorMessage") }
+        }
+        then(inviteService).should().delete(inviteId)
+    }
+
     private fun sampleInviteEntity(
         id: UUID = UUID.randomUUID(),
         realm: String = "master",

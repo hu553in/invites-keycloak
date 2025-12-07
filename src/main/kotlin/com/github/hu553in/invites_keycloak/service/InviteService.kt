@@ -117,6 +117,18 @@ class InviteService(
     }
 
     @Transactional
+    fun delete(inviteId: UUID): InviteEntity {
+        val invite = inviteRepository.findById(inviteId)
+            .orElseThrow { InviteNotFoundException(inviteId) }
+
+        val now = clock.instant()
+        check(!invite.isActive(now)) { "Invite $inviteId is active; revoke it before deleting." }
+
+        inviteRepository.delete(invite)
+        return invite
+    }
+
+    @Transactional
     fun resendInvite(inviteId: UUID, expiresAt: Instant, createdBy: String): CreatedInvite {
         val current = inviteRepository.findById(inviteId)
             .orElseThrow { InviteNotFoundException(inviteId) }
@@ -141,6 +153,10 @@ class InviteService(
     fun get(inviteId: UUID): InviteEntity {
         return inviteRepository.findById(inviteId)
             .orElseThrow { InviteNotFoundException(inviteId) }
+    }
+
+    private fun InviteEntity.isActive(now: Instant): Boolean {
+        return !revoked && !expiresAt.isBefore(now) && uses < maxUses
     }
 
     private fun parseRawToken(rawToken: String): Pair<String, String> {
