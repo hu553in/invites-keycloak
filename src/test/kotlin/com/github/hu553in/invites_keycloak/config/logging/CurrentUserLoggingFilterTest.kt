@@ -67,7 +67,7 @@ class CurrentUserLoggingFilterTest {
         }
 
         val events = listAppender.list
-        val mdcValues = events.map { it.mdc[CURRENT_USER_ID_KEY] }
+        val mdcValues = events.map { it.mdcPropertyMap[CURRENT_USER_ID_KEY] }
         assertThat(events).isNotEmpty
         assertThat(mdcValues)
             .describedAs("MDC values captured in log events: %s", mdcValues)
@@ -95,7 +95,7 @@ class CurrentUserLoggingFilterTest {
         }
 
         val events = listAppender.list
-        val subjects = events.map { it.mdc[CURRENT_USER_SUBJECT_KEY] }
+        val subjects = events.map { it.mdcPropertyMap[CURRENT_USER_SUBJECT_KEY] }
         assertThat(subjects)
             .describedAs("MDC subjects captured in log events: %s", subjects)
             .contains("user-subject-123")

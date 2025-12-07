@@ -32,7 +32,8 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 - Realms may have an empty roles list; when no roles are configured, the admin UI hides the roles selector and
   invites are created without assigning realm roles (Keycloak still applies its default composites).
 - Mail: SMTP settings are optional; when absent, invite emails are skipped with a warning, and links are still
-  displayed.
+  displayed. You can set `MAIL_FROM` for the sender address and `MAIL_SUBJECT_TEMPLATE` for the subject
+  (defaults to `Invitation to %s`, filled with the target realm).
 - Database: PostgreSQL reachable via JDBC; Flyway runs on startup to create the `invite` table and indexes.
 
 ### Keycloak setup (all environments)

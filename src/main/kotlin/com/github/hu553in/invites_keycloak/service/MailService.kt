@@ -1,5 +1,6 @@
 package com.github.hu553in.invites_keycloak.service
 
+import com.github.hu553in.invites_keycloak.config.props.MailProps
 import com.github.hu553in.invites_keycloak.util.logger
 import jakarta.mail.MessagingException
 import org.springframework.beans.factory.ObjectProvider
@@ -14,7 +15,8 @@ import java.time.Instant
 @Service
 class MailService(
     private val senderProvider: ObjectProvider<JavaMailSender>,
-    private val templateEngine: SpringTemplateEngine
+    private val templateEngine: SpringTemplateEngine,
+    private val mailProps: MailProps
 ) {
 
     private val log by logger()
@@ -29,8 +31,11 @@ class MailService(
         return try {
             val msg = sender.createMimeMessage().also {
                 MimeMessageHelper(it, Charsets.UTF_8.name()).also { helper ->
+                    mailProps.from
+                        ?.takeIf { from -> from.isNotBlank() }
+                        ?.let { from -> helper.setFrom(from.trim()) }
                     helper.setTo(data.email)
-                    helper.setSubject("Invitation to ${data.target}")
+                    helper.setSubject(resolveSubject(data.target))
                     helper.setText(renderBody(data), true)
                 }
             }
@@ -50,6 +55,16 @@ class MailService(
                     .log { "Failed to build invite email" }
             }
         }
+    }
+
+    private fun resolveSubject(target: String): String {
+        return runCatching { mailProps.subjectTemplate.format(target) }
+            .getOrElse {
+                log.atWarn()
+                    .setCause(it)
+                    .log { "Falling back to default invite email subject template" }
+                "Invitation to $target"
+            }
     }
 
     private fun renderBody(data: InviteMailData): String {

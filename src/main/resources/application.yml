@@ -75,6 +75,10 @@ invite:
   cleanup:
     retention: ${INVITE_CLEANUP_RETENTION:30d}
 
+mail:
+  from: ${MAIL_FROM:}
+  subject-template: ${MAIL_SUBJECT_TEMPLATE:Invitation to %s}
+
 keycloak:
   url: ${KEYCLOAK_URL}
   realm: ${KEYCLOAK_REALM:master}

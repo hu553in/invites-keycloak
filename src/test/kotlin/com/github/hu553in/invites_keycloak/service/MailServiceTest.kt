@@ -1,5 +1,6 @@
 package com.github.hu553in.invites_keycloak.service
 
+import com.github.hu553in.invites_keycloak.config.props.MailProps
 import com.github.hu553in.invites_keycloak.service.MailService.InviteMailData
 import com.github.hu553in.invites_keycloak.service.MailService.MailSendStatus
 import com.github.hu553in.invites_keycloak.util.objectProvider
@@ -43,7 +44,7 @@ class MailServiceTest {
 
         given(sender.createMimeMessage()).willReturn(msg)
 
-        val svc = MailService(objectProvider(sender), templateEngine)
+        val svc = MailService(objectProvider(sender), templateEngine, MailProps())
         val data = InviteMailData(
             email = "user@example.com",
             target = "master",
@@ -67,7 +68,7 @@ class MailServiceTest {
     @Test
     fun `sendInviteEmail skips when sender missing`() {
         // arrange
-        val svc = MailService(objectProvider(null), templateEngine)
+        val svc = MailService(objectProvider(null), templateEngine, MailProps())
 
         val data = InviteMailData(
             email = "user@example.com",
@@ -92,7 +93,7 @@ class MailServiceTest {
         given(sender.createMimeMessage()).willReturn(msg)
         willThrow(MailSendException("boom")).given(sender).send(msg)
 
-        val svc = MailService(objectProvider(sender), templateEngine)
+        val svc = MailService(objectProvider(sender), templateEngine, MailProps())
         val data = InviteMailData(
             email = "user@example.com",
             target = "master",
