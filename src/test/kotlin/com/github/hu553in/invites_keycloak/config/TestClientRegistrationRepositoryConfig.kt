@@ -38,6 +38,9 @@ class TestClientRegistrationRepositoryConfig(private val environment: Environmen
             .userInfoUri("$realmUrl/protocol/openid-connect/userinfo")
             .userNameAttributeName("preferred_username")
             .issuerUri(realmUrl)
+            .providerConfigurationMetadata(
+                mapOf("end_session_endpoint" to "$realmUrl/protocol/openid-connect/logout")
+            )
             .build()
 
         return InMemoryClientRegistrationRepository(registration)

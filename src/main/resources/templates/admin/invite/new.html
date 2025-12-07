@@ -13,13 +13,26 @@
             <p class="text-sm text-slate-300">Invitations</p>
             <h1 class="text-2xl font-semibold leading-tight">Create invite</h1>
         </div>
-        <a th:href="@{/admin/invite}"
-           class="inline-flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-800 px-4 py-2
-                  text-sm font-semibold text-white shadow-lg shadow-slate-900/30 transition hover:-translate-y-0.5
-                  hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-                  focus-visible:outline-white">
-            Back to list
-        </a>
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <form th:action="@{/logout}" method="post" class="inline-flex">
+                <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
+                       th:value="${_csrf.token}"/>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-800
+                               px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/30 transition
+                               hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2
+                               focus-visible:outline-offset-2 focus-visible:outline-white">
+                    Logout
+                </button>
+            </form>
+            <a th:href="@{/admin/invite}"
+               class="inline-flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-800 px-4 py-2
+                      text-sm font-semibold text-white shadow-lg shadow-slate-900/30 transition hover:-translate-y-0.5
+                      hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+                      focus-visible:outline-white">
+                Back to list
+            </a>
+        </div>
     </div>
 </header>
 

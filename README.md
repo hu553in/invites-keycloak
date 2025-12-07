@@ -75,6 +75,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 - `/admin/invite/**` is the admin UI for creating/resending/revoking invites; protected via Keycloak OAuth2 login.
 - `/invite/{realm}/{token}` is public: validates the token, creates the Keycloak user, assigns roles, sends a
   required-actions email, and marks the invite as used.
+- Admin pages include a logout action that signs out of Keycloak and returns to the start page.
 
 ## Deploying to a VPS with Docker
 
@@ -103,16 +104,16 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 
 ## Future roadmap
 
-- [ ] Add admin logout
+- [x] Add admin logout
 - [ ] Add admin invite deletion
 - [ ] Timestamps must be shown in the browser's time zone (in the UI and email, if possible)
 - [ ] Truncate IDs in the table and show the full ID on hover
 - [ ] Test everything and fix all functional issues
-  - [ ] All invites must be resendable
-  - [ ] "Revoke" button must be disabled for used-up invites
-  - [ ] Some issues with roles
-  - [ ] Some statuses may not be colored correctly in the table
-  - [ ] Some issues with `obtainAccessToken()`
+    - [ ] All invites must be resendable
+    - [ ] "Revoke" button must be disabled for used-up invites
+    - [ ] Some issues with roles
+    - [ ] Some statuses may not be colored correctly in the table
+    - [ ] Some issues with `obtainAccessToken()`
 - [ ] Fix all styling issues
 - [ ] Add detailed docs
 - [ ] Cover everything with logs

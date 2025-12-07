@@ -28,12 +28,14 @@ import org.springframework.context.annotation.Import
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.mock.web.MockHttpSession
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.TestConstructor
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.web.bind.annotation.GetMapping
@@ -207,6 +209,49 @@ class SecurityConfigTest(
         )
             // assert
             .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `authenticated user is redirected to Keycloak logout endpoint on logout`() {
+        // arrange
+        val ctx = initiateAuthorizationFlow()
+
+        val subject = stubTokenResponse(ctx.nonce, setOf(REQUIRED_ROLE))
+        stubUserInfoResponse(setOf(REQUIRED_ROLE), subject)
+
+        val loginResult = mockMvc.perform(
+            get("/login/oauth2/code/keycloak")
+                .session(ctx.session)
+                .withCookiesIfPresent(ctx.cookies)
+                .param("code", "test-code")
+                .param("state", ctx.state)
+        )
+            .andExpect(status().is3xxRedirection)
+            .andReturn()
+
+        val authenticatedSession = loginResult.request.session as MockHttpSession
+        val authenticatedCookies = mergeCookies(ctx.cookies, loginResult.response.cookies.toList())
+
+        // act
+        val logoutResult = mockMvc.perform(
+            post("/logout")
+                .session(authenticatedSession)
+                .withCookiesIfPresent(authenticatedCookies)
+                .with(csrf())
+        )
+            // assert
+            .andExpect(status().is3xxRedirection)
+            .andReturn()
+
+        val location = logoutResult.response.getHeader(HttpHeaders.LOCATION)
+        assertThat(location).isNotBlank()
+        assertThat(location).startsWith("${server.baseUrl()}/realms/$REALM/protocol/openid-connect/logout")
+
+        val uri = URI(location!!)
+        val params = UriComponentsBuilder.fromUri(uri).build().queryParams
+
+        assertThat(params.getFirst("post_logout_redirect_uri")).isEqualTo("http://localhost/")
+        assertThat(params.getFirst("id_token_hint")).isNotBlank()
     }
 
     @Test
