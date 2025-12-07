@@ -112,6 +112,8 @@ class InviteService(
     fun revoke(inviteId: UUID) {
         val invite = inviteRepository.findById(inviteId)
             .orElseThrow { InviteNotFoundException(inviteId) }
+        val now = clock.instant()
+        check(invite.isActive(now)) { "Invite $inviteId is not active; revoke is only allowed for active invites." }
         invite.revoked = true
     }
 

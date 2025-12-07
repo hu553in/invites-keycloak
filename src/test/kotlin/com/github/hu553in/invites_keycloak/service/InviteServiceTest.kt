@@ -256,6 +256,47 @@ class InviteServiceTest(
     }
 
     @Test
+    fun `revoke rejects used-up invite`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+            maxUses = 1
+        ).invite
+        inviteService.useOnce(invite.id!!)
+
+        // act & assert
+        assertThatThrownBy { inviteService.revoke(invite.id!!) }
+            .isInstanceOf(IllegalStateException::class.java)
+    }
+
+    @Test
+    fun `revoke rejects expired invite`() {
+        // arrange
+        val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+            expiresAt = expiresAt
+        ).invite
+
+        val pastExpiresAt = clock.instant().minus(Duration.ofMinutes(5))
+        jdbcClient
+            .sql("update invite set expires_at = ? where id = ?")
+            .param(pastExpiresAt.toSqlTimestamp())
+            .param(invite.id)
+            .update()
+
+        // act & assert
+        assertThatThrownBy { inviteService.revoke(invite.id!!) }
+            .isInstanceOf(IllegalStateException::class.java)
+    }
+
+    @Test
     fun `delete removes revoked invite`() {
         // arrange
         val invite = inviteService.createInvite(

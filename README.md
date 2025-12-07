@@ -111,7 +111,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - [x] Truncate IDs in the table and show the full ID on hover
 - [ ] Test everything and fix all functional issues
     - [x] All invites must be resendable
-    - [ ] "Revoke" button must be disabled for used-up invites
+    - [x] "Revoke" button must be disabled for used-up invites
     - [ ] Some issues with roles
     - [ ] Some statuses may not be colored correctly in the table
     - [ ] Some issues with `obtainAccessToken()`
