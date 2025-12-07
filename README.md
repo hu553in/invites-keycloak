@@ -7,8 +7,8 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 
 ## What the service does
 
-- Admin UI: create, resend, revoke, and delete invites per realm (delete after revoke/expiry/usage); view status
-  (active, expired, used-up, revoked).
+- Admin UI: create, resend (including revoked/expired/used-up), revoke, and delete invites per realm;
+  delete after revoke/expiry/usage; view status (active, expired, used-up, revoked).
 - Invite flow: validate invite token, create Keycloak user, assign realm roles, trigger a required-actions email,
   and mark the invite as used. If any step in this flow fails, created Keycloak users are deleted to keep the flow
   atomic. Permanent errors (for example missing roles or client-side 4xx from Keycloak) revoke the invite;
@@ -110,7 +110,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - [x] Timestamps must be shown in the browser's time zone (in the UI and email, if possible)
 - [x] Truncate IDs in the table and show the full ID on hover
 - [ ] Test everything and fix all functional issues
-    - [ ] All invites must be resendable
+    - [x] All invites must be resendable
     - [ ] "Revoke" button must be disabled for used-up invites
     - [ ] Some issues with roles
     - [ ] Some statuses may not be colored correctly in the table

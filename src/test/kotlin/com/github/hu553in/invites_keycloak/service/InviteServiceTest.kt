@@ -202,6 +202,33 @@ class InviteServiceTest(
     }
 
     @Test
+    fun `resendInvite allows already revoked invite`() {
+        // arrange
+        val original = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator"
+        ).invite
+        inviteService.revoke(original.id!!)
+        val newExpiry = clock.instant().plus(Duration.ofHours(12))
+
+        // act
+        val resent = inviteService.resendInvite(
+            inviteId = original.id!!,
+            expiresAt = newExpiry,
+            createdBy = "resender"
+        )
+
+        // assert
+        val revokedOriginal = inviteRepository.findById(original.id!!).orElseThrow()
+        assertThat(revokedOriginal.revoked).isTrue()
+        assertThat(resent.invite.id).isNotEqualTo(original.id)
+        assertThat(resent.invite.expiresAt).isEqualTo(newExpiry)
+        assertThat(resent.invite.email).isEqualTo(original.email)
+    }
+
+    @Test
     fun `createInvite allows new invite after max uses reached`() {
         // arrange
         val initial = inviteService.createInvite(

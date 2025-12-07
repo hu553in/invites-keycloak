@@ -144,35 +144,17 @@
          class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow shadow-slate-200/80">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50 text-slate-700">
-                <tr>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        ID
-                    </th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        Created
-                    </th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        Email
-                    </th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        Realm
-                    </th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        Expires
-                    </th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        Uses
-                    </th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        Status
-                    </th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        Roles
-                    </th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        Actions
-                    </th>
-                </tr>
+            <tr>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">ID</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Created</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Email</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Realm</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Expires</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Uses</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Status</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Roles</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Actions</th>
+            </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 bg-white">
             <tr th:each="invite : ${invites}" class="hover:bg-slate-50/70">
@@ -263,9 +245,7 @@
                                            font-semibold text-white shadow-sm shadow-indigo-200 transition
                                            hover:-translate-y-0.5 hover:bg-indigo-700 focus-visible:outline
                                            focus-visible:outline-2 focus-visible:outline-offset-2
-                                           focus-visible:outline-indigo-500 disabled:cursor-not-allowed
-                                           disabled:bg-slate-300"
-                                    th:disabled="${!invite.active}">
+                                           focus-visible:outline-indigo-500">
                                 Resend
                             </button>
                         </form>

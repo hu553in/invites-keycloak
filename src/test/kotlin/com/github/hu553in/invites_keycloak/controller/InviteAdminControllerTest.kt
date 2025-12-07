@@ -362,6 +362,47 @@ class InviteAdminControllerTest(
     }
 
     @Test
+    fun `resend invite allows revoked invite`() {
+        // arrange
+        val inviteId = UUID.randomUUID()
+        val existing = sampleInviteEntity(id = inviteId, realm = "other", email = "user@example.com").apply {
+            revoked = true
+        }
+        val created = InviteService.CreatedInvite(
+            sampleInviteEntity(realm = "other", email = "user@example.com"),
+            "token.resend.revoked"
+        )
+        val expectedMailData = MailService.InviteMailData(
+            email = created.invite.email,
+            target = created.invite.realm,
+            link = "https://app.example.com/invite/${created.invite.realm}/${created.rawToken}",
+            expiresAt = created.invite.expiresAt
+        )
+        val expectedExpiry = clock.instant().plus(Duration.ofMinutes(1440))
+        given(inviteService.get(inviteId)).willReturn(existing)
+        given(keycloakAdminClient.listRealmRoles("other")).willReturn(existing.roles.toList())
+        given(inviteService.resendInvite(inviteId, expectedExpiry, "system")).willReturn(created)
+        given(mailService.sendInviteEmail(expectedMailData)).willReturn(MailService.MailSendStatus.OK)
+
+        // act
+        val result = mockMvc.post("/admin/invite/$inviteId/resend") {
+            param("expiryMinutes", "1440")
+        }
+
+        // assert
+        result.andExpect {
+            status { is3xxRedirection() }
+            redirectedUrl("/admin/invite")
+            flash {
+                attribute("inviteLink", "https://app.example.com/invite/other/token.resend.revoked")
+                attribute("mailStatusLevel", "info")
+            }
+        }
+        then(inviteService).should().resendInvite(inviteId, expectedExpiry, "system")
+        then(mailService).should().sendInviteEmail(expectedMailData)
+    }
+
+    @Test
     fun `resend invite blocks when roles missing in Keycloak`() {
         // arrange
         val inviteId = UUID.randomUUID()

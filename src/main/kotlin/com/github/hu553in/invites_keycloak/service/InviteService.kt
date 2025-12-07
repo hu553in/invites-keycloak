@@ -29,7 +29,6 @@ class InviteService(
         return inviteRepository.findAllByOrderByCreatedAtDesc()
     }
 
-    @Suppress("ForbiddenComment")
     @Transactional
     fun createInvite(
         realm: String,
@@ -133,12 +132,9 @@ class InviteService(
         val current = inviteRepository.findById(inviteId)
             .orElseThrow { InviteNotFoundException(inviteId) }
 
-        require(!current.revoked) { "Invite $inviteId is already revoked" }
-
         current.revoked = true
         inviteRepository.flush()
 
-        @Suppress("ForbiddenComment")
         return createInvite(
             realm = current.realm,
             email = current.email,
