@@ -15,7 +15,9 @@ class RestControllerExceptionHandler : ResponseEntityExceptionHandler() {
 
     @ExceptionHandler(Exception::class)
     fun handleUnknown(e: Exception): ProblemDetail {
-        log.error("Unknown exception led to 500 response code", e)
+        log.atError()
+            .setCause(e)
+            .log { "Unknown exception led to 500 response code" }
         return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     }
 }

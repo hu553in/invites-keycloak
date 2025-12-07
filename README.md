@@ -21,6 +21,8 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 - Keycloak admin REST calls via reactive `WebClient` with retries for transient failures.
 - PostgreSQL + Flyway for persistence; invites stored with token hash + salt.
 - Strict input normalization (trimming, lowercasing emails) and masked logging of sensitive values.
+- Structured logging uses SLF4J event builders; a servlet filter puts `current_user.id` (username or `system`) and
+  `current_user.sub` (OIDC subject when available) into MDC for every request.
 
 ## Configuration expectations
 

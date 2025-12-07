@@ -19,7 +19,9 @@ class ControllerExceptionHandler {
 
     @ExceptionHandler(InvalidInviteException::class)
     fun handleInvalidInvite(e: InvalidInviteException, model: Model, resp: HttpServletResponse): String {
-        log.warn("${InvalidInviteException::class.simpleName} exception occurred", e)
+        log.atWarn()
+            .setCause(e)
+            .log { "${InvalidInviteException::class.simpleName} exception occurred" }
         if (!model.containsAttribute("error_message")) {
             model.addAttribute("error_message", "Invite is invalid")
         }
@@ -33,7 +35,9 @@ class ControllerExceptionHandler {
         model: Model,
         resp: HttpServletResponse
     ): String {
-        log.error("${KeycloakAdminClientException::class.simpleName} exception occurred", e)
+        log.atError()
+            .setCause(e)
+            .log { "${KeycloakAdminClientException::class.simpleName} exception occurred" }
         model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
         model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
         resp.status = HttpStatus.SERVICE_UNAVAILABLE.value()
@@ -46,7 +50,9 @@ class ControllerExceptionHandler {
         model: Model,
         resp: HttpServletResponse
     ): String {
-        log.warn("${InviteNotFoundException::class.simpleName} exception occurred", e)
+        log.atWarn()
+            .setCause(e)
+            .log { "${InviteNotFoundException::class.simpleName} exception occurred" }
         if (!model.containsAttribute("error_message")) {
             model.addAttribute("error_message", e.message ?: "Invite is not found")
         }
@@ -56,7 +62,9 @@ class ControllerExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleUnknown(e: Exception, model: Model, resp: HttpServletResponse): String {
-        log.error("Unknown exception handled at controller layer", e)
+        log.atError()
+            .setCause(e)
+            .log { "Unknown exception handled at controller layer" }
         model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
         model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
         resp.status = HttpStatus.SERVICE_UNAVAILABLE.value()

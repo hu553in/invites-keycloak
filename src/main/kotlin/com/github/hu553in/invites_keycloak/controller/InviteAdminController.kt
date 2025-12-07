@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import java.time.Clock
+import java.time.Duration
 import java.util.*
 
 @Controller
@@ -190,33 +191,23 @@ class InviteAdminController(
             return "redirect:/admin/invite"
         }
 
+        return resendInviteInternal(id, expiryDuration, redirectAttributes, authentication)
+    }
+
+    private fun resendInviteInternal(
+        id: UUID,
+        expiryDuration: Duration,
+        redirectAttributes: RedirectAttributes,
+        authentication: Authentication?
+    ): String {
         return runCatching {
             val invite = inviteService.get(id)
 
-            val allowedRoles = runCatching { keycloakAdminClient.listRealmRoles(invite.realm).toSet() }
-                .getOrElse {
-                    log.atWarn()
-                        .addKeyValue("invite.id") { id }
-                        .addKeyValue("realm") { invite.realm }
-                        .setCause(it)
-                        .log { "Failed to fetch realm roles before resend" }
-                    redirectAttributes.addFlashAttribute(
-                        "errorMessage",
-                        "Cannot resend invite now: roles are unavailable (Keycloak may be down)."
-                    )
-                    return@runCatching "redirect:/admin/invite"
-                }
+            val allowedRoles = fetchAllowedRolesForResend(id, invite.realm, redirectAttributes)
+                ?: return@runCatching "redirect:/admin/invite"
 
             if (!allowedRoles.containsAll(invite.roles)) {
-                log.atWarn()
-                    .addKeyValue("invite.id") { id }
-                    .addKeyValue("realm") { invite.realm }
-                    .log { "Refusing to resend invite because some roles are missing in Keycloak" }
-                redirectAttributes.addFlashAttribute(
-                    "errorMessage",
-                    "Cannot resend: invite roles no longer exist in Keycloak. Create a new invite with valid roles."
-                )
-                return@runCatching "redirect:/admin/invite"
+                return@runCatching refuseResendDueToMissingRoles(id, invite.realm, redirectAttributes)
             }
 
             val created = inviteService.resendInvite(
@@ -240,6 +231,42 @@ class InviteAdminController(
             redirectAttributes.addFlashAttribute("errorMessage", it.message ?: "Failed to resend invite")
             "redirect:/admin/invite"
         }
+    }
+
+    private fun fetchAllowedRolesForResend(
+        inviteId: UUID,
+        realm: String,
+        redirectAttributes: RedirectAttributes
+    ): Set<String>? {
+        return runCatching { keycloakAdminClient.listRealmRoles(realm).toSet() }
+            .onFailure {
+                log.atWarn()
+                    .addKeyValue("invite.id") { inviteId }
+                    .addKeyValue("realm") { realm }
+                    .setCause(it)
+                    .log { "Failed to fetch realm roles before resend" }
+                redirectAttributes.addFlashAttribute(
+                    "errorMessage",
+                    "Cannot resend invite now: roles are unavailable (Keycloak may be down)."
+                )
+            }
+            .getOrNull()
+    }
+
+    private fun refuseResendDueToMissingRoles(
+        inviteId: UUID,
+        realm: String,
+        redirectAttributes: RedirectAttributes
+    ): String {
+        log.atWarn()
+            .addKeyValue("invite.id") { inviteId }
+            .addKeyValue("realm") { realm }
+            .log { "Refusing to resend invite because some roles are missing in Keycloak" }
+        redirectAttributes.addFlashAttribute(
+            "errorMessage",
+            "Cannot resend: invite roles no longer exist in Keycloak. Create a new invite with valid roles."
+        )
+        return "redirect:/admin/invite"
     }
 
     private fun sendMail(created: InviteService.CreatedInvite, link: String): MailService.MailSendStatus {
@@ -292,7 +319,10 @@ class InviteAdminController(
             val roles = keycloakAdminClient.listRealmRoles(realm)
             RoleFetchResult(roles, null, available = true)
         }.getOrElse {
-            log.warn("Failed to fetch roles for realm {}", realm, it)
+            log.atWarn()
+                .addKeyValue("realm") { realm }
+                .setCause(it)
+                .log { "Failed to fetch roles for realm" }
             RoleFetchResult(
                 roles = emptyList(),
                 errorMessage = "Roles are temporarily unavailable. Keycloak may be down; please retry later.",
@@ -308,7 +338,10 @@ class InviteAdminController(
     ): Set<String>? {
         val allowedRoles = runCatching { keycloakAdminClient.listRealmRoles(realm).toSet() }
             .onFailure {
-                log.warn("Failed to fetch roles for validation on realm {}", realm, it)
+                log.atWarn()
+                    .addKeyValue("realm") { realm }
+                    .setCause(it)
+                    .log { "Failed to fetch roles for validation" }
                 bindingResult.reject(
                     "roles.unavailable",
                     "Unable to fetch realm roles from Keycloak right now. Please try again."

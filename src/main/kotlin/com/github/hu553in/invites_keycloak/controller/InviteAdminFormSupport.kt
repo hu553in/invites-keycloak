@@ -1,6 +1,7 @@
 package com.github.hu553in.invites_keycloak.controller
 
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
+import com.github.hu553in.invites_keycloak.util.userIdOrSystem
 import org.springframework.security.core.Authentication
 import org.springframework.ui.Model
 import org.springframework.validation.BindingResult
@@ -166,7 +167,6 @@ object InviteAdminFormSupport {
     }
 
     fun Authentication?.nameOrSystem(): String {
-        val trimmed = this?.name?.trim().orEmpty()
-        return trimmed.ifEmpty { "system" }
+        return this.userIdOrSystem()
     }
 }
