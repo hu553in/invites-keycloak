@@ -57,6 +57,8 @@ management:
   health:
     diskspace:
       enabled: true
+    mail:
+      enabled: false
 
 invite:
   public-base-url: ${INVITE_PUBLIC_BASE_URL}
