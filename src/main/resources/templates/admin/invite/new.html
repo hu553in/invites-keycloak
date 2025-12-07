@@ -60,7 +60,7 @@
         </form>
     </div>
 
-    <div th:if="${rolesFetchError}"
+    <div th:if="${rolesVisible and rolesFetchError != null}"
          class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 shadow-sm shadow-rose-100"
          th:text="${rolesFetchError}">
         Roles could not be fetched.
@@ -126,7 +126,7 @@
             </div>
         </div>
 
-        <div class="space-y-3">
+        <div class="space-y-3" th:if="${rolesVisible}">
             <div class="flex items-center gap-2">
                 <p class="text-sm font-semibold text-slate-900">Roles</p>
                 <span th:if="${!rolesAvailable}"
@@ -162,7 +162,7 @@
                            text-white shadow-lg shadow-indigo-300 transition hover:-translate-y-0.5 hover:bg-indigo-700
                            focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
                            focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    th:disabled="${!rolesAvailable}">
+                    th:disabled="${rolesVisible and !rolesAvailable}">
                 Create invite
             </button>
             <a th:href="@{/admin/invite}"

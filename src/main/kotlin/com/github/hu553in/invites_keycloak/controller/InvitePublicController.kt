@@ -97,7 +97,9 @@ class InvitePublicController(
 
         return runCatching {
             createdUserId = keycloakAdminClient.createUser(realm, email, email)
-            keycloakAdminClient.assignRealmRoles(realm, createdUserId, roles)
+            if (roles.isNotEmpty()) {
+                keycloakAdminClient.assignRealmRoles(realm, createdUserId, roles)
+            }
             keycloakAdminClient.executeActionsEmail(realm, createdUserId)
             inviteService.useOnce(inviteId)
 

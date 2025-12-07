@@ -191,6 +191,23 @@ class HttpKeycloakAdminClientTest {
     }
 
     @Test
+    fun `assignRealmRoles no-ops when roles set is empty`() {
+        // act
+        client.assignRealmRoles(
+            realm = "invite-realm",
+            userId = "user-id",
+            roles = emptySet()
+        )
+
+        // assert
+        server.verify(0, postRequestedFor(urlEqualTo("/realms/master/protocol/openid-connect/token")))
+        server.verify(
+            0,
+            postRequestedFor(urlEqualTo("/admin/realms/invite-realm/users/user-id/role-mappings/realm"))
+        )
+    }
+
+    @Test
     fun `assignRealmRoles throws when role is not found`() {
         // arrange
         server.stubFor(

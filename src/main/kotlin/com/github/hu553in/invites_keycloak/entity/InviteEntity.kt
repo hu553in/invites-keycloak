@@ -10,7 +10,6 @@ import jakarta.persistence.Table
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.FutureOrPresent
 import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.PositiveOrZero
 import org.hibernate.annotations.CreationTimestamp
@@ -68,9 +67,8 @@ class InviteEntity(
     var revoked: Boolean = false,
 
     @JdbcTypeCode(SqlTypes.ARRAY)
-    @field:NotEmpty
     @Column(nullable = false, updatable = false, columnDefinition = "text[]")
-    var roles: Set<String>
+    var roles: Set<@NotBlank String> = emptySet()
 ) {
     fun incrementUses() {
         if (uses + 1 > maxUses) {

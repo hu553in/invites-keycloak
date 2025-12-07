@@ -204,7 +204,7 @@
                     </span>
                 </td>
                 <td class="px-4 py-3 text-slate-700 break-all sm:break-normal"
-                    th:text="${#strings.listJoin(invite.roles, ', ')}">
+                    th:text="${#lists.isEmpty(invite.roles) ? '-' : #strings.listJoin(invite.roles, ', ')}">
                     realm-role
                 </td>
                 <td class="px-4 py-3">

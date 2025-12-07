@@ -29,6 +29,8 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 - Keycloak: an admin client with client credentials, required admin role name, and reachable issuer URL.
 - Invites: public base URL for generated links, allowed realms with roles, token secret/size/algorithm,
   expiry bounds, and cleanup retention. By design, non-recoverable errors should revoke the invite.
+- Realms may have an empty roles list; when no roles are configured, the admin UI hides the roles selector and
+  invites are created without assigning realm roles (Keycloak still applies its default composites).
 - Mail: SMTP settings are optional; when absent, invite emails are skipped with a warning, and links are still
   displayed.
 - Database: PostgreSQL reachable via JDBC; Flyway runs on startup to create the `invite` table and indexes.
@@ -66,8 +68,8 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 ## Local development
 
-- Prerequisites: Java 21, Docker, Docker Compose plugin, and [lefthook](https://github.com/evilmartians/lefthook).
-- Install git hooks once: `lefthook install` (pre-commit runs `make check`).
+- Prerequisites: Java 21, Docker, Docker Compose plugin, and [pre-commit](https://pre-commit.com/).
+- Install git hooks once: `pre-commit install` (pre-commit runs `make check` and a few other checks).
 - Run the app locally (starts Postgres via Compose, then Boot): `make run_local`.
 - Fast dev loop: keep `docker compose up -d db` running; use `./gradlew bootRun` for hot restarts.
 - Tests: `make test` (unit/integration). Full linting + coverage: `make check`.
@@ -115,7 +117,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
     - [x] All invites must be resendable
     - [x] "Revoke" button must be disabled for used-up invites
     - [x] Some statuses may not be colored correctly in the table
-    - [ ] Some issues with roles
+    - [x] Some issues with roles
     - [ ] Some issues with `obtainAccessToken()`
 - [ ] Fix all styling issues
 - [ ] Add detailed docs

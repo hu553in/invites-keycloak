@@ -38,8 +38,8 @@ data class InviteProps(
 
     @Validated
     data class RealmProps(
-        @field:NotEmpty
-        val roles: Set<@NotBlank String>
+        @field:NotNull
+        val roles: Set<@NotBlank String> = emptySet()
     )
 
     @Validated

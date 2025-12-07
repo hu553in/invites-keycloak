@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.then
+import org.mockito.Mockito
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.reset
@@ -87,6 +88,30 @@ class InvitePublicControllerTest {
         then(inviteService).should().useOnce(invite.id!!)
         then(keycloakAdminClient).should(never()).deleteUser("master", "user-id")
         verify(inviteService, never()).revoke(invite.id!!)
+    }
+
+    @Test
+    fun `validateInvite skips role assignment when invite has no roles`() {
+        // arrange
+        val invite = createInvite(roles = emptySet())
+
+        given(inviteService.validateToken("master", "token")).willReturn(invite)
+        given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
+        given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
+
+        // act
+        val result = mockMvc.get("/invite/master/token")
+
+        // assert
+        result.andExpect {
+            status { isOk() }
+            view { name("public/account_created") }
+        }
+        then(keycloakAdminClient).should().createUser("master", invite.email, invite.email)
+        verify(keycloakAdminClient, never())
+            .assignRealmRoles(Mockito.anyString(), Mockito.anyString(), Mockito.anySet())
+        then(keycloakAdminClient).should().executeActionsEmail("master", "user-id")
+        then(inviteService).should().useOnce(invite.id!!)
     }
 
     @Test

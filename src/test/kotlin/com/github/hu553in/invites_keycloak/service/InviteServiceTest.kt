@@ -70,6 +70,28 @@ class InviteServiceTest(
     }
 
     @Test
+    fun `createInvite allows realm with empty configured roles`() {
+        // arrange
+        val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
+
+        // act
+        val (saved, rawToken) = inviteService.createInvite(
+            realm = "no-roles",
+            email = "user@example.com",
+            expiresAt = expiresAt,
+            maxUses = 2,
+            roles = emptySet(),
+            createdBy = "creator"
+        )
+
+        val validated = inviteService.validateToken("no-roles", rawToken)
+
+        // assert
+        assertThat(saved.roles).isEmpty()
+        assertThat(validated.roles).isEmpty()
+    }
+
+    @Test
     fun `validateToken throws InvalidInviteException when invite is expired`() {
         // arrange
         val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))

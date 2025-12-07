@@ -203,10 +203,10 @@ class InviteAdminController(
         return runCatching {
             val invite = inviteService.get(id)
 
-            val allowedRoles = fetchAllowedRolesForResend(id, invite.realm, redirectAttributes)
+            val allowedRoles = fetchAllowedRolesForResend(id, invite.realm, invite.roles, redirectAttributes)
                 ?: return@runCatching "redirect:/admin/invite"
 
-            if (!allowedRoles.containsAll(invite.roles)) {
+            if (invite.roles.isNotEmpty() && !allowedRoles.containsAll(invite.roles)) {
                 return@runCatching refuseResendDueToMissingRoles(id, invite.realm, redirectAttributes)
             }
 
@@ -236,8 +236,12 @@ class InviteAdminController(
     private fun fetchAllowedRolesForResend(
         inviteId: UUID,
         realm: String,
+        roles: Set<String>,
         redirectAttributes: RedirectAttributes
     ): Set<String>? {
+        if (roles.isEmpty()) {
+            return emptySet()
+        }
         return runCatching { keycloakAdminClient.listRealmRoles(realm).toSet() }
             .onFailure {
                 log.atWarn()
@@ -298,20 +302,35 @@ class InviteAdminController(
     }
 
     private fun prepareForm(model: Model, realm: String) {
-        val roleFetch = fetchRoles(realm)
-        val roleOptions = rolesForView(realm, inviteProps, roleFetch)
+        val configuredRoles = configuredRoles(realm, inviteProps)
+        val rolesVisible = configuredRoles.isNotEmpty()
+        val roleFetch = if (rolesVisible) {
+            fetchRoles(realm)
+        } else {
+            RoleFetchResult(emptyList(), null, available = true)
+        }
+        val roleOptions = if (rolesVisible) {
+            rolesForView(realm, inviteProps, roleFetch)
+        } else {
+            emptyList()
+        }
+        val rolesAvailable = if (rolesVisible) {
+            roleFetch.available
+        } else {
+            true
+        }
         ensureFormPresent(
             model,
             realm,
             inviteProps,
-            rolesAvailable = roleFetch.available,
+            rolesAvailable = rolesAvailable,
             allowedRoles = roleOptions.toSet()
         )
-        if (!roleFetch.available) {
+        if (rolesVisible && !roleFetch.available) {
             val form = model.getAttribute("inviteForm") as? InviteForm
             form?.roles?.clear()
         }
-        populateFormMetadata(model, realm, inviteProps, roleFetch, roleOptions)
+        populateFormMetadata(model, realm, inviteProps, roleFetch, roleOptions, rolesVisible, rolesAvailable)
     }
 
     private fun fetchRoles(realm: String): RoleFetchResult {
@@ -336,6 +355,20 @@ class InviteAdminController(
         requestedRoles: Set<String>,
         bindingResult: BindingResult
     ): Set<String>? {
+        val sanitizedRoles = requestedRoles
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .toCollection(LinkedHashSet())
+
+        val rolesToUse = if (sanitizedRoles.isEmpty()) {
+            configuredRoles(realm, inviteProps)
+        } else {
+            sanitizedRoles
+        }
+        if (rolesToUse.isEmpty()) {
+            return rolesToUse.takeUnless { bindingResult.hasErrors() }
+        }
+
         val allowedRoles = runCatching { keycloakAdminClient.listRealmRoles(realm).toSet() }
             .onFailure {
                 log.atWarn()
@@ -348,16 +381,6 @@ class InviteAdminController(
                 )
             }
             .getOrNull()
-
-        val sanitizedRoles = requestedRoles
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .toCollection(LinkedHashSet())
-
-        val rolesToUse = if (sanitizedRoles.isEmpty()) configuredRoles(realm, inviteProps) else sanitizedRoles
-        if (rolesToUse.isEmpty()) {
-            bindingResult.rejectValue("roles", "roles.empty", "At least one role must be selected")
-        }
 
         if (allowedRoles != null && !allowedRoles.containsAll(rolesToUse)) {
             bindingResult.rejectValue("roles", "roles.invalid", "Selected roles are not available in Keycloak")

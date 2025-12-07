@@ -14,6 +14,9 @@ invite:
   public-base-url: https://app.example.com
   token:
     secret: example-very-long-secret
+  realms:
+    no-roles:
+      roles: [ ]
 
 keycloak:
   url: https://id.example.com

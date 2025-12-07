@@ -50,6 +50,7 @@ import java.util.*
         "invite.cleanup.retention=P30D",
         "invite.realms.master.roles[0]=default-admin",
         "invite.realms.other.roles[0]=auditor",
+        "invite.realms.no-roles.roles=",
         "invite.token.secret=01234567890123456789012345678901",
         "invite.token.bytes=32",
         "invite.token.salt-bytes=16",
@@ -128,6 +129,8 @@ class InviteAdminControllerTest(
             view { name("admin/invite/new") }
             model {
                 attribute("selectedRealm", "master")
+                attribute("rolesVisible", true)
+                attribute("rolesAvailable", true)
                 attributeExists("inviteForm")
             }
         }
@@ -144,10 +147,34 @@ class InviteAdminControllerTest(
             param("realm", "other")
         }.andExpect {
             status { isOk() }
-            model { attribute("selectedRealm", "other") }
+            model {
+                attribute("selectedRealm", "other")
+                attribute("rolesVisible", true)
+                attribute("rolesAvailable", true)
+            }
         }
 
         then(keycloakAdminClient).should().listRealmRoles("other")
+    }
+
+    @Test
+    fun `new invite form hides roles when realm has none configured`() {
+        // act
+        val result = mockMvc.get("/admin/invite/new") {
+            param("realm", "no-roles")
+        }
+
+        // assert
+        result.andExpect {
+            status { isOk() }
+            view { name("admin/invite/new") }
+            model {
+                attribute("selectedRealm", "no-roles")
+                attribute("rolesVisible", false)
+                attribute("rolesAvailable", true)
+            }
+        }
+        verifyNoInteractions(keycloakAdminClient)
     }
 
     @Test
@@ -164,6 +191,7 @@ class InviteAdminControllerTest(
             view { name("admin/invite/new") }
             model {
                 attribute("rolesAvailable", false)
+                attribute("rolesVisible", true)
                 attributeExists("rolesFetchError")
             }
         }
@@ -213,6 +241,59 @@ class InviteAdminControllerTest(
             }
         }
 
+        then(mailService).should().sendInviteEmail(expectedMailData)
+    }
+
+    @Test
+    fun `create invite without roles when realm has none`() {
+        // arrange
+        val expectedExpiry = clock.instant().plus(Duration.ofMinutes(1440))
+        val createdInvite = InviteService.CreatedInvite(
+            sampleInviteEntity(
+                realm = "no-roles",
+                email = "no-roles@example.com",
+                roles = emptySet()
+            ),
+            "raw.token.no-roles"
+        )
+        val expectedMailData = MailService.InviteMailData(
+            email = createdInvite.invite.email,
+            target = createdInvite.invite.realm,
+            link = "https://app.example.com/invite/${createdInvite.invite.realm}/${createdInvite.rawToken}",
+            expiresAt = createdInvite.invite.expiresAt
+        )
+        given(
+            inviteService.createInvite(
+                realm = "no-roles",
+                email = "no-roles@example.com",
+                expiresAt = expectedExpiry,
+                maxUses = 1,
+                roles = emptySet(),
+                createdBy = "system"
+            )
+        ).willReturn(createdInvite)
+        given(mailService.sendInviteEmail(expectedMailData)).willReturn(MailService.MailSendStatus.OK)
+
+        // act
+        val result = mockMvc.post("/admin/invite") {
+            param("realm", "no-roles")
+            param("email", "no-roles@example.com")
+            param("expiryMinutes", "1440")
+            param("maxUses", "1")
+        }
+
+        // assert
+        result.andExpect {
+            status { is3xxRedirection() }
+            redirectedUrl("/admin/invite")
+            flash {
+                attribute("successMessage", "Invite created for no-roles@example.com")
+                attributeExists("inviteLink")
+                attribute("mailStatusLevel", "info")
+            }
+        }
+
+        verifyNoInteractions(keycloakAdminClient)
         then(mailService).should().sendInviteEmail(expectedMailData)
     }
 
@@ -487,7 +568,8 @@ class InviteAdminControllerTest(
     private fun sampleInviteEntity(
         id: UUID = UUID.randomUUID(),
         realm: String = "master",
-        email: String = "admin@example.com"
+        email: String = "admin@example.com",
+        roles: Set<String> = setOf("default-admin")
     ): InviteEntity {
         return InviteEntity(
             id = id,
@@ -499,7 +581,7 @@ class InviteAdminControllerTest(
             createdAt = clock.instant(),
             expiresAt = clock.instant().plus(inviteProps.expiry.default),
             maxUses = 1,
-            roles = setOf("default-admin")
+            roles = roles
         )
     }
 }

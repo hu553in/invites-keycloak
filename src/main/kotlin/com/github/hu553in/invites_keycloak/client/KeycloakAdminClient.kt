@@ -179,7 +179,14 @@ class HttpKeycloakAdminClient(
     override fun assignRealmRoles(realm: String, userId: String, roles: Set<String>) {
         val normalizedRealm = normalizeString(realm, "realm must not be blank")
         val normalizedUserId = normalizeString(userId, "userId must not be blank")
-        val normalizedRoles = normalizeStrings(roles, "roles must not be empty")
+        val normalizedRoles = normalizeStrings(roles, required = false)
+        if (normalizedRoles.isEmpty()) {
+            log.atInfo()
+                .addKeyValue("user.id") { normalizedUserId }
+                .addKeyValue("realm") { normalizedRealm }
+                .log { "Skipping role assignment because no roles were provided" }
+            return
+        }
         val accessToken = obtainAccessToken()
 
         val roleRepresentations = normalizedRoles.map { role ->

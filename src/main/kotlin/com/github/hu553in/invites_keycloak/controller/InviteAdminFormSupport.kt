@@ -58,15 +58,25 @@ object InviteAdminFormSupport {
         realm: String,
         inviteProps: InviteProps,
         roleFetch: RoleFetchResult,
-        roleOptions: List<String>
+        roleOptions: List<String>,
+        rolesVisible: Boolean,
+        rolesAvailable: Boolean
     ) {
         val availableRealms = inviteProps.realms.keys.toList()
 
         model.addAttribute("realmOptions", availableRealms)
         model.addAttribute("selectedRealm", realm)
         model.addAttribute("roleOptions", roleOptions)
-        model.addAttribute("rolesFetchError", roleFetch.errorMessage)
-        model.addAttribute("rolesAvailable", roleFetch.available)
+        model.addAttribute(
+            "rolesFetchError",
+            if (rolesVisible) {
+                roleFetch.errorMessage
+            } else {
+                null
+            }
+        )
+        model.addAttribute("rolesAvailable", rolesAvailable)
+        model.addAttribute("rolesVisible", rolesVisible)
         addExpiryMetadata(model, inviteProps)
     }
 
@@ -126,7 +136,11 @@ object InviteAdminFormSupport {
         rolesAvailable: Boolean = true,
         configuredOverride: Set<String>? = null
     ): InviteAdminController.InviteForm {
-        val configured = if (rolesAvailable) configuredOverride ?: configuredRoles(realm, inviteProps) else emptySet()
+        val configured = if (rolesAvailable) {
+            configuredOverride ?: configuredRoles(realm, inviteProps)
+        } else {
+            emptySet()
+        }
         return InviteAdminController.InviteForm(
             realm = realm,
             email = "",
@@ -146,7 +160,9 @@ object InviteAdminFormSupport {
     }
 
     fun rolesForView(realm: String, inviteProps: InviteProps, roleFetch: RoleFetchResult): List<String> {
-        if (!roleFetch.available) return emptyList()
+        if (!roleFetch.available) {
+            return emptyList()
+        }
 
         val configuredRoles = configuredRoles(realm, inviteProps)
         val keycloakRoles = roleFetch.roles.toSet()
