@@ -7,9 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="flex min-h-screen items-center justify-center
-             bg-gradient-to-b from-rose-50 via-white to-white text-rose-950">
+             bg-gradient-to-b from-rose-50 via-white to-white text-rose-950 antialiased">
 <main class="mx-4 w-full max-w-xl rounded-2xl border border-rose-200/70 bg-white/90
-             p-8 shadow-2xl shadow-rose-100 backdrop-blur">
+             p-6 text-center shadow-2xl shadow-rose-100 backdrop-blur sm:p-8 sm:text-left">
     <h1 class="text-2xl font-semibold" th:text="${error_message ?: 'Unknown error'}">Unknown error</h1>
     <p class="mt-2 text-base leading-relaxed text-rose-800"
        th:text="${error_details ?: 'Please contact your administrator.'}">
