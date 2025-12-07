@@ -10,7 +10,7 @@ import java.util.*
 class InviteAdminMappingsTest {
 
     @Test
-    fun `marks invite as used up when uses reach max`() {
+    fun `marks invite as used-up when uses reach max`() {
         val now = Instant.parse("2025-01-01T00:00:00Z")
         val view = InviteEntity(
             id = UUID.randomUUID(),
@@ -27,6 +27,6 @@ class InviteAdminMappingsTest {
         ).toView(now)
 
         assertThat(view.statusClass).isEqualTo("used-up")
-        assertThat(view.statusLabel).isEqualTo("Used up")
+        assertThat(view.statusLabel).isEqualTo("Used-up")
     }
 }

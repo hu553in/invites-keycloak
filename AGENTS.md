@@ -2,27 +2,26 @@
 
 ## General
 
-- Please ask questions before doing any changes if you have any doubts about anything.
+- Please ask questions before making any changes if you have any doubts about anything.
 
 ## Testing and checking
 
-- Always use `make test` command for testing.
-- Always use `make check` command for full checking (testing, linting, etc.)
+- Always use the `make test` command for testing.
+- Always use the `make check` command for full checking (testing, linting, etc.)
 
 ## git
 
 - Always check staged and unstaged changes before doing any work to have a clear context.
-- Don't stage/unstage any changes and don't do any commits until explicitly asked.
+- Don't stage or unstage any changes, and don't do any commits until explicitly asked.
 
 ## DB
 
-- Always consider performance and complexity and try to use existing or create new indexes.
+- Always consider performance and complexity, and prefer using existing indexes or creating new ones.
 
 ## Docs
 
-- In any Markdown file please consider the max line length equal 120 (excluding tables, long links
-  or code blocks, etc.)
-- After doing any changes in project, check that any existing docs must be actualized:
+- In any Markdown file, keep the max line length to 120 (excluding tables, long links or code blocks, etc.)
+- After making any changes to the project, ensure the existing docs are updated:
     - `AGENTS.md`
     - `README.md`
     - code comments

@@ -26,7 +26,7 @@ object InviteAdminMappings {
         val (statusLabel, statusClass) = when {
             revoked -> "Revoked" to "revoked"
             expired -> "Expired" to "expired"
-            usedUp -> "Used up" to "used-up"
+            usedUp -> "Used-up" to "used-up"
             else -> "Active" to "active"
         }
 

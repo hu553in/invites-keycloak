@@ -55,15 +55,15 @@
                              px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
                     Active
                 </span>
-                <dd class="text-slate-600">Usable invite</dd>
+                <dd class="text-slate-600">Invite is usable</dd>
             </div>
 
             <div class="flex items-center gap-2">
                 <span class="inline-flex items-center min-w-[4.8rem] justify-center rounded-full bg-slate-100
                              px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-600/20">
-                    Used up
+                    Used-up
                 </span>
-                <dd class="text-slate-600">Max uses reached (issue new invite)</dd>
+                <dd class="text-slate-600">Maximum uses reached (issue a new invite)</dd>
             </div>
 
             <div class="flex items-center gap-2">
@@ -71,7 +71,7 @@
                              px-2 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-600/20">
                     Expired
                 </span>
-                <dd class="text-slate-600">Past expiry (issue new invite)</dd>
+                <dd class="text-slate-600">Invite expired (issue a new invite)</dd>
             </div>
 
             <div class="flex items-center gap-2">
@@ -79,7 +79,7 @@
                              px-2 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-600/20">
                     Revoked
                 </span>
-                <dd class="text-slate-600">Manually revoked or non-recoverable error</dd>
+                <dd class="text-slate-600">Manually revoked or a non-recoverable error</dd>
             </div>
         </dl>
     </div>
@@ -203,7 +203,7 @@
                             <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
                                    th:value="${_csrf.token}"/>
                             <label class="flex flex-col text-xs font-semibold text-slate-700">
-                                <span>Expiry (min)</span>
+                                <span>Expiry (minutes)</span>
                                 <input type="number"
                                        name="expiryMinutes"
                                        th:value="${expiryDefaultMinutes}"

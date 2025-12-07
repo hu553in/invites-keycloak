@@ -63,7 +63,7 @@
              class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900
                     shadow-sm shadow-rose-100"
              th:each="err : ${#fields.globalErrors()}" th:text="${err}">
-            Form has errors
+            The form has errors
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
@@ -86,7 +86,7 @@
                               focus:ring-indigo-200"/>
                 <div th:if="${#fields.hasErrors('maxUses')}"
                      class="text-sm font-semibold text-rose-700" th:errors="*{maxUses}">
-                    Invalid max uses
+                    Invalid maximum uses
                 </div>
             </div>
         </div>
@@ -109,7 +109,7 @@
             </div>
             <div th:if="${#fields.hasErrors('expiryMinutes')}"
                  class="text-sm font-semibold text-rose-700" th:errors="*{expiryMinutes}">
-                Invalid expiry
+                Invalid expiry value
             </div>
         </div>
 
@@ -125,7 +125,7 @@
             <div th:if="${!rolesAvailable}"
                  class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm
                         shadow-amber-100">
-                Roles are unavailable right now. Retry after Keycloak is reachable.
+                Roles are unavailable right now. Try again once Keycloak is reachable.
             </div>
             <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <label th:each="role : ${roleOptions}"
@@ -139,7 +139,7 @@
             </div>
             <div th:if="${#fields.hasErrors('roles')}"
                  class="text-sm font-semibold text-rose-700" th:errors="*{roles}">
-                Invalid roles
+                Invalid role selection
             </div>
         </div>
 
