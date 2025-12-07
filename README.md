@@ -101,6 +101,8 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 
 ## Future roadmap
 
+- [ ] Add logout
+- [ ] Test everything and fix all functional issues
 - [ ] Fix all styling issues
 - [ ] Add detailed docs
 - [ ] Cover everything with logs
