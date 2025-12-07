@@ -24,7 +24,7 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 ## Configuration expectations
 
 - Keycloak: an admin client with client credentials, required admin role name, and reachable issuer URL.
-- Invites: public base URL for generated links, allowed realms with default roles, token secret/size/algorithm,
+- Invites: public base URL for generated links, allowed realms with roles, token secret/size/algorithm,
   expiry bounds, and cleanup retention. Errors that are not recoverable should revoke the invite by design.
 - Mail: SMTP settings optional; when absent, invite emails are skipped with a warning, links still displayed.
 - Database: PostgreSQL reachable via JDBC; Flyway runs on startup to create the `invite` table and indexes.
@@ -33,11 +33,11 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 
 - Realm: use `master` or set `KEYCLOAK_REALM` to match.
 - Client: confidential client named `invites-keycloak` (or set `KEYCLOAK_CLIENT_ID`).
-  - Standard Flow enabled.
-  - Redirect URIs: `<app-base-url>/login/oauth2/code/keycloak`
-    - Example for local: `http://localhost:8080/login/oauth2/code/keycloak`.
-  - Web Origins: `<app-base-url>` (add the scheme/port the app is served on).
-  - Client secret: copy to `KEYCLOAK_CLIENT_SECRET`.
+    - Standard Flow enabled.
+    - Redirect URIs: `<app-base-url>/login/oauth2/code/keycloak`
+        - Example for local: `http://localhost:8080/login/oauth2/code/keycloak`.
+    - Web Origins: `<app-base-url>` (add the scheme/port the app is served on).
+    - Client secret: copy to `KEYCLOAK_CLIENT_SECRET`.
 - Role: realm role `invite-admin` (or `KEYCLOAK_REQUIRED_ROLE`) granted to the user who will sign in to the
   admin UI.
 - Token claims: include roles in the ID token. Attach the built-in `roles` client scope or add a mapper for
@@ -78,6 +78,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 ## Deploying to a VPS with Docker
 
 CI builds and pushes images to `ghcr.io/hu553in/invites-keycloak`:
+
 - `latest` and commit SHA on pushes to `main`.
 - git tag name (for example `v1.2.3`) when the tag matches `v*`.
 

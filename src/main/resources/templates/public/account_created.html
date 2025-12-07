@@ -4,54 +4,20 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Account created</title>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f8;
-            color: #1f2933;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        main {
-            margin: 0 2rem;
-            max-width: 32rem;
-            padding: 2.5rem;
-            background-color: #ffffff;
-            border-radius: 0.75rem;
-            box-shadow: 0 1.25rem 2.5rem rgba(15, 23, 42, 0.1);
-            border: 1px solid rgba(15, 23, 42, 0.3);
-        }
-
-        h1, p {
-            margin: 16px 0;
-        }
-
-        h1 {
-            font-size: 1.75rem;
-        }
-
-        p {
-            line-height: 1.5;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-<main>
-    <h1>Account created</h1>
-    <p>
+<body class="flex min-h-screen items-center justify-center
+             bg-gradient-to-br from-emerald-50 via-white to-sky-50 text-slate-900">
+<main class="mx-4 w-full max-w-xl rounded-2xl border border-emerald-200/80 bg-white/90
+             p-8 shadow-2xl shadow-emerald-100 backdrop-blur">
+    <h1 class="text-2xl font-semibold text-emerald-800">Account created</h1>
+    <p class="mt-2 text-base leading-relaxed text-slate-700">
         Your account has been created successfully.
         Please check your email for further instructions to activate your account.
     </p>
-    <p>If you do not receive an email, be sure to check your spam folder or contact your administrator.</p>
+    <p class="mt-3 text-sm leading-relaxed text-slate-600">
+        If you do not receive an email, check your spam folder or contact your administrator.
+    </p>
 </main>
 </body>
 </html>

@@ -4,152 +4,39 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Create invite</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f7fb;
-            margin: 0;
-            padding: 0;
-            color: #111827;
-        }
-
-        header {
-            background-color: #111827;
-            color: #fff;
-            padding: 1.5rem;
-        }
-
-        main {
-            padding: 2rem;
-            max-width: 720px;
-            margin: 0 auto;
-        }
-
-        form {
-            background-color: #fff;
-            padding: 2rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08);
-        }
-
-        label {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 0.35rem;
-        }
-
-        input[type="text"],
-        input[type="email"],
-        input[type="number"] {
-            width: 100%;
-            padding: 0.6rem 0.75rem;
-            border: 1px solid #cbd5f5;
-            border-radius: 0.5rem;
-            font-size: 1rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .field-error {
-            color: #b91c1c;
-            font-size: 0.85rem;
-            margin-top: -0.5rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .helper {
-            font-size: 0.85rem;
-            color: #4b5563;
-            margin-bottom: 0.75rem;
-        }
-
-        .roles {
-            margin-bottom: 1.25rem;
-        }
-
-        .roles label {
-            font-weight: normal;
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
-
-        .roles div {
-            padding: 0.35rem 0;
-        }
-
-        .realm-switcher {
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .realm-switcher select {
-            padding: 0.4rem 0.75rem;
-            border-radius: 0.375rem;
-            border: 1px solid #cbd5f5;
-            font-size: 1rem;
-        }
-
-        .alert {
-            padding: 0.75rem 1rem;
-            border-radius: 0.375rem;
-            margin-bottom: 1rem;
-        }
-
-        .alert.error {
-            background-color: #fee2e2;
-            color: #991b1b;
-        }
-
-        .alert.info {
-            background-color: #e0f2fe;
-            color: #0f172a;
-        }
-
-        .buttons {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1.25rem;
-        }
-
-        button.primary {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 0.5rem;
-            background-color: #2563eb;
-            color: #fff;
-            font-size: 1rem;
-            cursor: pointer;
-        }
-
-        a.secondary {
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.5rem;
-            text-decoration: none;
-            border: 1px solid #cbd5f5;
-            color: #111827;
-            font-size: 1rem;
-        }
-
-        .roles-error {
-            color: #92400e;
-            background-color: #fef3c7;
-            padding: 0.75rem 1rem;
-            border-radius: 0.375rem;
-            margin-bottom: 1rem;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-<header>
-    <h1>Create invite</h1>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 text-slate-900">
+<header class="bg-slate-900 text-white shadow-lg shadow-slate-900/20">
+    <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div>
+            <p class="text-sm text-slate-300">Invitations</p>
+            <h1 class="text-2xl font-semibold leading-tight">Create invite</h1>
+        </div>
+        <a th:href="@{/admin/invite}"
+           class="inline-flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-800 px-4 py-2
+                  text-sm font-semibold text-white shadow-lg shadow-slate-900/30 transition hover:-translate-y-0.5
+                  hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+                  focus-visible:outline-white">
+            Back to list
+        </a>
+    </div>
 </header>
-<main>
-    <div class="realm-switcher">
-        <form method="get" th:action="@{/admin/invite/new}">
-            <label for="realmSelect">Realm</label>
-            <select id="realmSelect" name="realm" onchange="this.form.submit()">
+
+<main class="mx-auto max-w-5xl space-y-6 px-6 pb-12 pt-8">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <p class="text-sm text-slate-600">Realm in focus</p>
+            <p class="text-xl font-semibold text-slate-900" th:text="${selectedRealm}">master</p>
+        </div>
+        <form method="get" th:action="@{/admin/invite/new}"
+              class="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm
+                     shadow-slate-200/60">
+            <label for="realmSelect" class="text-sm font-medium text-slate-800">Realm</label>
+            <select id="realmSelect" name="realm" onchange="this.form.submit()"
+                    class="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold
+                           text-slate-900 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-2
+                           focus:ring-indigo-200">
                 <option th:each="realmOption : ${realmOptions}"
                         th:value="${realmOption}"
                         th:text="${realmOption}"
@@ -158,66 +45,119 @@
                 </option>
             </select>
         </form>
-        <div class="helper">Roles update when another realm is selected.</div>
     </div>
 
-    <div th:if="${rolesFetchError}" class="alert error" th:text="${rolesFetchError}">
+    <div th:if="${rolesFetchError}"
+         class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 shadow-sm shadow-rose-100"
+         th:text="${rolesFetchError}">
         Roles could not be fetched.
     </div>
 
-    <form th:action="@{/admin/invite}" th:object="${inviteForm}" method="post">
+    <form th:action="@{/admin/invite}" th:object="${inviteForm}" method="post"
+          class="space-y-5 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-xl
+                 shadow-slate-200/80 backdrop-blur">
         <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
         <input type="hidden" th:field="*{realm}"/>
 
-        <div th:if="${#fields.hasGlobalErrors()}" class="alert error"
+        <div th:if="${#fields.hasGlobalErrors()}"
+             class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900
+                    shadow-sm shadow-rose-100"
              th:each="err : ${#fields.globalErrors()}" th:text="${err}">
             Form has errors
         </div>
 
-        <div>
-            <label for="email">Email</label>
-            <input id="email" type="email" placeholder="user@example.com" th:field="*{email}"/>
-            <div th:if="${#fields.hasErrors('email')}" class="field-error" th:errors="*{email}">Invalid email</div>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div class="space-y-2">
+                <label for="email" class="text-sm font-semibold text-slate-900">Email</label>
+                <input id="email" type="email" placeholder="user@example.com" th:field="*{email}"
+                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base
+                              font-medium text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none
+                              focus:ring-2 focus:ring-indigo-200"/>
+                <div th:if="${#fields.hasErrors('email')}"
+                     class="text-sm font-semibold text-rose-700" th:errors="*{email}">
+                    Invalid email
+                </div>
+            </div>
+            <div class="space-y-2">
+                <label for="maxUses" class="text-sm font-semibold text-slate-900">Max uses</label>
+                <input id="maxUses" type="number" min="1" th:field="*{maxUses}"
+                       class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base font-medium
+                              text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2
+                              focus:ring-indigo-200"/>
+                <div th:if="${#fields.hasErrors('maxUses')}"
+                     class="text-sm font-semibold text-rose-700" th:errors="*{maxUses}">
+                    Invalid max uses
+                </div>
+            </div>
         </div>
 
-        <div>
-            <label for="expiry">Expiry (minutes)</label>
+        <div class="space-y-2">
+            <label for="expiry" class="text-sm font-semibold text-slate-900">Expiry (minutes)</label>
             <input id="expiry" type="number" th:field="*{expiryMinutes}"
-                   th:attr="min=${expiryMinMinutes},max=${expiryMaxMinutes},step=5"/>
-            <div class="helper">
-                Default: <span th:text="${expiryDefaultMinutes}">1440</span> minutes.
-                Allowed range: <span th:text="${expiryMinMinutes}">5</span> -
-                <span th:text="${expiryMaxMinutes}">43200</span> minutes.
+                   th:attr="min=${expiryMinMinutes},max=${expiryMaxMinutes},step=5"
+                   class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base font-medium
+                          text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2
+                          focus:ring-indigo-200"/>
+            <div class="text-sm text-slate-600">
+                Default:
+                <span class="font-semibold text-slate-800" th:text="${expiryDefaultMinutes}">1440</span>
+                minutes. Allowed range:
+                <span class="font-semibold text-slate-800" th:text="${expiryMinMinutes}">5</span> -
+                <span class="font-semibold text-slate-800" th:text="${expiryMaxMinutes}">43200</span>
+                minutes.
             </div>
-            <div th:if="${#fields.hasErrors('expiryMinutes')}" class="field-error" th:errors="*{expiryMinutes}">
+            <div th:if="${#fields.hasErrors('expiryMinutes')}"
+                 class="text-sm font-semibold text-rose-700" th:errors="*{expiryMinutes}">
                 Invalid expiry
             </div>
         </div>
 
-        <div>
-            <label for="maxUses">Max uses</label>
-            <input id="maxUses" type="number" min="1" th:field="*{maxUses}"/>
-            <div th:if="${#fields.hasErrors('maxUses')}" class="field-error" th:errors="*{maxUses}">
-                Invalid max uses
+        <div class="space-y-3">
+            <div class="flex items-center gap-2">
+                <p class="text-sm font-semibold text-slate-900">Roles</p>
+                <span th:if="${!rolesAvailable}"
+                      class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1
+                             ring-amber-600/30">
+                    Unavailable
+                </span>
             </div>
-        </div>
-
-        <div class="roles">
-            <label>Roles</label>
-            <div th:if="${!rolesAvailable}" class="roles-error">
+            <div th:if="${!rolesAvailable}"
+                 class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm
+                        shadow-amber-100">
                 Roles are unavailable right now. Retry after Keycloak is reachable.
             </div>
-            <div th:each="role : ${roleOptions}">
-                <label>
-                    <input type="checkbox" th:field="*{roles}" th:value="${role}" th:disabled="${!rolesAvailable}"/>
+            <div class="grid gap-2 sm:grid-cols-2">
+                <label th:each="role : ${roleOptions}"
+                       class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2
+                              text-sm font-medium text-slate-800 shadow-inner shadow-slate-200/70">
+                    <input type="checkbox" th:field="*{roles}" th:value="${role}" th:disabled="${!rolesAvailable}"
+                           class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500
+                                  disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100"/>
                     <span th:text="${role}">realm-role</span>
                 </label>
             </div>
+            <div th:if="${#fields.hasErrors('roles')}"
+                 class="text-sm font-semibold text-rose-700" th:errors="*{roles}">
+                Invalid roles
+            </div>
         </div>
 
-        <div class="buttons">
-            <button type="submit" class="primary" th:disabled="${!rolesAvailable}">Create invite</button>
-            <a class="secondary" th:href="@{/admin/invite}">Cancel</a>
+        <div class="flex flex-wrap items-center gap-3 pt-2">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold
+                           text-white shadow-lg shadow-indigo-300 transition hover:-translate-y-0.5 hover:bg-indigo-700
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+                           focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    th:disabled="${!rolesAvailable}">
+                Create invite
+            </button>
+            <a th:href="@{/admin/invite}"
+               class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm
+                      font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:shadow
+                      focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+                      focus-visible:outline-slate-500">
+                Cancel
+            </a>
         </div>
     </form>
 </main>

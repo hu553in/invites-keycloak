@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title th:text="|Invite to ${target ?: 'example'}|">Invite to example</title>
 </head>
-<body style="font-family: Arial, sans-serif; color: #111827;">
-<h1 style="color: #1d4ed8;">You're invited! 🎉</h1>
-<p>You have been invited to <strong th:text="${target ?: 'example'}">example</strong>.</p>
+<body>
+<h1>You're invited! 🎉</h1>
+<p>
+    You have been invited to
+    <strong th:text="${target ?: 'example'}">example</strong>.
+</p>
 <p>Click the link below to accept the invitation:</p>
 <p>
-    👉
     <a th:attr="href=${link ?: 'https://example.org/invite/realm/token'}"
        th:text="${link ?: 'https://example.org/invite/realm/token'}">
         https://example.org/invite/realm/token

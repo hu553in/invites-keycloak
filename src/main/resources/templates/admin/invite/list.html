@@ -4,275 +4,210 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Invites</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f7fb;
-            margin: 0;
-            padding: 0;
-            color: #1f2933;
-        }
-
-        header {
-            background-color: #111827;
-            color: #fff;
-            padding: 1.5rem;
-        }
-
-        main {
-            padding: 2rem;
-        }
-
-        .actions {
-            margin-bottom: 1rem;
-        }
-
-        .actions a {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            text-decoration: none;
-            background-color: #2563eb;
-            color: #fff;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #fff;
-            box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.08);
-            border-radius: 0.5rem;
-            overflow: hidden;
-        }
-
-        thead {
-            background-color: #e0e7ff;
-        }
-
-        th, td {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        th {
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        .status {
-            padding: 0.125rem 0.5rem;
-            border-radius: 0.375rem;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .status.active {
-            background-color: #dcfce7;
-            color: #166534;
-        }
-
-        .status.revoked {
-            background-color: #fee2e2;
-            color: #991b1b;
-        }
-
-        .status.expired {
-            background-color: #fef3c7;
-            color: #92400e;
-        }
-
-        .status.used-up {
-            background-color: #e5e7eb;
-            color: #374151;
-        }
-
-        .actions-inline {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-
-        .actions-inline form {
-            margin: 0;
-        }
-
-        button.action {
-            padding: 0.35rem 0.75rem;
-            border: none;
-            border-radius: 0.375rem;
-            cursor: pointer;
-            background-color: #f3f4f6;
-        }
-
-        button.action.primary {
-            background-color: #2563eb;
-            color: #fff;
-        }
-
-        button.action:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .expiry-field {
-            display: flex;
-            flex-direction: column;
-            font-size: 0.75rem;
-        }
-
-        .expiry-field input {
-            margin-top: 0.25rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.375rem;
-            border: 1px solid #cbd5f5;
-            width: 6rem;
-        }
-
-        .invite-link {
-            margin: 1rem 0;
-            padding: 0.75rem 1rem;
-            border-radius: 0.375rem;
-            background-color: #ecfccb;
-            color: #365314;
-        }
-
-        code {
-            background-color: #111827;
-            color: #fff;
-            padding: 0.15rem 0.35rem;
-            border-radius: 0.25rem;
-            font-size: 0.85rem;
-        }
-
-        .alert {
-            padding: 0.75rem 1rem;
-            border-radius: 0.375rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .alert.success {
-            background-color: #dcfce7;
-            color: #166534;
-        }
-
-        .alert.error {
-            background-color: #fee2e2;
-            color: #991b1b;
-        }
-
-        .alert.info {
-            background-color: #e0f2fe;
-            color: #0f172a;
-        }
-
-        .alert.warning {
-            background-color: #fef3c7;
-            color: #92400e;
-        }
-
-        .empty {
-            padding: 1rem;
-            background-color: #fff;
-            border-radius: 0.5rem;
-            box-shadow: 0 0.25rem 1rem rgba(15, 23, 42, 0.05);
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-<header>
-    <h1>Invite administration</h1>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+<header class="bg-slate-900 text-white shadow-lg shadow-slate-900/20">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div>
+            <p class="text-sm text-slate-300">Invitations</p>
+            <h1 class="text-2xl font-semibold leading-tight">Invite administration</h1>
+        </div>
+        <a th:href="@{/admin/invite/new}"
+           class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600
+                  px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition
+                  hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2
+                  focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+            New invite
+        </a>
+    </div>
 </header>
-<main>
-    <div th:if="${successMessage}" class="alert success" th:text="${successMessage}">Success</div>
-    <div th:if="${errorMessage}" class="alert error" th:text="${errorMessage}">Error</div>
+
+<main class="mx-auto max-w-6xl space-y-6 px-6 pb-12 pt-8">
+    <div th:if="${successMessage}"
+         class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3
+                text-sm text-emerald-900 shadow-sm shadow-emerald-100">
+        <p class="font-semibold" th:text="${successMessage}">Success</p>
+    </div>
+    <div th:if="${errorMessage}"
+         class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3
+                text-sm text-rose-900 shadow-sm shadow-rose-100">
+        <p class="font-semibold" th:text="${errorMessage}">Error</p>
+    </div>
     <div th:if="${mailStatusMessage}"
-         th:class="'alert ' + (${mailStatusLevel} ?: 'info')"
+         th:class="|rounded-lg border text-sm shadow-sm px-4 py-3
+                   ${mailStatusLevel} == 'error'
+                       ? 'border-rose-200 bg-rose-50 text-rose-900 shadow-rose-100'
+                       : (${mailStatusLevel} == 'warning'
+                           ? 'border-amber-200 bg-amber-50 text-amber-900 shadow-amber-100'
+                           : (${mailStatusLevel} == 'success'
+                               ? 'border-emerald-200 bg-emerald-50 text-emerald-900 shadow-emerald-100'
+                               : 'border-sky-200 bg-sky-50 text-sky-900 shadow-sky-100'))|"
          th:text="${mailStatusMessage}">
         Email status
     </div>
-    <div class="alert info">
-        Status legend:
-        <strong>Active</strong> — usable invite;
-        <strong>Used up</strong> — max uses reached (retry requires new invite);
-        <strong>Expired</strong> — past expiry (issue a new one);
-        <strong>Revoked</strong> — manually revoked or failed due to non-recoverable Keycloak error.
-    </div>
-    <div th:if="${inviteLink}" class="invite-link">
-        Invite link:
-        <code th:text="${inviteLink}">https://example.org/invite/realm/token</code>
-    </div>
 
-    <div class="actions">
-        <a th:href="@{/admin/invite/new}">Create invite</a>
-    </div>
-
-    <div th:if="${#lists.isEmpty(invites)}" class="empty">
-        No invites yet. Create one to get started.
-    </div>
-
-    <table th:if="${!#lists.isEmpty(invites)}">
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Created</th>
-            <th>Email</th>
-            <th>Realm</th>
-            <th>Expires</th>
-            <th>Uses</th>
-            <th>Status</th>
-            <th>Roles</th>
-            <th>Actions</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="invite : ${invites}">
-            <td><code th:text="${invite.id}">id</code></td>
-            <td th:text="${#temporals.format(invite.createdAt, 'yyyy-MM-dd HH:mm:ss z')}">2025-01-01 12:00:00 UTC</td>
-            <td th:text="${invite.email}">user@example.com</td>
-            <td th:text="${invite.realm}">master</td>
-            <td th:text="${#temporals.format(invite.expiresAt, 'yyyy-MM-dd HH:mm:ss z')}">2025-01-02 12:00:00 UTC</td>
-            <td th:text="|${invite.uses} / ${invite.maxUses}|">0 / 1</td>
-            <td>
-                <span th:class="'status ' + ${invite.statusClass}"
-                      th:text="${invite.statusLabel}">
+    <div class="rounded-xl border border-slate-200 bg-white/80 p-4 shadow-sm shadow-slate-200/60 backdrop-blur">
+        <p class="text-sm font-semibold text-slate-800">Status legend</p>
+        <dl class="mt-2 grid gap-1 text-sm text-slate-600 sm:grid-cols-2">
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold
+                             text-emerald-700 ring-1 ring-emerald-600/20">
                     Active
                 </span>
-            </td>
-            <td th:text="${#strings.listJoin(invite.roles, ', ')}">realm-role</td>
-            <td>
-                <div class="actions-inline">
-                    <form th:action="@{|/admin/invite/${invite.id}/revoke|}" method="post">
-                        <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
-                               th:value="${_csrf.token}"/>
-                        <button class="action" type="submit" th:disabled="${invite.revoked}">
-                            Revoke
-                        </button>
-                    </form>
-                    <form th:action="@{|/admin/invite/${invite.id}/resend|}" method="post">
-                        <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
-                               th:value="${_csrf.token}"/>
-                        <label class="expiry-field">
-                            <span>Expiry (min)</span>
-                            <input type="number"
-                                   name="expiryMinutes"
-                                   th:value="${expiryDefaultMinutes}"
-                                   th:attr="min=${expiryMinMinutes},max=${expiryMaxMinutes},step=5"/>
-                        </label>
-                        <button class="action primary" type="submit" th:disabled="${invite.statusClass != 'active'}">
-                            Resend
-                        </button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-        </tbody>
-    </table>
+                <dd class="text-slate-600">Usable invite</dd>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold
+                             text-slate-700 ring-1 ring-slate-600/20">
+                    Used up
+                </span>
+                <dd class="text-slate-600">Max uses reached (issue new invite)</dd>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold
+                             text-amber-700 ring-1 ring-amber-600/20">
+                    Expired
+                </span>
+                <dd class="text-slate-600">Past expiry (issue new invite)</dd>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-1 text-xs font-semibold
+                             text-rose-700 ring-1 ring-rose-600/20">
+                    Revoked
+                </span>
+                <dd class="text-slate-600">Manually revoked or non-recoverable error</dd>
+            </div>
+        </dl>
+    </div>
+
+    <div th:if="${inviteLink}"
+         class="flex items-start rounded-xl border border-lime-200 bg-lime-50 px-4 py-3
+                text-lime-900 shadow-sm shadow-lime-100">
+        <div class="flex flex-col gap-2">
+            <p class="text-sm font-semibold">Invite link</p>
+            <code class="block max-w-full overflow-x-auto rounded-lg bg-slate-900 px-3 py-2 text-xs text-lime-100"
+                  th:text="${inviteLink}">https://example.org/invite/realm/token</code>
+        </div>
+    </div>
+
+    <div class="flex items-center justify-end">
+        <a th:href="@{/admin/invite/new}"
+           class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm
+                  font-semibold text-indigo-700 transition hover:-translate-y-0.5 hover:bg-white hover:shadow
+                  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+                  focus-visible:outline-indigo-500">
+            Create invite
+        </a>
+    </div>
+
+    <div th:if="${#lists.isEmpty(invites)}"
+         class="rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-8 text-center text-slate-600
+                shadow-inner shadow-slate-200/60">
+        <p class="text-base font-semibold text-slate-700">No invites yet</p>
+        <p class="mt-2 text-sm">Create your first invite to get started.</p>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(invites)}"
+         class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow shadow-slate-200/80">
+        <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-brand-50 text-slate-700">
+            <tr>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">ID</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Created</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Email</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Realm</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Expires</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Uses</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Status</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Roles</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Actions</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white text-sm">
+            <tr th:each="invite : ${invites}" class="hover:bg-slate-50/70">
+                <td class="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-800">
+                    <code th:text="${invite.id}">id</code>
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-slate-700"
+                    th:text="${#temporals.format(invite.createdAt, 'yyyy-MM-dd HH:mm:ss z')}">
+                    2025-01-01 12:00:00 UTC
+                </td>
+                <td class="px-4 py-3 text-slate-800" th:text="${invite.email}">user@example.com</td>
+                <td class="px-4 py-3 text-slate-700" th:text="${invite.realm}">master</td>
+                <td class="whitespace-nowrap px-4 py-3 text-slate-700"
+                    th:text="${#temporals.format(invite.expiresAt, 'yyyy-MM-dd HH:mm:ss z')}">
+                    2025-01-02 12:00:00 UTC
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-slate-700" th:text="|${invite.uses} / ${invite.maxUses}|">
+                    0 / 1
+                </td>
+                <td class="px-4 py-3">
+                    <span th:text="${invite.statusLabel}"
+                          th:class="|inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1
+                                    ${invite.statusClass} == 'active'
+                                        ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                                        : (${invite.statusClass} == 'revoked'
+                                            ? 'bg-rose-50 text-rose-700 ring-rose-600/20'
+                                            : (${invite.statusClass} == 'expired'
+                                                ? 'bg-amber-50 text-amber-700 ring-amber-600/20'
+                                                : 'bg-slate-100 text-slate-700 ring-slate-600/20'))|">
+                        Active
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-slate-700" th:text="${#strings.listJoin(invite.roles, ', ')}">
+                    realm-role
+                </td>
+                <td class="px-4 py-3">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <form th:action="@{|/admin/invite/${invite.id}/revoke|}" method="post"
+                              class="inline-flex">
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
+                                   th:value="${_csrf.token}"/>
+                            <button type="submit"
+                                    class="inline-flex items-center gap-1 rounded-lg border border-slate-200
+                                           bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm transition
+                                           hover:-translate-y-0.5 hover:shadow focus-visible:outline
+                                           focus-visible:outline-2 focus-visible:outline-offset-2
+                                           focus-visible:outline-slate-500 disabled:cursor-not-allowed
+                                           disabled:bg-slate-100 disabled:text-slate-400"
+                                    th:disabled="${invite.revoked}">
+                                Revoke
+                            </button>
+                        </form>
+                        <form th:action="@{|/admin/invite/${invite.id}/resend|}" method="post"
+                              class="flex flex-wrap items-center gap-3">
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
+                                   th:value="${_csrf.token}"/>
+                            <label class="flex flex-col text-xs font-semibold text-slate-700">
+                                <span>Expiry (min)</span>
+                                <input type="number"
+                                       name="expiryMinutes"
+                                       th:value="${expiryDefaultMinutes}"
+                                       th:attr="min=${expiryMinMinutes},max=${expiryMaxMinutes},step=5"
+                                       class="mt-1 w-24 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs
+                                              font-semibold text-slate-800 shadow-sm focus:border-indigo-500
+                                              focus:ring-2 focus:ring-indigo-200 focus:outline-none
+                                              disabled:cursor-not-allowed disabled:bg-slate-100
+                                              disabled:text-slate-400"/>
+                            </label>
+                            <button type="submit"
+                                    class="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs
+                                           font-semibold text-white shadow-sm shadow-indigo-200 transition
+                                           hover:-translate-y-0.5 hover:bg-indigo-700 focus-visible:outline
+                                           focus-visible:outline-2 focus-visible:outline-offset-2
+                                           focus-visible:outline-indigo-500 disabled:cursor-not-allowed
+                                           disabled:bg-slate-300"
+                                    th:disabled="${invite.statusClass != 'active'}">
+                                Resend
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
 </main>
 </body>
 </html>
