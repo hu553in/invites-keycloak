@@ -26,6 +26,14 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOSTNAME:db}:${POSTGRES_PORT:5432}/${POSTGRES_DB:invites-keycloak}
     username: ${POSTGRES_USER:invites-keycloak}
     password: ${POSTGRES_PASSWORD:invites-keycloak}
+  mail:
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
   security:
     oauth2:
       client:
