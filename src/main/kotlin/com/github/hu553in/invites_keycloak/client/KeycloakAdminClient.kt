@@ -24,8 +24,6 @@ import reactor.netty.http.client.HttpClient
 import reactor.util.retry.Retry
 import java.net.URI
 import java.time.Clock
-import java.time.Duration
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 interface KeycloakAdminClient {
@@ -63,13 +61,13 @@ class HttpKeycloakAdminClient(
         private val roleListType = object : ParameterizedTypeReference<List<RoleRepresentation>>() {}
 
         private const val ACCESS_TOKEN_SKEW_SECONDS = 60
-
-        private const val CONNECT_TIMEOUT_MILLIS = 5_000
-        private const val RESPONSE_TIMEOUT_SECONDS = 10L
         private const val ROLE_PAGE_SIZE = 1_000
     }
 
     private val log by logger()
+
+    private val connectTimeoutMillis: Int = keycloakProps.connectTimeout.toMillis().toPositiveIntWithinIntMax()
+    private val responseTimeoutSeconds: Int = keycloakProps.responseTimeout.seconds.toPositiveIntWithinIntMax()
 
     private val retry = Retry
         .backoff(keycloakProps.maxAttempts, keycloakProps.minBackoff)
@@ -82,12 +80,12 @@ class HttpKeycloakAdminClient(
         }
 
     private val httpClient = HttpClient.create()
-        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECT_TIMEOUT_MILLIS)
-        .responseTimeout(Duration.ofSeconds(RESPONSE_TIMEOUT_SECONDS))
+        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
+        .responseTimeout(keycloakProps.responseTimeout)
         .doOnConnected { connection ->
             connection
-                .addHandlerLast(ReadTimeoutHandler(RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS))
-                .addHandlerLast(WriteTimeoutHandler(RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+                .addHandlerLast(ReadTimeoutHandler(responseTimeoutSeconds))
+                .addHandlerLast(WriteTimeoutHandler(responseTimeoutSeconds))
         }
 
     private val webClient: WebClient = webClientBuilder
@@ -467,4 +465,8 @@ private fun <T> executeRequest(ctx: String, block: () -> T): T {
     } catch (e: WebClientRequestException) {
         throw KeycloakAdminClientException(ctx, e)
     }
+}
+
+private fun Long.toPositiveIntWithinIntMax(): Int {
+    return coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
 }

@@ -8,7 +8,7 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 ## What the service does
 
 - Admin UI: create, resend (including revoked/expired/used-up), revoke, and delete invites per realm;
-  delete after revoke/expiry/usage; view status (active, expired, used-up, revoked).
+  delete them after revoke/expiry/usage; view status (active, expired, used-up, revoked).
 - Invite flow: validate invite token, create Keycloak user, assign realm roles, trigger a required-actions email,
   and mark the invite as used. If any step in this flow fails, created Keycloak users are deleted to keep the flow
   atomic. Permanent errors (for example missing roles or client-side 4xx from Keycloak) revoke the invite;
@@ -26,17 +26,23 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 
 ## Configuration and environment
 
-- Settings are loaded from environment variables; Compose passes `.env` via `env_file: .env`. Any Spring Boot property
-  can be set through env vars thanks to Spring's relaxed binding (for example `spring.mail.host` -> `SPRING_MAIL_HOST`).
-  Prefer `.env` over editing `src/main/resources/application.yml`.
-- Copy `.env.example.local` (dev) or `.env.example.docker` (VPS) to `.env` and fill secrets/URLs.
-- Keycloak: admin client with client credentials, required admin role name, and reachable issuer URL.
-- Invites: `INVITE_*` env vars cover public base URL, token secret, and cleanup retention. Other invite defaults live in
-  `application.yml` (expiry bounds, token bytes/salt, MAC algorithm, and `invite.realms` map). Realms may have empty
-  roles; the admin UI hides the selector in that case.
-- Mail: optional. The example `.env` disables mail via `SPRING_AUTOCONFIGURE_EXCLUDE`; remove it and set `SPRING_MAIL_*`
-  plus `MAIL_FROM`/`MAIL_SUBJECT_TEMPLATE` to enable sending (defaults to `Invitation to %s` with the target realm).
-- Database: PostgreSQL reachable via JDBC; Flyway runs on startup to create the `invite` table and indexes.
+- Everything is externalizable via environment variables thanks to Spring relaxed binding; prefer `.env` over editing
+  `src/main/resources/application.yml`. Compose loads `.env` via `env_file: .env`.
+- The bundled `.env.example.local` and `.env.example.docker` are for local development and showcasing only; they are not
+  exhaustive lists of tunables. Copy one to `.env` and adjust for your setup.
+- Profiles: `application.yml` defaults to `prod`. Set `SPRING_PROFILES_ACTIVE=local` in your `.env` for local runs (the
+  examples do this).
+- Keycloak: `KEYCLOAK_URL` and `KEYCLOAK_CLIENT_SECRET` are required. Defaults for realm/client ID/required role are
+  `master`/`invites-keycloak`/`invite-admin`; HTTP timeouts default to 5s connect and 10s response. Override any of
+  these via env if needed.
+- Invites: `INVITE_PUBLIC_BASE_URL` and `INVITE_TOKEN_SECRET` are required. Other invite defaults (expiry bounds, token
+  bytes/salt, MAC algorithm, realms map, cleanup retention) live in `application.yml` and can be overridden via env
+  vars.
+- Mail: enable by providing `SPRING_MAIL_HOST` (and related `SPRING_MAIL_*` as needed). `MAIL_FROM` is optional;
+  subject template defaults to `Invitation to %s`. To disable mail entirely, set `SPRING_AUTOCONFIGURE_EXCLUDE` to
+  `org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration,org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration`.
+- Database: defaults point to Postgres at `db:5432` with database/user/password `invites-keycloak`. Override via
+  `POSTGRES_HOSTNAME`/`POSTGRES_PORT`/`POSTGRES_DB`/`POSTGRES_USER`/`POSTGRES_PASSWORD` env vars.
 
 ### Keycloak setup (all environments)
 
@@ -98,7 +104,7 @@ To deploy:
    compose file).
 2) Update `docker-compose.yml` (or use an override file) to point the app image to the GHCR tag you want.
 3) Run `docker compose pull && docker compose up -d --wait`.
-4) Verify health at the configured healthcheck path (defaults to `/actuator/health`).
+4) Verify health at the configured health check path (defaults to `/actuator/health`).
 
 ## Tech stack
 
@@ -116,6 +122,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - [x] Add admin invite deletion
 - [x] Timestamps must be shown in the browser's time zone (in the UI and email, if possible)
 - [x] Truncate IDs in the table and show the full ID on hover
+- [x] Move to env vars all configuration that can be moved
 - [ ] Test everything and fix all functional issues
     - [x] All invites must be resendable
     - [x] "Revoke" button must be disabled for used-up invites
@@ -124,7 +131,6 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
     - [ ] Some issues with `obtainAccessToken()`
 - [ ] Fix all styling issues
 - [ ] Cover everything with logs
-- [ ] Move to env vars all configuration that can be moved
 - [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency
 - [ ] Add detailed docs
 - [ ] Add metrics

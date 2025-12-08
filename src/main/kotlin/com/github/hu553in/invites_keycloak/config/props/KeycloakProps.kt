@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Positive
 import org.hibernate.validator.constraints.URL
+import org.hibernate.validator.constraints.time.DurationMin
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.validation.annotation.Validated
 import java.time.Duration
@@ -26,5 +27,12 @@ data class KeycloakProps(
     @field:Positive
     val maxAttempts: Long,
     @field:NotNull
-    val minBackoff: Duration
+    @field:DurationMin(millis = 1)
+    val minBackoff: Duration,
+    @field:NotNull
+    @field:DurationMin(millis = 1)
+    val connectTimeout: Duration,
+    @field:NotNull
+    @field:DurationMin(seconds = 1)
+    val responseTimeout: Duration
 )

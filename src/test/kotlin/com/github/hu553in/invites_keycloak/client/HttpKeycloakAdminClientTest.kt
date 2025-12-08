@@ -58,7 +58,9 @@ class HttpKeycloakAdminClientTest {
                 clientSecret = "s3cr3t",
                 requiredRole = "invite-admin",
                 maxAttempts = 3,
-                minBackoff = Duration.ofSeconds(2)
+                minBackoff = Duration.ofSeconds(2),
+                connectTimeout = Duration.ofSeconds(5),
+                responseTimeout = Duration.ofSeconds(10)
             ),
             clock = Clock.systemUTC(),
             webClientBuilder = WebClient.builder()

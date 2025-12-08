@@ -6,9 +6,16 @@ server:
     include-binding-errors: never
     include-stacktrace: never
 
+postgres:
+  hostname: db
+  port: 5432
+  db: invites-keycloak
+  user: invites-keycloak
+  password: invites-keycloak
+
 spring:
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:prod}
+    active: prod
   mvc:
     problemdetails:
       enabled: true
@@ -25,9 +32,9 @@ spring:
     hibernate:
       ddl-auto: validate
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOSTNAME:db}:${POSTGRES_PORT:5432}/${POSTGRES_DB:invites-keycloak}
-    username: ${POSTGRES_USER:invites-keycloak}
-    password: ${POSTGRES_PASSWORD:invites-keycloak}
+    url: jdbc:postgresql://${postgres.hostname}:${postgres.port}/${postgres.db}
+    username: ${postgres.user}
+    password: ${postgres.password}
   mail:
     properties:
       "[mail.smtp.connectiontimeout]": 10000
@@ -68,7 +75,7 @@ management:
       enabled: false
 
 invite:
-  public-base-url: ${INVITE_PUBLIC_BASE_URL}
+  public-base-url: # required and can't have default value
   expiry:
     default: 24h
     min: 5m
@@ -77,25 +84,27 @@ invite:
     master:
       roles: [ ]
   token:
-    secret: ${INVITE_TOKEN_SECRET}
+    secret: # required and can't have default value
     bytes: 32
     salt-bytes: 16
     mac-algorithm: HmacSHA256
   cleanup:
-    retention: ${INVITE_CLEANUP_RETENTION:30d}
+    retention: 30d
 
 mail:
-  from: ${MAIL_FROM:}
-  subject-template: ${MAIL_SUBJECT_TEMPLATE:Invitation to %s}
+  from: # not required and can't have default value
+  subject-template: Invitation to %s
 
 keycloak:
-  url: ${KEYCLOAK_URL}
-  realm: ${KEYCLOAK_REALM:master}
-  client-id: ${KEYCLOAK_CLIENT_ID:invites-keycloak}
-  client-secret: ${KEYCLOAK_CLIENT_SECRET}
-  required-role: ${KEYCLOAK_REQUIRED_ROLE:invite-admin}
+  url: # required and can't have default value
+  realm: master
+  client-id: invites-keycloak
+  client-secret: # required and can't have default value
+  required-role: invite-admin
   max-attempts: 3
   min-backoff: PT2S
+  connect-timeout: 5s
+  response-timeout: 10s
 
 logging:
   structured:
