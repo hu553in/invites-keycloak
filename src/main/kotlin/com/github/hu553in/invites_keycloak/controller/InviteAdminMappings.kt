@@ -9,6 +9,7 @@ object InviteAdminMappings {
     data class InviteView(
         val id: UUID?,
         val createdAt: Instant,
+        val createdBy: String,
         val email: String,
         val realm: String,
         val expiresAt: Instant,
@@ -37,6 +38,7 @@ object InviteAdminMappings {
         return InviteView(
             id = id,
             createdAt = createdAt,
+            createdBy = createdBy,
             email = email,
             realm = realm,
             expiresAt = expiresAt,

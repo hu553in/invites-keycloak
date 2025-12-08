@@ -2,6 +2,8 @@ package com.github.hu553in.invites_keycloak.config
 
 import com.github.hu553in.invites_keycloak.config.props.KeycloakProps
 import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest
+import org.springframework.boot.actuate.health.HealthEndpoint
+import org.springframework.boot.actuate.metrics.export.prometheus.PrometheusScrapeEndpoint
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -13,6 +15,11 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority
 import org.springframework.security.oauth2.core.user.OAuth2UserAuthority
 import org.springframework.security.web.SecurityFilterChain
+
+private val healthAndPrometheusMatcher = EndpointRequest.to(
+    HealthEndpoint::class.java,
+    PrometheusScrapeEndpoint::class.java
+)
 
 @Configuration
 @EnableWebSecurity
@@ -29,41 +36,27 @@ class SecurityConfig(
         return http
             .authorizeHttpRequests { auth ->
                 auth
-                    // public
-                    .requestMatchers(
-                        "/",
-                        "/invite/**",
-                        "/v3/api-docs/**",
-                        "/v3/api-docs.yaml",
-                        "/swagger-ui/**",
-                        "/css/**",
-                        "/js/**",
-                        "/images/**"
-                    ).permitAll()
-                    // actuator
-                    .requestMatchers(EndpointRequest.toAnyEndpoint()).permitAll()
-                    // admin API
-                    .requestMatchers("/admin/**").hasRole(keycloakProps.requiredRole)
-                    .anyRequest().authenticated()
+                    .requestMatchers(healthAndPrometheusMatcher).permitAll()
+                    .requestMatchers("/", "/invite/**", "/css/**", "/js/**", "/images/**").permitAll()
+                    .anyRequest().hasRole(keycloakProps.requiredRole)
             }
             .oauth2Login { oauth2 ->
                 oauth2
                     .loginPage("/oauth2/authorization/keycloak")
                     .defaultSuccessUrl("/", true)
-                    .userInfoEndpoint { userInfo ->
-                        userInfo.userAuthoritiesMapper(keycloakAuthoritiesMapper)
-                    }
+                    .userInfoEndpoint { it.userAuthoritiesMapper(keycloakAuthoritiesMapper) }
             }
             .logout { logout ->
-                logout.logoutSuccessHandler(
-                    OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository).apply {
-                        setPostLogoutRedirectUri("{baseUrl}/")
-                    }
-                )
-                logout.invalidateHttpSession(true)
-                logout.clearAuthentication(true)
-                logout.deleteCookies("JSESSIONID")
+                logout
+                    .logoutSuccessHandler(
+                        OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository)
+                            .apply { setPostLogoutRedirectUri("{baseUrl}/") }
+                    )
+                    .invalidateHttpSession(true)
+                    .clearAuthentication(true)
+                    .deleteCookies("JSESSIONID")
             }
+            .csrf { it.ignoringRequestMatchers(healthAndPrometheusMatcher) }
             .build()
     }
 

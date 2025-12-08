@@ -214,29 +214,13 @@ class SecurityConfigTest(
     @Test
     fun `authenticated user is redirected to Keycloak logout endpoint on logout`() {
         // arrange
-        val ctx = initiateAuthorizationFlow()
-
-        val subject = stubTokenResponse(ctx.nonce, setOf(REQUIRED_ROLE))
-        stubUserInfoResponse(setOf(REQUIRED_ROLE), subject)
-
-        val loginResult = mockMvc.perform(
-            get("/login/oauth2/code/keycloak")
-                .session(ctx.session)
-                .withCookiesIfPresent(ctx.cookies)
-                .param("code", "test-code")
-                .param("state", ctx.state)
-        )
-            .andExpect(status().is3xxRedirection)
-            .andReturn()
-
-        val authenticatedSession = loginResult.request.session as MockHttpSession
-        val authenticatedCookies = mergeCookies(ctx.cookies, loginResult.response.cookies.toList())
+        val authenticated = loginWithRoles(setOf(REQUIRED_ROLE))
 
         // act
         val logoutResult = mockMvc.perform(
             post("/logout")
-                .session(authenticatedSession)
-                .withCookiesIfPresent(authenticatedCookies)
+                .session(authenticated.session)
+                .withCookiesIfPresent(authenticated.cookies)
                 .with(csrf())
         )
             // assert
@@ -260,6 +244,47 @@ class SecurityConfigTest(
         mockMvc.perform(get("/invite/anything"))
             // assert
             .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `actuator health is public`() {
+        // act
+        mockMvc.perform(get("/actuator/health"))
+            // assert
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `actuator env requires role`() {
+        // unauthenticated -> redirected to login page
+        // act
+        mockMvc.perform(get("/actuator/env"))
+            // assert
+            .andExpect(status().is3xxRedirection)
+
+        // authenticated without role -> forbidden
+        // arrange
+        val noRole = loginWithRoles(emptySet())
+        // act
+        mockMvc.perform(
+            get("/actuator/env")
+                .session(noRole.session)
+                .withCookiesIfPresent(noRole.cookies)
+        )
+            // assert
+            .andExpect(status().isForbidden)
+
+        // authenticated with role -> ok
+        // arrange
+        val admin = loginWithRoles(setOf(REQUIRED_ROLE))
+        // act
+        mockMvc.perform(
+            get("/actuator/env")
+                .session(admin.session)
+                .withCookiesIfPresent(admin.cookies)
+        )
+            // assert
+            .andExpect(status().isOk)
     }
 
     private fun initiateAuthorizationFlow(): AuthorizationContext {
@@ -287,6 +312,31 @@ class SecurityConfigTest(
 
         val cookies = authorize.response.cookies
         return AuthorizationContext(session, state, nonce, cookies.toList())
+    }
+
+    private fun loginWithRoles(roles: Set<String>): AuthenticatedContext {
+        // arrange
+        val ctx = initiateAuthorizationFlow()
+
+        val subject = stubTokenResponse(ctx.nonce, roles)
+        stubUserInfoResponse(roles, subject)
+
+        // act
+        val loginResult = mockMvc.perform(
+            get("/login/oauth2/code/keycloak")
+                .session(ctx.session)
+                .withCookiesIfPresent(ctx.cookies)
+                .param("code", "test-code")
+                .param("state", ctx.state)
+        )
+            // assert
+            .andExpect(status().is3xxRedirection)
+            .andReturn()
+
+        val authenticatedSession = loginResult.request.session as MockHttpSession
+        val authenticatedCookies = mergeCookies(ctx.cookies, loginResult.response.cookies.toList())
+
+        return AuthenticatedContext(authenticatedSession, authenticatedCookies)
     }
 
     private fun stubTokenResponse(nonce: String, roles: Set<String>): String {
@@ -362,6 +412,11 @@ class SecurityConfigTest(
         val session: MockHttpSession,
         val state: String,
         val nonce: String,
+        val cookies: List<Cookie>
+    )
+
+    private data class AuthenticatedContext(
+        val session: MockHttpSession,
         val cookies: List<Cookie>
     )
 

@@ -28,6 +28,7 @@ class InviteAdminMappingsTest {
 
         assertThat(view.statusClass).isEqualTo("used-up")
         assertThat(view.statusLabel).isEqualTo("Used-up")
+        assertThat(view.createdBy).isEqualTo("creator")
         assertThat(view.usedUp).isTrue()
         assertThat(view.active).isFalse()
         assertThat(view.expired).isFalse()
@@ -52,6 +53,7 @@ class InviteAdminMappingsTest {
 
         assertThat(view.statusClass).isEqualTo("expired")
         assertThat(view.statusLabel).isEqualTo("Expired")
+        assertThat(view.createdBy).isEqualTo("creator")
         assertThat(view.expired).isTrue()
         assertThat(view.active).isFalse()
         assertThat(view.usedUp).isFalse()

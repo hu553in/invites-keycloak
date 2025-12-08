@@ -9,6 +9,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.delete
 import com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.noContent
 import com.github.tomakehurst.wiremock.client.WireMock.okJson
 import com.github.tomakehurst.wiremock.client.WireMock.post
@@ -17,6 +18,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.put
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
+import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterAll
@@ -27,12 +29,16 @@ import org.junit.jupiter.api.TestInstance
 import org.springframework.web.reactive.function.client.WebClient
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class HttpKeycloakAdminClientTest {
 
     private lateinit var server: WireMockServer
     private lateinit var client: KeycloakAdminClient
+    private lateinit var clock: MutableClock
 
     @BeforeAll
     fun setupSuite() {
@@ -49,6 +55,7 @@ class HttpKeycloakAdminClientTest {
     fun setup() {
         server.resetAll()
         stubToken()
+        clock = MutableClock(Instant.parse("2025-01-01T00:00:00Z"))
 
         client = HttpKeycloakAdminClient(
             keycloakProps = KeycloakProps(
@@ -58,11 +65,11 @@ class HttpKeycloakAdminClientTest {
                 clientSecret = "s3cr3t",
                 requiredRole = "invite-admin",
                 maxAttempts = 3,
-                minBackoff = Duration.ofSeconds(2),
-                connectTimeout = Duration.ofSeconds(5),
-                responseTimeout = Duration.ofSeconds(10)
+                minBackoff = Duration.ofMillis(10),
+                connectTimeout = Duration.ofSeconds(1),
+                responseTimeout = Duration.ofSeconds(2)
             ),
-            clock = Clock.systemUTC(),
+            clock = clock,
             webClientBuilder = WebClient.builder()
         )
     }
@@ -315,6 +322,70 @@ class HttpKeycloakAdminClientTest {
         server.verify(1, deleteRequestedFor(urlEqualTo("/admin/realms/master/users/uid")))
     }
 
+    @Test
+    fun `obtainAccessToken reuses cached token while outside skew window`() {
+        // arrange
+        stubToken(token = "t1", expiresIn = 300)
+        stubUserExists(realm = "reuse-realm", token = "t1")
+
+        // act
+        client.userExists("reuse-realm", "user@example.com")
+        advanceSeconds(100)
+        client.userExists("reuse-realm", "user@example.com")
+
+        // assert
+        server.verify(1, postRequestedFor(urlEqualTo("/realms/master/protocol/openid-connect/token")))
+    }
+
+    @Test
+    fun `obtainAccessToken returns cached token when refresh fails inside skew`() {
+        // arrange
+        stubTokenScenario(
+            firstToken = "t-refresh",
+            firstExpiresIn = 30,
+            secondStatus = 500
+        )
+        stubUserExists(realm = "skew-realm", token = "t-refresh")
+
+        // act
+        client.userExists("skew-realm", "user@example.com")
+        advanceSeconds(26) // inside skew window (remaining 4s, skew 5s)
+        val exists = client.userExists("skew-realm", "user@example.com")
+
+        // assert
+        assertThat(exists).isTrue()
+        val tokenCalls = server
+            .findAll(postRequestedFor(urlEqualTo("/realms/master/protocol/openid-connect/token")))
+            .size
+        assertThat(tokenCalls).isGreaterThanOrEqualTo(2)
+    }
+
+    @Test
+    fun `obtainAccessToken fetches new token after expiry`() {
+        // arrange
+        stubTokenScenario(
+            firstToken = "t-old",
+            firstExpiresIn = 10,
+            secondToken = "t-new",
+            secondStatus = 200
+        )
+        stubUserExists(realm = "exp-realm", token = "t-old")
+        stubUserExists(realm = "exp-realm", token = "t-new")
+
+        // act
+        client.userExists("exp-realm", "user@example.com")
+        advanceSeconds(11) // token expired
+        client.userExists("exp-realm", "user@example.com")
+
+        // assert
+        server.verify(2, postRequestedFor(urlEqualTo("/realms/master/protocol/openid-connect/token")))
+        server.verify(
+            1,
+            getRequestedFor(urlPathEqualTo("/admin/realms/exp-realm/users"))
+                .withHeader("Authorization", equalTo("Bearer t-new"))
+        )
+    }
+
     private fun stubToken(token: String = "admin-token") {
         server.stubFor(
             post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
@@ -326,10 +397,72 @@ class HttpKeycloakAdminClientTest {
         )
     }
 
+    private fun stubToken(token: String = "admin-token", expiresIn: Long) {
+        server.stubFor(
+            post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
+                .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
+                .withRequestBody(containing("grant_type=client_credentials"))
+                .withRequestBody(containing("client_id=admin-cli"))
+                .withRequestBody(containing("client_secret=s3cr3t"))
+                .willReturn(okJson("""{"access_token":"$token","expires_in":$expiresIn}"""))
+        )
+    }
+
+    private fun stubTokenScenario(
+        firstToken: String,
+        firstExpiresIn: Long,
+        secondStatus: Int,
+        secondToken: String = "second-token"
+    ) {
+        val scenario = "token-refresh-$firstToken"
+        server.stubFor(
+            post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
+                .inScenario(scenario)
+                .whenScenarioStateIs(STARTED)
+                .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
+                .willReturn(okJson("""{"access_token":"$firstToken","expires_in":$firstExpiresIn}"""))
+                .willSetStateTo("REFRESH")
+        )
+        val secondResponse = if (secondStatus == 200) {
+            okJson("""{"access_token":"$secondToken","expires_in":300}""")
+        } else {
+            aResponse().withStatus(secondStatus)
+        }
+        server.stubFor(
+            post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
+                .inScenario(scenario)
+                .whenScenarioStateIs("REFRESH")
+                .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
+                .willReturn(secondResponse)
+        )
+    }
+
     private fun roleArrayJson(size: Int, prefix: String): String {
         val body = (0 until size).joinToString(",", prefix = "[", postfix = "]") { i ->
             """{"id":"$i","name":"$prefix-$i"}"""
         }
         return body
+    }
+
+    private fun stubUserExists(realm: String, token: String) {
+        server.stubFor(
+            get(urlPathEqualTo("/admin/realms/$realm/users"))
+                .withQueryParam("email", equalTo("user@example.com"))
+                .withQueryParam("exact", equalTo("true"))
+                .withQueryParam("max", equalTo("1"))
+                .withQueryParam("briefRepresentation", equalTo("true"))
+                .withHeader("Authorization", equalTo("Bearer $token"))
+                .willReturn(okJson("""[{"id":"user-id","email":"user@example.com"}]"""))
+        )
+    }
+
+    private fun advanceSeconds(seconds: Long) {
+        clock.currentInstant = clock.currentInstant.plusSeconds(seconds)
+    }
+
+    private class MutableClock(var currentInstant: Instant) : Clock() {
+        override fun getZone(): ZoneId = ZoneOffset.UTC
+        override fun withZone(zone: ZoneId?): Clock = this
+        override fun instant(): Instant = currentInstant
     }
 }

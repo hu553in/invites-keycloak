@@ -1,18 +1,16 @@
-# invites-keycloak
+# Invites for your Keycloak 💌 🗝
 
-> Invites for your Keycloak. 💌 🗝
-
-Spring Boot service for issuing and consuming Keycloak invitation links. Admins create invites with a limited
-lifetime and usage count; recipients redeem them to get an account provisioned with predefined realm roles.
+Spring Boot service for issuing and consuming Keycloak invitation links. Admins create invites with a limited lifetime
+and usage count; recipients redeem them to get an account provisioned with predefined realm roles.
 
 ## What the service does
 
-- Admin UI: create, resend (including revoked/expired/used-up), revoke, and delete invites per realm;
-  delete them after revoke/expiry/usage; view status (active, expired, used-up, revoked).
-- Invite flow: validate invite token, create Keycloak user, assign realm roles, trigger a required-actions email,
-  and mark the invite as used. If any step in this flow fails, created Keycloak users are deleted to keep the flow
-  atomic. Permanent errors (for example missing roles or client-side 4xx from Keycloak) revoke the invite;
-  transient errors keep the invite usable.
+- Admin UI: create, resend (including revoked/expired/used-up), revoke, and delete invites per realm; delete them after
+  revoke/expiry/usage; view status (active, expired, used-up, revoked).
+- Invite flow: validate invite token, create Keycloak user, assign realm roles, trigger a required-actions email, and
+  mark the invite as used. If any step in this flow fails, created Keycloak users are deleted to keep the flow atomic.
+  Permanent errors (for example missing roles or client-side 4xx from Keycloak) revoke the invite; transient errors keep
+  the invite usable.
 - Housekeeping: expired invites beyond retention are purged by a daily scheduled job.
 
 ## Architecture at a glance
@@ -53,27 +51,24 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
         - Example for local: `http://localhost:8080/login/oauth2/code/keycloak`.
     - Web Origins: `<app-base-url>` (add the scheme/port the app is served on).
     - Client secret: copy to `KEYCLOAK_CLIENT_SECRET`.
-- Role: realm role `invite-admin` (or `KEYCLOAK_REQUIRED_ROLE`) granted to the user who will sign in to the
-  admin UI.
+- Role: realm role `invite-admin` (or `KEYCLOAK_REQUIRED_ROLE`) granted to the user who will sign in to the admin UI.
 - Token claims: include roles in the ID token. Attach the built-in `roles` client scope or add a mapper for
   `realm_access.roles` (multivalued, in ID token, access token, and userinfo).
-- Service account: enable it for the client and grant realm-management roles needed by the backend admin API
-  (minimum: `manage-users`, `view-realm` and `manage-realm`). Missing these will cause 403s when listing
-  roles or creating users.
+- Service account: enable it for the client and grant realm-management roles needed by the backend admin API (minimum:
+  `manage-users`, `view-realm` and `manage-realm`). Missing these will cause 403s when listing roles or creating users.
 
 ### Reverse proxy / HTTPS termination
 
-- The app respects forwarded headers (`server.forward-headers-strategy=framework` is set). Make sure your proxy
-  sends them; otherwise, OAuth redirects may downgrade to HTTP.
+- The app respects forwarded headers (`server.forward-headers-strategy=framework` is set). Make sure your proxy sends
+  them; otherwise, OAuth redirects may downgrade to HTTP.
 - Required headers: `Host`, `X-Forwarded-Proto`, `X-Forwarded-Port`, `X-Forwarded-For`.
 - nginx example:
-
-```
-proxy_set_header Host $host;
-proxy_set_header X-Forwarded-Proto $scheme;
-proxy_set_header X-Forwarded-Port $server_port;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-```
+  ```
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-Port $server_port;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  ```
 
 ## Local development
 
@@ -100,8 +95,8 @@ CI builds and pushes images to `ghcr.io/hu553in/invites-keycloak`:
 
 To deploy:
 
-1) On the VPS, provision `.env` with Keycloak, invite, mail, and database settings (keep secrets out of the
-   compose file).
+1) On the VPS, provision `.env` with Keycloak, invite, mail, and database settings (keep secrets out of the compose
+   file).
 2) Update `docker-compose.yml` (or use an override file) to point the app image to the GHCR tag you want.
 3) Run `docker compose pull && docker compose up -d --wait`.
 4) Verify health at the configured health check path (defaults to `/actuator/health`).
@@ -114,7 +109,17 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - Java 21, Kotlin 2, Gradle 9, Spring Boot 3
 - PostgreSQL 17, Flyway, Spring Data JPA
 - Spring Security OAuth2 Client, Thymeleaf, WebFlux (for the Keycloak admin client)
+- Micrometer + Prometheus registry, Micrometer tracing (OTLP exporter optional)
 - Detekt, Kover, Testcontainers, WireMock
+
+## Observability
+
+- Actuator: `/actuator/health` and `/actuator/prometheus` are public; all other actuator endpoints require the Keycloak
+  `invite-admin` role. Configure your proxy/network accordingly.
+- Metrics: Prometheus scrape is enabled by default.
+- Tracing: OTLP exporter dependency is present but disabled by default (`management.tracing.export.enabled=false`). To
+  emit spans, set `MANAGEMENT_TRACING_EXPORT_ENABLED=true` and configure `MANAGEMENT_OTLP_TRACING_ENDPOINT`
+  (for example `http://otel-collector:4318/v1/traces`). Adjust sampling with `MANAGEMENT_TRACING_SAMPLING_PROBABILITY`.
 
 ## Future roadmap
 
@@ -123,17 +128,13 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - [x] Timestamps must be shown in the browser's time zone (in the UI and email, if possible)
 - [x] Truncate IDs in the table and show the full ID on hover
 - [x] Move to env vars all configuration that can be moved
-- [ ] Test everything and fix all functional issues
-    - [x] All invites must be resendable
-    - [x] "Revoke" button must be disabled for used-up invites
-    - [x] Some statuses may not be colored correctly in the table
-    - [x] Some issues with roles
-    - [ ] Some issues with `obtainAccessToken()`
-- [ ] Fix all styling issues
+- [x] Fix all styling issues
+- [x] Test everything and fix all found issues
+- [x] Add metrics
+- [x] Add tracing
+- [ ] Store additional audit log data and show it in the table: revoked by, revoked at, resent by, resent at
 - [ ] Cover everything with logs
-- [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency
 - [ ] Add detailed docs
-- [ ] Add metrics
-- [ ] Add tracing
 - [ ] Add rate limiting
 - [ ] Add i18n
+- [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency (optional)

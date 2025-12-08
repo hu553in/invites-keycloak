@@ -56,7 +56,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, prometheus, metrics, info, env, loggers, threaddump, heapdump
   endpoint:
     health:
       show-details: when_authorized
@@ -67,12 +67,25 @@ management:
         liveness:
           include: livenessState
         readiness:
-          include: readinessState,db
+          include: readinessState, db
+    prometheus:
+      enabled: true
   health:
     diskspace:
       enabled: true
     mail:
       enabled: false
+  metrics:
+    enable:
+      all: true
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    export:
+      enabled: false
+    sampling:
+      probability: 1.0
 
 invite:
   public-base-url: # required and can't have default value

@@ -147,6 +147,7 @@
             <tr>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">ID</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Created</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Creator</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Email</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Realm</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Expires</th>
@@ -175,6 +176,7 @@
                         2025-01-01 12:00:00 UTC
                     </time>
                 </td>
+                <td class="px-4 py-3 text-slate-700" th:text="${invite.createdBy}">creator</td>
                 <td class="px-4 py-3 text-slate-800 break-all sm:break-normal" th:text="${invite.email}">
                     user@example.com
                 </td>

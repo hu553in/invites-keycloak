@@ -25,6 +25,8 @@ import reactor.util.retry.Retry
 import java.net.URI
 import java.time.Clock
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.math.max
+import kotlin.math.min
 
 interface KeycloakAdminClient {
 
@@ -61,6 +63,7 @@ class HttpKeycloakAdminClient(
         private val roleListType = object : ParameterizedTypeReference<List<RoleRepresentation>>() {}
 
         private const val ACCESS_TOKEN_SKEW_SECONDS = 60
+        private const val MIN_ACCESS_TOKEN_SKEW_SECONDS = 5L
         private const val ROLE_PAGE_SIZE = 1_000
     }
 
@@ -354,11 +357,45 @@ class HttpKeycloakAdminClient(
     }
 
     private fun obtainAccessToken(): String {
-        readCachedToken()?.let { return it }
+        readCachedToken(allowWithinSkew = false)?.value?.let { return it }
 
+        val cachedWithinSkew = readCachedToken(allowWithinSkew = true)
+        val token = if (cachedWithinSkew != null) {
+            refreshIfPossible(cachedWithinSkew)
+        } else {
+            refreshWithLock()
+        }
+        return token
+    }
+
+    private fun refreshIfPossible(cachedWithinSkew: CachedAccessToken): String {
+        if (!cachedAccessTokenWriteLock.tryLock()) {
+            return cachedWithinSkew.value
+        }
+
+        val refreshed = try {
+            readCachedToken(allowWithinSkew = false)?.value ?: fetchAndCacheAccessToken()
+        } catch (
+            @Suppress("TooGenericExceptionCaught")
+            e: Exception
+        ) {
+            if (isTokenUsable(cachedWithinSkew, allowWithinSkew = true)) {
+                cachedWithinSkew.value
+            } else {
+                cachedAccessToken = null
+                throw e
+            }
+        } finally {
+            cachedAccessTokenWriteLock.unlock()
+        }
+
+        return refreshed
+    }
+
+    private fun refreshWithLock(): String {
         cachedAccessTokenWriteLock.lock()
         return try {
-            readCachedToken() ?: fetchAndCacheAccessToken()
+            readCachedToken(allowWithinSkew = false)?.value ?: fetchAndCacheAccessToken()
         } catch (
             @Suppress("TooGenericExceptionCaught")
             e: Exception
@@ -404,20 +441,28 @@ class HttpKeycloakAdminClient(
         return accessToken
     }
 
-    private fun readCachedToken(): String? {
+    private fun readCachedToken(allowWithinSkew: Boolean): CachedAccessToken? {
         cachedAccessTokenReadLock.lock()
         return try {
-            val now = clock.instant().epochSecond
-            cachedAccessToken?.let { (accessToken, expiresAt) ->
-                if (expiresAt != null && now < expiresAt - ACCESS_TOKEN_SKEW_SECONDS) {
-                    accessToken
-                } else {
-                    null
-                }
-            }
+            cachedAccessToken?.takeIf { isTokenUsable(it, allowWithinSkew) }
         } finally {
             cachedAccessTokenReadLock.unlock()
         }
+    }
+
+    private fun isTokenUsable(cachedToken: CachedAccessToken, allowWithinSkew: Boolean): Boolean {
+        val expiresAt = cachedToken.expiresAtEpochSec ?: return false
+        val now = clock.instant().epochSecond
+        val remainingSeconds = expiresAt - now
+        val skewSeconds = computeSkewSeconds(remainingSeconds)
+        val meetsSkew = allowWithinSkew || remainingSeconds > skewSeconds
+        return remainingSeconds > 0 && meetsSkew
+    }
+
+    private fun computeSkewSeconds(remainingSeconds: Long): Long {
+        val halfLifetime = remainingSeconds / 2
+        val adjustedSkew = max(MIN_ACCESS_TOKEN_SKEW_SECONDS, halfLifetime)
+        return min(ACCESS_TOKEN_SKEW_SECONDS.toLong(), adjustedSkew)
     }
 
     private data class TokenResponse(

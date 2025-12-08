@@ -42,6 +42,9 @@ dependencies {
     implementation(libs.thymeleaf.extras.springsecurity6)
     implementation(libs.spring.dotenv)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
+    implementation(libs.micrometer.registry.prometheus)
+    implementation(libs.micrometer.tracing.bridge.otel)
+    implementation(libs.opentelemetry.exporter.otlp)
 
     runtimeOnly(libs.postgresql)
 
