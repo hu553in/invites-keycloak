@@ -153,6 +153,8 @@
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Expires</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Uses</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Status</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Revoked</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Revoker</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Roles</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Actions</th>
             </tr>
@@ -205,9 +207,19 @@
                         Active
                     </span>
                 </td>
+                <td class="whitespace-nowrap px-4 py-3 text-slate-700">
+                    <span th:if="${invite.revokedAt == null}">-</span>
+                    <time th:if="${invite.revokedAt != null}"
+                          th:data-local-datetime="${invite.revokedAt}"
+                          th:title="${#temporals.format(invite.revokedAt, 'yyyy-MM-dd HH:mm:ss z')}"
+                          th:text="${#temporals.format(invite.revokedAt, 'yyyy-MM-dd HH:mm:ss z')}">
+                        2025-01-01 12:00:00 UTC
+                    </time>
+                </td>
+                <td class="px-4 py-3 text-slate-700" th:text="${invite.revokedBy ?: '-'}">revoker</td>
                 <td class="px-4 py-3 text-slate-700 break-all sm:break-normal"
                     th:text="${#lists.isEmpty(invite.roles) ? '-' : #strings.listJoin(invite.roles, ', ')}">
-                    realm-role
+                    admin
                 </td>
                 <td class="px-4 py-3">
                     <div class="flex flex-wrap items-center gap-3">

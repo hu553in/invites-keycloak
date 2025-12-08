@@ -30,27 +30,31 @@ interface InviteRepository : JpaRepository<InviteEntity, UUID> {
     @Query(
         """
         update InviteEntity invite
-        set invite.revoked = true
+        set invite.revoked = true,
+            invite.revokedAt = :now,
+            invite.revokedBy = :revokedBy
         where invite.realm = :realm
           and invite.email = :email
           and invite.revoked = false
           and invite.expiresAt <= :now
         """
     )
-    fun revokeExpired(realm: String, email: String, now: Instant): Int
+    fun revokeExpired(realm: String, email: String, now: Instant, revokedBy: String): Int
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """
         update InviteEntity invite
-        set invite.revoked = true
+        set invite.revoked = true,
+            invite.revokedAt = :now,
+            invite.revokedBy = :revokedBy
         where invite.realm = :realm
           and invite.email = :email
           and invite.revoked = false
           and invite.uses >= invite.maxUses
         """
     )
-    fun revokeOverused(realm: String, email: String): Int
+    fun revokeOverused(realm: String, email: String, now: Instant, revokedBy: String): Int
 
     @Query(
         """

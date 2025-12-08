@@ -10,6 +10,7 @@ import jakarta.persistence.Table
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.FutureOrPresent
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.PastOrPresent
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.PositiveOrZero
 import org.hibernate.annotations.CreationTimestamp
@@ -65,6 +66,13 @@ class InviteEntity(
 
     @Column(nullable = false)
     var revoked: Boolean = false,
+
+    @Column(name = "revoked_at")
+    @field:PastOrPresent
+    var revokedAt: Instant? = null,
+
+    @Column(name = "revoked_by")
+    var revokedBy: String? = null,
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(nullable = false, updatable = false, columnDefinition = "text[]")

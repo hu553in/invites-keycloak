@@ -9,10 +9,10 @@ import jakarta.mail.internet.MimeMessage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
+import org.mockito.BDDMockito
 import org.mockito.BDDMockito.then
 import org.mockito.BDDMockito.willAnswer
 import org.mockito.BDDMockito.willThrow
-import org.mockito.Mockito
 import org.springframework.mail.MailSendException
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessagePreparator
@@ -41,7 +41,7 @@ class MailServiceTest {
     @Test
     fun `sendInviteEmail sends message when mail sender configured`() {
         // arrange
-        val sender = Mockito.mock(JavaMailSender::class.java)
+        val sender = BDDMockito.mock(JavaMailSender::class.java)
         val msg = MimeMessage(Session.getInstance(Properties()))
 
         willAnswer { invocation ->
@@ -93,7 +93,7 @@ class MailServiceTest {
     @Test
     fun `sendInviteEmail returns failed when sender throws`() {
         // arrange
-        val sender = Mockito.mock(JavaMailSender::class.java)
+        val sender = BDDMockito.mock(JavaMailSender::class.java)
         willThrow(MailSendException("boom")).given(sender).send(any(MimeMessagePreparator::class.java))
 
         val svc = MailService(objectProvider(sender), templateEngine, MailProps())

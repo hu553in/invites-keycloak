@@ -11,7 +11,7 @@ const val CURRENT_USER_ID_KEY = "current_user.id"
 const val CURRENT_USER_SUBJECT_KEY = "current_user.subject"
 
 private const val ANONYMOUS_USER_ID = "anonymousUser"
-private const val SYSTEM_USER_ID = "system"
+const val SYSTEM_USER_ID = "system"
 
 fun <R : Any> R.logger(): Lazy<Logger> {
     return lazy { LoggerFactory.getLogger(this.javaClass) }

@@ -6,6 +6,7 @@ import com.github.hu553in.invites_keycloak.config.props.InviteProps
 import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.repo.InviteRepository
+import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -194,7 +195,11 @@ class InviteServiceTest(
         ).invite
 
         // assert
+        val expiredOriginal = inviteRepository.findById(first.id!!).orElseThrow()
         assertThat(second.id).isNotEqualTo(first.id)
+        assertThat(expiredOriginal.revoked).isTrue()
+        assertThat(expiredOriginal.revokedBy).isEqualTo(SYSTEM_USER_ID)
+        assertThat(expiredOriginal.revokedAt).isNotNull()
     }
 
     @Test
@@ -207,6 +212,7 @@ class InviteServiceTest(
             createdBy = "creator"
         ).invite
         val newExpiry = clock.instant().plus(Duration.ofHours(6))
+        val before = clock.instant()
 
         // act
         val resent = inviteService.resendInvite(
@@ -217,10 +223,15 @@ class InviteServiceTest(
 
         // assert
         val revokedOriginal = inviteRepository.findById(original.id!!).orElseThrow()
+        val after = clock.instant()
         assertThat(revokedOriginal.revoked).isTrue()
+        assertThat(revokedOriginal.revokedAt).isNotNull()
+        assertThat(revokedOriginal.revokedAt).isBetween(before, after)
+        assertThat(revokedOriginal.revokedBy).isEqualTo("resender")
         assertThat(resent.invite.id).isNotEqualTo(original.id)
         assertThat(resent.invite.expiresAt).isEqualTo(newExpiry)
         assertThat(resent.invite.email).isEqualTo(original.email)
+        assertThat(resent.invite.createdBy).isEqualTo("resender")
     }
 
     @Test
@@ -274,6 +285,8 @@ class InviteServiceTest(
         // assert
         val original = inviteRepository.findById(initial.id!!).orElseThrow()
         assertThat(original.revoked).isTrue()
+        assertThat(original.revokedBy).isEqualTo(SYSTEM_USER_ID)
+        assertThat(original.revokedAt).isNotNull()
         assertThat(replacement.id).isNotEqualTo(initial.id)
     }
 
@@ -316,6 +329,29 @@ class InviteServiceTest(
         // act & assert
         assertThatThrownBy { inviteService.revoke(invite.id!!) }
             .isInstanceOf(IllegalStateException::class.java)
+    }
+
+    @Test
+    fun `revoke stores audit metadata`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator"
+        ).invite
+        val before = clock.instant()
+
+        // act
+        inviteService.revoke(invite.id!!, "auditor")
+
+        // assert
+        val revoked = inviteRepository.findById(invite.id!!).orElseThrow()
+        val after = clock.instant()
+        assertThat(revoked.revoked).isTrue()
+        assertThat(revoked.revokedBy).isEqualTo("auditor")
+        assertThat(revoked.revokedAt).isNotNull()
+        assertThat(revoked.revokedAt).isBetween(before, after)
     }
 
     @Test

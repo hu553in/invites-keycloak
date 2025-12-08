@@ -138,11 +138,12 @@ class InviteAdminController(
     @PostMapping("/{id}/revoke")
     fun revokeInvite(
         @PathVariable id: UUID,
-        redirectAttributes: RedirectAttributes
+        redirectAttributes: RedirectAttributes,
+        authentication: Authentication?
     ): String {
         return runCatching {
             val invite = inviteService.get(id)
-            inviteService.revoke(id)
+            inviteService.revoke(id, authentication.nameOrSystem())
             redirectAttributes.addFlashAttribute("successMessage", "Invite revoked for ${invite.email}")
             "redirect:/admin/invite"
         }.getOrElse {

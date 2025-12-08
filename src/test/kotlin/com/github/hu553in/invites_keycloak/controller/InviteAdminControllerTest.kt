@@ -9,13 +9,13 @@ import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.service.MailService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.BDDMockito
 import org.mockito.BDDMockito.given
+import org.mockito.BDDMockito.mock
+import org.mockito.BDDMockito.reset
 import org.mockito.BDDMockito.then
-import org.mockito.Mockito
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.reset
-import org.mockito.Mockito.verifyNoInteractions
-import org.mockito.Mockito.verifyNoMoreInteractions
+import org.mockito.BDDMockito.verifyNoInteractions
+import org.mockito.BDDMockito.verifyNoMoreInteractions
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -301,14 +301,14 @@ class InviteAdminControllerTest(
     fun `create invite duplicate email shows field error`() {
         // arrange
         given(keycloakAdminClient.listRealmRoles("master")).willReturn(listOf("default-admin"))
-        Mockito.`when`(
+        BDDMockito.`when`(
             inviteService.createInvite(
-                Mockito.anyString(),
-                Mockito.anyString(),
-                Mockito.any(Instant::class.java),
-                Mockito.anyInt(),
-                Mockito.anySet(),
-                Mockito.anyString()
+                BDDMockito.anyString(),
+                BDDMockito.anyString(),
+                BDDMockito.any(Instant::class.java),
+                BDDMockito.anyInt(),
+                BDDMockito.anySet(),
+                BDDMockito.anyString()
             )
         ).thenThrow(ActiveInviteExistsException("master", "admin@example.com"))
 

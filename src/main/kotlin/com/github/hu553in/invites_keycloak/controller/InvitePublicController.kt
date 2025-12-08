@@ -4,6 +4,7 @@ import com.github.hu553in.invites_keycloak.client.KeycloakAdminClient
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.util.ErrorMessages
+import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
 import com.github.hu553in.invites_keycloak.util.logger
 import com.github.hu553in.invites_keycloak.util.maskSensitive
 import io.swagger.v3.oas.annotations.Operation
@@ -65,7 +66,7 @@ class InvitePublicController(
             .addKeyValue("email") { maskSensitive(email) }
             .log { "Invite target user already exists; revoking invite" }
 
-        runCatching { inviteService.revoke(inviteId) }
+        runCatching { inviteService.revoke(inviteId, SYSTEM_USER_ID) }
             .onFailure {
                 log.atError()
                     .addKeyValue("invite.id") { inviteId }
@@ -108,7 +109,7 @@ class InvitePublicController(
             rollbackUser(realm, inviteId, email, createdUserId)
             val shouldRevoke = shouldRevokeInvite(e)
             val view = if (shouldRevoke) {
-                runCatching { inviteService.revoke(inviteId) }
+                runCatching { inviteService.revoke(inviteId, SYSTEM_USER_ID) }
                     .onFailure { revokeError ->
                         log.atError()
                             .addKeyValue("invite.id") { inviteId }

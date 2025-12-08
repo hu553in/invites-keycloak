@@ -132,7 +132,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - [x] Test everything and fix all found issues
 - [x] Add metrics
 - [x] Add tracing
-- [ ] Store additional audit log data and show it in the table: revoked by, revoked at, resent by, resent at
+- [x] Store additional audit log data and show it in the table: revoked by, revoked at
 - [ ] Cover everything with logs
 - [ ] Add detailed docs
 - [ ] Add i18n

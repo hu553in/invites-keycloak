@@ -8,15 +8,16 @@ import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientExceptio
 import com.github.hu553in.invites_keycloak.exception.handler.ControllerExceptionHandler
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.util.ErrorMessages
+import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
+import org.mockito.BDDMockito.mock
+import org.mockito.BDDMockito.never
+import org.mockito.BDDMockito.reset
 import org.mockito.BDDMockito.then
-import org.mockito.Mockito
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.never
-import org.mockito.Mockito.reset
-import org.mockito.Mockito.verify
+import org.mockito.BDDMockito.verify
+import org.mockito.BDDMockito.willThrow
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -87,7 +88,7 @@ class InvitePublicControllerTest {
         then(keycloakAdminClient).should().executeActionsEmail("master", "user-id")
         then(inviteService).should().useOnce(invite.id!!)
         then(keycloakAdminClient).should(never()).deleteUser("master", "user-id")
-        verify(inviteService, never()).revoke(invite.id!!)
+        then(inviteService).shouldHaveNoMoreInteractions()
     }
 
     @Test
@@ -107,10 +108,10 @@ class InvitePublicControllerTest {
             status { isOk() }
             view { name("public/account_created") }
         }
+        then(keycloakAdminClient).should().userExists("master", invite.email)
         then(keycloakAdminClient).should().createUser("master", invite.email, invite.email)
-        verify(keycloakAdminClient, never())
-            .assignRealmRoles(Mockito.anyString(), Mockito.anyString(), Mockito.anySet())
         then(keycloakAdminClient).should().executeActionsEmail("master", "user-id")
+        then(keycloakAdminClient).shouldHaveNoMoreInteractions()
         then(inviteService).should().useOnce(invite.id!!)
     }
 
@@ -130,9 +131,9 @@ class InvitePublicControllerTest {
             status { isConflict() }
             view { name("generic_error") }
         }
-        org.mockito.Mockito.verify(keycloakAdminClient, never())
+        verify(keycloakAdminClient, never())
             .createUser("master", invite.email, invite.email)
-        then(inviteService).should().revoke(invite.id!!)
+        then(inviteService).should().revoke(invite.id!!, SYSTEM_USER_ID)
         then(inviteService).should(never()).useOnce(invite.id!!)
     }
 
@@ -169,12 +170,11 @@ class InvitePublicControllerTest {
             status { isServiceUnavailable() }
             view { name("generic_error") }
         }
-        then(keycloakAdminClient).should(never()).deleteUser(
-            org.mockito.Mockito.anyString(),
-            org.mockito.Mockito.anyString()
-        )
-        then(inviteService).should(never()).revoke(invite.id!!)
-        then(inviteService).should(never()).useOnce(invite.id!!)
+        then(inviteService).should().validateToken("master", "token")
+        then(inviteService).shouldHaveNoMoreInteractions()
+        then(keycloakAdminClient).should().userExists("master", invite.email)
+        then(keycloakAdminClient).should().createUser("master", invite.email, invite.email)
+        then(keycloakAdminClient).shouldHaveNoMoreInteractions()
     }
 
     @Test
@@ -184,7 +184,7 @@ class InvitePublicControllerTest {
         given(inviteService.validateToken("master", "token")).willReturn(invite)
         given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
         given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
-        org.mockito.BDDMockito.willThrow(IllegalStateException("role-assign-failed"))
+        willThrow(IllegalStateException("role-assign-failed"))
             .given(keycloakAdminClient)
             .assignRealmRoles("master", "user-id", invite.roles)
 
@@ -198,7 +198,7 @@ class InvitePublicControllerTest {
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
         then(keycloakAdminClient).should().deleteUser("master", "user-id")
-        then(inviteService).should().revoke(invite.id!!)
+        then(inviteService).should().revoke(invite.id!!, SYSTEM_USER_ID)
         verify(inviteService, never()).useOnce(invite.id!!)
     }
 
@@ -209,7 +209,7 @@ class InvitePublicControllerTest {
         given(inviteService.validateToken("master", "token")).willReturn(invite)
         given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
         given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
-        org.mockito.BDDMockito.willThrow(IllegalStateException("actions-failed"))
+        willThrow(IllegalStateException("actions-failed"))
             .given(keycloakAdminClient)
             .executeActionsEmail("master", "user-id")
 
@@ -223,7 +223,7 @@ class InvitePublicControllerTest {
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
         then(keycloakAdminClient).should().deleteUser("master", "user-id")
-        then(inviteService).should().revoke(invite.id!!)
+        then(inviteService).should().revoke(invite.id!!, SYSTEM_USER_ID)
         verify(inviteService, never()).useOnce(invite.id!!)
     }
 
@@ -245,8 +245,11 @@ class InvitePublicControllerTest {
             view { name("generic_error") }
             model { attribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE) }
         }
-        then(inviteService).should(never()).revoke(invite.id!!)
-        then(inviteService).should(never()).useOnce(invite.id!!)
+        then(inviteService).should().validateToken("master", "token")
+        then(inviteService).shouldHaveNoMoreInteractions()
+        then(keycloakAdminClient).should().userExists("master", invite.email)
+        then(keycloakAdminClient).should().createUser("master", invite.email, invite.email)
+        then(keycloakAdminClient).shouldHaveNoMoreInteractions()
     }
 
     @Test
@@ -265,7 +268,7 @@ class InvitePublicControllerTest {
         given(inviteService.validateToken("master", "token")).willReturn(invite)
         given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
         given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
-        org.mockito.BDDMockito.willThrow(exception)
+        willThrow(exception)
             .given(keycloakAdminClient)
             .assignRealmRoles("master", "user-id", invite.roles)
 
@@ -279,7 +282,7 @@ class InvitePublicControllerTest {
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
         then(keycloakAdminClient).should().deleteUser("master", "user-id")
-        then(inviteService).should().revoke(invite.id!!)
+        then(inviteService).should().revoke(invite.id!!, SYSTEM_USER_ID)
         then(inviteService).should(never()).useOnce(invite.id!!)
     }
 
@@ -298,7 +301,7 @@ class InvitePublicControllerTest {
 
         given(inviteService.validateToken("master", "token")).willReturn(invite)
         given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
-        org.mockito.BDDMockito.willThrow(exception)
+        willThrow(exception)
             .given(keycloakAdminClient)
             .createUser("master", invite.email, invite.email)
 
@@ -311,10 +314,12 @@ class InvitePublicControllerTest {
             view { name("generic_error") }
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
-        then(inviteService).should().revoke(invite.id!!)
-        then(keycloakAdminClient).should(never())
-            .deleteUser(org.mockito.Mockito.anyString(), org.mockito.Mockito.anyString())
-        then(inviteService).should(never()).useOnce(invite.id!!)
+        then(inviteService).should().validateToken("master", "token")
+        then(keycloakAdminClient).should().userExists("master", invite.email)
+        then(keycloakAdminClient).should().createUser("master", invite.email, invite.email)
+        then(inviteService).should().revoke(invite.id!!, SYSTEM_USER_ID)
+        then(inviteService).shouldHaveNoMoreInteractions()
+        then(keycloakAdminClient).shouldHaveNoMoreInteractions()
     }
 
     @Test
@@ -324,7 +329,7 @@ class InvitePublicControllerTest {
         given(inviteService.validateToken("master", "token")).willReturn(invite)
         given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
         given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
-        org.mockito.BDDMockito.willThrow(
+        willThrow(
             KeycloakAdminClientException("role is not found", org.springframework.http.HttpStatus.NOT_FOUND)
         )
             .given(keycloakAdminClient)
@@ -340,7 +345,7 @@ class InvitePublicControllerTest {
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
         then(keycloakAdminClient).should().deleteUser("master", "user-id")
-        then(inviteService).should().revoke(invite.id!!)
+        then(inviteService).should().revoke(invite.id!!, SYSTEM_USER_ID)
         then(inviteService).should(never()).useOnce(invite.id!!)
     }
 
@@ -358,6 +363,8 @@ class InvitePublicControllerTest {
             view { name("generic_error") }
             model { attribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE) }
         }
+        then(inviteService).should().validateToken("master", "token")
+        then(inviteService).shouldHaveNoMoreInteractions()
         then(keycloakAdminClient).shouldHaveNoInteractions()
     }
 
