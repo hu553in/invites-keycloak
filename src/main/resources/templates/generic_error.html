@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title th:text="${error_message ?: 'Unknown error'}">Unknown error</title>
+    <title th:text="|${error_message ?: 'Unknown error'} - Invites for your Keycloak 💌 🗝|">
+        Unknown error - Invites for your Keycloak 💌 🗝
+    </title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="flex min-h-screen items-center justify-center
