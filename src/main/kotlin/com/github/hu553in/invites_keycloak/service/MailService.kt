@@ -29,7 +29,7 @@ class MailService(
             }
 
         return try {
-            val msg = sender.createMimeMessage().also {
+            sender.send {
                 MimeMessageHelper(it, Charsets.UTF_8.name()).also { helper ->
                     mailProps.from
                         ?.takeIf { from -> from.isNotBlank() }
@@ -39,8 +39,6 @@ class MailService(
                     helper.setText(renderBody(data), true)
                 }
             }
-
-            sender.send(msg)
             MailSendStatus.OK
         } catch (e: MailException) {
             MailSendStatus.FAIL.also {

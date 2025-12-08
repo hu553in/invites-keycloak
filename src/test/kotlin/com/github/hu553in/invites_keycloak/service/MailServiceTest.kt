@@ -8,12 +8,14 @@ import jakarta.mail.Session
 import jakarta.mail.internet.MimeMessage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.mockito.BDDMockito.given
+import org.mockito.ArgumentMatchers.any
 import org.mockito.BDDMockito.then
+import org.mockito.BDDMockito.willAnswer
 import org.mockito.BDDMockito.willThrow
 import org.mockito.Mockito
 import org.springframework.mail.MailSendException
 import org.springframework.mail.javamail.JavaMailSender
+import org.springframework.mail.javamail.MimeMessagePreparator
 import org.thymeleaf.spring6.SpringTemplateEngine
 import org.thymeleaf.templatemode.TemplateMode
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver
@@ -42,7 +44,11 @@ class MailServiceTest {
         val sender = Mockito.mock(JavaMailSender::class.java)
         val msg = MimeMessage(Session.getInstance(Properties()))
 
-        given(sender.createMimeMessage()).willReturn(msg)
+        willAnswer { invocation ->
+            val preparator = invocation.getArgument<MimeMessagePreparator>(0)
+            preparator.prepare(msg)
+            null
+        }.given(sender).send(any(MimeMessagePreparator::class.java))
 
         val svc = MailService(objectProvider(sender), templateEngine, MailProps())
         val data = InviteMailData(
@@ -62,7 +68,7 @@ class MailServiceTest {
         assertThat(msg.allRecipients[0].toString()).isEqualTo("user@example.com")
         assertThat(msg.content.toString()).contains(data.link)
 
-        then(sender).should().send(msg)
+        then(sender).should().send(any(MimeMessagePreparator::class.java))
     }
 
     @Test
@@ -88,10 +94,7 @@ class MailServiceTest {
     fun `sendInviteEmail returns failed when sender throws`() {
         // arrange
         val sender = Mockito.mock(JavaMailSender::class.java)
-        val msg = MimeMessage(Session.getInstance(Properties()))
-
-        given(sender.createMimeMessage()).willReturn(msg)
-        willThrow(MailSendException("boom")).given(sender).send(msg)
+        willThrow(MailSendException("boom")).given(sender).send(any(MimeMessagePreparator::class.java))
 
         val svc = MailService(objectProvider(sender), templateEngine, MailProps())
         val data = InviteMailData(

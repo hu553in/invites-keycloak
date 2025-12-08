@@ -24,16 +24,18 @@ lifetime and usage count; recipients redeem them to get an account provisioned w
 - Structured logging uses SLF4J event builders; a servlet filter puts `current_user.id` (username or `system`) and
   `current_user.sub` (OIDC subject when available) into MDC for every request.
 
-## Configuration expectations
+## Configuration and environment
 
-- Keycloak: an admin client with client credentials, required admin role name, and reachable issuer URL.
-- Invites: public base URL for generated links, allowed realms with roles, token secret/size/algorithm,
-  expiry bounds, and cleanup retention. By design, non-recoverable errors should revoke the invite.
-- Realms may have an empty roles list; when no roles are configured, the admin UI hides the roles selector and
-  invites are created without assigning realm roles (Keycloak still applies its default composites).
-- Mail: SMTP settings are optional; when absent, invite emails are skipped with a warning, and links are still
-  displayed. You can set `MAIL_FROM` for the sender address and `MAIL_SUBJECT_TEMPLATE` for the subject
-  (defaults to `Invitation to %s`, filled with the target realm).
+- Settings are loaded from environment variables; Compose passes `.env` via `env_file: .env`. Any Spring Boot property
+  can be set through env vars thanks to Spring's relaxed binding (for example `spring.mail.host` -> `SPRING_MAIL_HOST`).
+  Prefer `.env` over editing `src/main/resources/application.yml`.
+- Copy `.env.example.local` (dev) or `.env.example.docker` (VPS) to `.env` and fill secrets/URLs.
+- Keycloak: admin client with client credentials, required admin role name, and reachable issuer URL.
+- Invites: `INVITE_*` env vars cover public base URL, token secret, and cleanup retention. Other invite defaults live in
+  `application.yml` (expiry bounds, token bytes/salt, MAC algorithm, and `invite.realms` map). Realms may have empty
+  roles; the admin UI hides the selector in that case.
+- Mail: optional. The example `.env` disables mail via `SPRING_AUTOCONFIGURE_EXCLUDE`; remove it and set `SPRING_MAIL_*`
+  plus `MAIL_FROM`/`MAIL_SUBJECT_TEMPLATE` to enable sending (defaults to `Invitation to %s` with the target realm).
 - Database: PostgreSQL reachable via JDBC; Flyway runs on startup to create the `invite` table and indexes.
 
 ### Keycloak setup (all environments)
@@ -122,8 +124,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
     - [ ] Some issues with `obtainAccessToken()`
 - [ ] Fix all styling issues
 - [ ] Cover everything with logs
-- [ ] Configure realms for invites through env vars
-- [ ] Check if any other configuration can be done through env vars
+- [ ] Move to env vars all configuration that can be moved
 - [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency
 - [ ] Add detailed docs
 - [ ] Add metrics
