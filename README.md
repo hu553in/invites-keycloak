@@ -123,6 +123,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - [ ] Fix all styling issues
 - [ ] Cover everything with logs
 - [ ] Configure realms for invites through env vars
+- [ ] Check if any other configuration can be done through env vars
 - [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency
 - [ ] Add detailed docs
 - [ ] Add metrics
