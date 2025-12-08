@@ -135,6 +135,5 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - [ ] Store additional audit log data and show it in the table: revoked by, revoked at, resent by, resent at
 - [ ] Cover everything with logs
 - [ ] Add detailed docs
-- [ ] Add rate limiting
 - [ ] Add i18n
 - [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency (optional)
