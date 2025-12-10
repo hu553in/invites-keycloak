@@ -24,7 +24,6 @@ complexity:
 
 style:
   MagicNumber:
-    active: true
     ignoreAnnotation: true
   BracesOnIfStatements:
     active: true

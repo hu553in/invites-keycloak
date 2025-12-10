@@ -120,6 +120,14 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - Tracing: OTLP exporter dependency is present but disabled by default (`management.tracing.export.enabled=false`). To
   emit spans, set `MANAGEMENT_TRACING_EXPORT_ENABLED=true` and configure `MANAGEMENT_OTLP_TRACING_ENDPOINT`
   (for example `http://otel-collector:4318/v1/traces`). Adjust sampling with `MANAGEMENT_TRACING_SAMPLING_PROBABILITY`.
+- Logging conventions:
+    - Servlet access log (opt-in: `access-logging.enabled=true`) emitted once per request with method, path, status,
+      duration, and MDC-enriched user/invite context (PII stays masked).
+    - Service layer owns INFO/audit logs for invite lifecycle (create/resend/revoke/delete/use) and includes the actor;
+      controllers avoid duplicating success logs.
+    - Keycloak admin client logs HTTP failures with status, context, and duration; retries are logged at DEBUG with
+      counts; controller advice adds route/status so requests are traceable without duplicating client details.
+    - Use MDC helpers (`withAuthDataInMdc`, `withInviteContextInMdc`) and `maskSensitive` to keep PII out of logs.
 
 ## Future roadmap
 
@@ -133,7 +141,7 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
 - [x] Add metrics
 - [x] Add tracing
 - [x] Store additional audit log data and show it in the table: revoked by, revoked at
-- [ ] Cover everything with logs
+- [x] Cover everything with logs
 - [ ] Add detailed docs
 - [ ] Add i18n
 - [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency (optional)

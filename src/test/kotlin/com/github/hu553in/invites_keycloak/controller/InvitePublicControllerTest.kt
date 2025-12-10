@@ -193,7 +193,7 @@ class InvitePublicControllerTest {
 
         // assert
         result.andExpect {
-            status { isServiceUnavailable() }
+            status { isGone() }
             view { name("generic_error") }
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
@@ -218,7 +218,7 @@ class InvitePublicControllerTest {
 
         // assert
         result.andExpect {
-            status { isServiceUnavailable() }
+            status { isGone() }
             view { name("generic_error") }
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
@@ -277,7 +277,7 @@ class InvitePublicControllerTest {
 
         // assert
         result.andExpect {
-            status { isServiceUnavailable() }
+            status { isGone() }
             view { name("generic_error") }
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
@@ -310,7 +310,7 @@ class InvitePublicControllerTest {
 
         // assert
         result.andExpect {
-            status { isServiceUnavailable() }
+            status { isGone() }
             view { name("generic_error") }
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }
@@ -340,7 +340,7 @@ class InvitePublicControllerTest {
 
         // assert
         result.andExpect {
-            status { isServiceUnavailable() }
+            status { isGone() }
             view { name("generic_error") }
             model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
         }

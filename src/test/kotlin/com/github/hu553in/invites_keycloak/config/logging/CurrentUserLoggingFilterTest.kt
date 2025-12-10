@@ -60,12 +60,14 @@ class CurrentUserLoggingFilterTest {
     @Test
     @WithMockUser(username = "alice")
     fun `request logs include current user id from MDC`() {
+        // act
         mockMvc.get("/logging-test") {
             accept = MediaType.TEXT_PLAIN
         }.andExpect {
             status { isOk() }
         }
 
+        // assert
         val events = listAppender.list
         val mdcValues = events.map { it.mdcPropertyMap[CURRENT_USER_ID_KEY] }
         assertThat(events).isNotEmpty
@@ -77,6 +79,7 @@ class CurrentUserLoggingFilterTest {
 
     @Test
     fun `request logs include subject when OIDC principal available`() {
+        // arrange
         val idToken = OidcIdToken(
             "token",
             java.time.Instant.now(),
@@ -87,6 +90,7 @@ class CurrentUserLoggingFilterTest {
         val oidcUser = DefaultOidcUser(authorities, idToken, "preferred_username")
         val auth = OAuth2AuthenticationToken(oidcUser, authorities, "keycloak")
 
+        // act
         mockMvc.get("/logging-test") {
             accept = MediaType.TEXT_PLAIN
             with(authentication(auth))
@@ -94,6 +98,7 @@ class CurrentUserLoggingFilterTest {
             status { isOk() }
         }
 
+        // assert
         val events = listAppender.list
         val subjects = events.map { it.mdcPropertyMap[CURRENT_USER_SUBJECT_KEY] }
         assertThat(subjects)

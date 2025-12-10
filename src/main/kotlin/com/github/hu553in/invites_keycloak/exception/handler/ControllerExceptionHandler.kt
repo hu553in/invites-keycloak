@@ -4,13 +4,16 @@ import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
 import com.github.hu553in.invites_keycloak.util.ErrorMessages
+import com.github.hu553in.invites_keycloak.util.eventForInviteError
 import com.github.hu553in.invites_keycloak.util.logger
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.servlet.HandlerMapping
 
 @ControllerAdvice(annotations = [Controller::class])
 class ControllerExceptionHandler {
@@ -18,9 +21,16 @@ class ControllerExceptionHandler {
     private val log by logger()
 
     @ExceptionHandler(InvalidInviteException::class)
-    fun handleInvalidInvite(e: InvalidInviteException, model: Model, resp: HttpServletResponse): String {
+    fun handleInvalidInvite(
+        e: InvalidInviteException,
+        model: Model,
+        req: HttpServletRequest,
+        resp: HttpServletResponse
+    ): String {
         log.atWarn()
             .setCause(e)
+            .addKeyValue("route") { req.routePatternOrUnknown() }
+            .addKeyValue("status") { HttpStatus.UNAUTHORIZED.value() }
             .log { "${InvalidInviteException::class.simpleName} exception occurred" }
         if (!model.containsAttribute("error_message")) {
             model.addAttribute("error_message", "Invite is invalid")
@@ -33,14 +43,31 @@ class ControllerExceptionHandler {
     fun handleKeycloakAdminClient(
         e: KeycloakAdminClientException,
         model: Model,
+        req: HttpServletRequest,
         resp: HttpServletResponse
     ): String {
-        log.atError()
+        val status = e.statusCode
+        val responseStatus = if (status?.is4xxClientError == true) {
+            status
+        } else {
+            HttpStatus.SERVICE_UNAVAILABLE
+        }
+
+        log.eventForInviteError(e, keycloakStatus = responseStatus)
             .setCause(e)
-            .log { "${KeycloakAdminClientException::class.simpleName} exception occurred" }
-        model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
-        model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
-        resp.status = HttpStatus.SERVICE_UNAVAILABLE.value()
+            .addKeyValue("route") { req.routePatternOrUnknown() }
+            .addKeyValue("status") { responseStatus.value() }
+            .log { "Keycloak admin client exception handled at controller layer" }
+
+        if (responseStatus.is4xxClientError) {
+            model.addAttributeIfAbsent("error_message", ErrorMessages.INVITE_CANNOT_BE_COMPLETED)
+            model.addAttributeIfAbsent("error_details", ErrorMessages.INVITE_CANNOT_BE_COMPLETED_DETAILS)
+        } else {
+            model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
+            model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
+        }
+
+        resp.status = responseStatus.value()
         return "generic_error"
     }
 
@@ -48,10 +75,13 @@ class ControllerExceptionHandler {
     fun handleInviteNotFound(
         e: InviteNotFoundException,
         model: Model,
+        req: HttpServletRequest,
         resp: HttpServletResponse
     ): String {
         log.atWarn()
             .setCause(e)
+            .addKeyValue("route") { req.routePatternOrUnknown() }
+            .addKeyValue("status") { HttpStatus.NOT_FOUND.value() }
             .log { "${InviteNotFoundException::class.simpleName} exception occurred" }
         if (!model.containsAttribute("error_message")) {
             model.addAttribute("error_message", e.message ?: "Invite is not found")
@@ -61,9 +91,11 @@ class ControllerExceptionHandler {
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleUnknown(e: Exception, model: Model, resp: HttpServletResponse): String {
+    fun handleUnknown(e: Exception, model: Model, req: HttpServletRequest, resp: HttpServletResponse): String {
         log.atError()
             .setCause(e)
+            .addKeyValue("route") { req.routePatternOrUnknown() }
+            .addKeyValue("status") { HttpStatus.SERVICE_UNAVAILABLE.value() }
             .log { "Unknown exception handled at controller layer" }
         model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
         model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
@@ -76,4 +108,8 @@ private fun Model.addAttributeIfAbsent(name: String, value: Any) {
     if (!this.containsAttribute(name)) {
         this.addAttribute(name, value)
     }
+}
+
+private fun HttpServletRequest.routePatternOrUnknown(): String {
+    return this.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) as? String ?: "unknown"
 }

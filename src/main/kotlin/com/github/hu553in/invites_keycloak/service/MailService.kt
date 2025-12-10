@@ -2,6 +2,7 @@ package com.github.hu553in.invites_keycloak.service
 
 import com.github.hu553in.invites_keycloak.config.props.MailProps
 import com.github.hu553in.invites_keycloak.util.logger
+import com.github.hu553in.invites_keycloak.util.maskSensitive
 import jakarta.mail.MessagingException
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.mail.MailException
@@ -25,8 +26,15 @@ class MailService(
         val sender = senderProvider.ifAvailable
             ?: return MailSendStatus.NOT_CONFIGURED.also {
                 log.atWarn()
+                    .addKeyValue("email") { maskSensitive(data.email) }
+                    .addKeyValue("target") { data.target }
                     .log { "Mail sender is not configured" }
             }
+
+        log.atDebug()
+            .addKeyValue("email") { maskSensitive(data.email) }
+            .addKeyValue("target") { data.target }
+            .log { "Sending invite email" }
 
         return try {
             sender.send {
@@ -39,16 +47,24 @@ class MailService(
                     helper.setText(renderBody(data), true)
                 }
             }
+            log.atInfo()
+                .addKeyValue("email") { maskSensitive(data.email) }
+                .addKeyValue("target") { data.target }
+                .log { "Invite email sent" }
             MailSendStatus.OK
         } catch (e: MailException) {
             MailSendStatus.FAIL.also {
                 log.atError()
+                    .addKeyValue("email") { maskSensitive(data.email) }
+                    .addKeyValue("target") { data.target }
                     .setCause(e)
                     .log { "Failed to send invite email" }
             }
         } catch (e: MessagingException) {
             MailSendStatus.FAIL.also {
                 log.atError()
+                    .addKeyValue("email") { maskSensitive(data.email) }
+                    .addKeyValue("target") { data.target }
                     .setCause(e)
                     .log { "Failed to build invite email" }
             }
