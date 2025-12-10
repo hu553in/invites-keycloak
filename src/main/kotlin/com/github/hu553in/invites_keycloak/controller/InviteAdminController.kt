@@ -183,7 +183,7 @@ class InviteAdminController(
         bindingResult: BindingResult,
         model: Model
     ): String {
-        log.eventForInviteError(e)
+        log.eventForInviteError(e, deduplicateKeycloak = true)
             .addKeyValue("realm") { inviteForm.realm }
             .addKeyValue("email") { maskSensitive(inviteForm.email) }
             .setCause(e)

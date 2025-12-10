@@ -53,7 +53,7 @@ class ControllerExceptionHandler {
             HttpStatus.SERVICE_UNAVAILABLE
         }
 
-        log.eventForInviteError(e, keycloakStatus = responseStatus)
+        log.eventForInviteError(e, keycloakStatus = responseStatus, deduplicateKeycloak = true)
             .setCause(e)
             .addKeyValue("route") { req.routePatternOrUnknown() }
             .addKeyValue("status") { responseStatus.value() }

@@ -113,6 +113,11 @@ fun Throwable.isClientSideInviteFailure(): Boolean {
         this is InvalidInviteException
 }
 
+/**
+ * Standardized log level chooser for invite/Keycloak errors.
+ * Use deduplication (`deduplicateKeycloak = true`) in upper layers when a Keycloak call already logged
+ * the failure to avoid double warn/error entries; only add contextual keys at that layer.
+ */
 fun Logger.eventForInviteError(
     error: Throwable,
     keycloakStatus: HttpStatusCode? = null,
