@@ -52,8 +52,9 @@ class MailServiceTest {
 
         val svc = MailService(objectProvider(sender), templateEngine, MailProps())
         val data = InviteMailData(
+            inviteId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            realm = "master",
             email = "user@example.com",
-            target = "master",
             link = "https://example.org/invite/master/token",
             expiresAt = Instant.parse("2025-02-01T10:15:30Z")
         )
@@ -77,8 +78,9 @@ class MailServiceTest {
         val svc = MailService(objectProvider(null), templateEngine, MailProps())
 
         val data = InviteMailData(
+            inviteId = null,
+            realm = "master",
             email = "user@example.com",
-            target = "master",
             link = "https://example.org/invite/master/token",
             expiresAt = clock.instant()
         )
@@ -98,8 +100,9 @@ class MailServiceTest {
 
         val svc = MailService(objectProvider(sender), templateEngine, MailProps())
         val data = InviteMailData(
+            inviteId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            realm = "master",
             email = "user@example.com",
-            target = "master",
             link = "https://example.org/invite/master/token",
             expiresAt = clock.instant()
         )

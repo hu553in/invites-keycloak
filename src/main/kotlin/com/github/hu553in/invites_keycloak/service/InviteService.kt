@@ -6,6 +6,23 @@ import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.repo.InviteRepository
+import com.github.hu553in.invites_keycloak.util.INVITE_COUNT_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_CREATED_BY_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_CREATED_ID_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_DELETED_BY_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_EXPIRES_AT_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_MAX_USES_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_PREVIOUS_ID_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_REALM_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_RESENT_BY_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_REVOKED_BY_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_REVOKED_EXPIRED_COUNT_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_REVOKED_OVERUSED_COUNT_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_ROLES_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_TOKEN_LENGTH_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_USES_KEY
 import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
 import com.github.hu553in.invites_keycloak.util.logger
 import com.github.hu553in.invites_keycloak.util.maskSensitive
@@ -33,7 +50,7 @@ class InviteService(
     fun listInvites(): List<InviteEntity> {
         val invites = inviteRepository.findAllByOrderByCreatedAtDesc()
         log.atDebug()
-            .addKeyValue("invite.count") { invites.size }
+            .addKeyValue(INVITE_COUNT_KEY) { invites.size }
             .log { "Listed invites" }
         return invites
     }
@@ -62,10 +79,10 @@ class InviteService(
         val expiredRevoked = inviteRepository.revokeExpired(normalizedRealm, normalizedEmail, now, SYSTEM_USER_ID)
         val overusedRevoked = inviteRepository.revokeOverused(normalizedRealm, normalizedEmail, now, SYSTEM_USER_ID)
         log.atDebug()
-            .addKeyValue("realm") { normalizedRealm }
-            .addKeyValue("email") { maskSensitive(normalizedEmail) }
-            .addKeyValue("revoked_expired") { expiredRevoked }
-            .addKeyValue("revoked_overused") { overusedRevoked }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(normalizedEmail) }
+            .addKeyValue(INVITE_REVOKED_EXPIRED_COUNT_KEY) { expiredRevoked }
+            .addKeyValue(INVITE_REVOKED_OVERUSED_COUNT_KEY) { overusedRevoked }
             .log { "Revoked stale invites before creating a new one" }
 
         val targetExpiresAt = expiresAt ?: now.plus(inviteProps.expiry.default)
@@ -105,13 +122,13 @@ class InviteService(
         val saved = inviteRepository.save(invite)
         val rawToken = buildRawToken(token, salt)
         log.atInfo()
-            .addKeyValue("invite.id") { saved.id }
-            .addKeyValue("realm") { normalizedRealm }
-            .addKeyValue("email") { maskSensitive(normalizedEmail) }
-            .addKeyValue("expires_at") { targetExpiresAt }
-            .addKeyValue("max_uses") { maxUses }
-            .addKeyValue("roles") { normalizedRoles.joinToString(",") }
-            .addKeyValue("created_by") { normalizedCreatedBy }
+            .addKeyValue(INVITE_ID_KEY) { saved.id }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(normalizedEmail) }
+            .addKeyValue(INVITE_EXPIRES_AT_KEY) { targetExpiresAt }
+            .addKeyValue(INVITE_MAX_USES_KEY) { maxUses }
+            .addKeyValue(INVITE_ROLES_KEY) { normalizedRoles.joinToString(",") }
+            .addKeyValue(INVITE_CREATED_BY_KEY) { normalizedCreatedBy }
             .log { "Created invite" }
         return CreatedInvite(saved, rawToken)
     }
@@ -125,16 +142,16 @@ class InviteService(
             inviteRepository.findValidByRealmAndTokenHash(realm, tokenHash, clock.instant())
                 .map {
                     log.atDebug()
-                        .addKeyValue("invite.id") { it.id }
-                        .addKeyValue("realm") { it.realm }
+                        .addKeyValue(INVITE_ID_KEY) { it.id }
+                        .addKeyValue(INVITE_REALM_KEY) { it.realm }
                         .log { "Validated invite token" }
                     it
                 }
                 .orElseThrow { InvalidInviteException() }
         } catch (e: IllegalArgumentException) {
             log.atDebug()
-                .addKeyValue("realm") { realm }
-                .addKeyValue("token_length") { rawToken.length }
+                .addKeyValue(INVITE_REALM_KEY) { realm }
+                .addKeyValue(INVITE_TOKEN_LENGTH_KEY) { rawToken.length }
                 .setCause(e)
                 .log { "Invite token parsing failed" }
             throw InvalidInviteException("Invite token is malformed", e)
@@ -148,9 +165,9 @@ class InviteService(
             .also {
                 it.incrementUses()
                 log.atInfo()
-                    .addKeyValue("invite.id") { inviteId }
-                    .addKeyValue("uses") { it.uses }
-                    .addKeyValue("max_uses") { it.maxUses }
+                    .addKeyValue(INVITE_ID_KEY) { inviteId }
+                    .addKeyValue(INVITE_USES_KEY) { it.uses }
+                    .addKeyValue(INVITE_MAX_USES_KEY) { it.maxUses }
                     .log { "Marked invite as used once" }
             }
     }
@@ -164,10 +181,10 @@ class InviteService(
         check(invite.isActive(now)) { "Invite $inviteId is not active; revoke is only allowed for active invites." }
         invite.markRevoked(normalizedRevokedBy, now)
         log.atInfo()
-            .addKeyValue("invite.id") { inviteId }
-            .addKeyValue("realm") { invite.realm }
-            .addKeyValue("email") { maskSensitive(invite.email) }
-            .addKeyValue("revoked_by") { normalizedRevokedBy }
+            .addKeyValue(INVITE_ID_KEY) { inviteId }
+            .addKeyValue(INVITE_REALM_KEY) { invite.realm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(invite.email) }
+            .addKeyValue(INVITE_REVOKED_BY_KEY) { normalizedRevokedBy }
             .log { "Revoked invite" }
     }
 
@@ -182,10 +199,10 @@ class InviteService(
         val normalizedDeletedBy = normalizeString(deletedBy, "deletedBy must not be blank")
         inviteRepository.delete(invite)
         log.atInfo()
-            .addKeyValue("invite.id") { inviteId }
-            .addKeyValue("realm") { invite.realm }
-            .addKeyValue("email") { maskSensitive(invite.email) }
-            .addKeyValue("deleted_by") { normalizedDeletedBy }
+            .addKeyValue(INVITE_ID_KEY) { inviteId }
+            .addKeyValue(INVITE_REALM_KEY) { invite.realm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(invite.email) }
+            .addKeyValue(INVITE_DELETED_BY_KEY) { normalizedDeletedBy }
             .log { "Deleted invite" }
         return invite
     }
@@ -209,12 +226,12 @@ class InviteService(
             createdBy = normalizedCreatedBy
         )
         log.atInfo()
-            .addKeyValue("invite.id.revoked") { inviteId }
-            .addKeyValue("invite.id.created") { created.invite.id }
-            .addKeyValue("realm") { created.invite.realm }
-            .addKeyValue("email") { maskSensitive(created.invite.email) }
-            .addKeyValue("expires_at") { expiresAt }
-            .addKeyValue("resent_by") { normalizedCreatedBy }
+            .addKeyValue(INVITE_PREVIOUS_ID_KEY) { inviteId }
+            .addKeyValue(INVITE_CREATED_ID_KEY) { created.invite.id }
+            .addKeyValue(INVITE_REALM_KEY) { created.invite.realm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(created.invite.email) }
+            .addKeyValue(INVITE_EXPIRES_AT_KEY) { expiresAt }
+            .addKeyValue(INVITE_RESENT_BY_KEY) { normalizedCreatedBy }
             .log { "Resent invite (previous invite revoked)" }
         return created
     }
@@ -224,8 +241,8 @@ class InviteService(
         return inviteRepository.findById(inviteId)
             .map {
                 log.atDebug()
-                    .addKeyValue("invite.id") { inviteId }
-                    .addKeyValue("realm") { it.realm }
+                    .addKeyValue(INVITE_ID_KEY) { inviteId }
+                    .addKeyValue(INVITE_REALM_KEY) { it.realm }
                     .log { "Fetched invite" }
                 it
             }

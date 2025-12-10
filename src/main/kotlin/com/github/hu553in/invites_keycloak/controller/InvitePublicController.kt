@@ -5,7 +5,13 @@ import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.util.ErrorMessages
+import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_REALM_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_ROLES_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_TOKEN_LENGTH_KEY
 import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
+import com.github.hu553in.invites_keycloak.util.USER_ID_KEY
 import com.github.hu553in.invites_keycloak.util.eventForInviteError
 import com.github.hu553in.invites_keycloak.util.extractKeycloakException
 import com.github.hu553in.invites_keycloak.util.keycloakStatusFrom
@@ -48,8 +54,8 @@ class InvitePublicController(
         val normalizedRealm = realm.trim()
         val normalizedToken = token.trim()
         log.atDebug()
-            .addKeyValue("realm") { normalizedRealm }
-            .addKeyValue("token_length") { normalizedToken.length }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
+            .addKeyValue(INVITE_TOKEN_LENGTH_KEY) { normalizedToken.length }
             .log { "Validating invite token" }
         val invite = inviteService.validateToken(normalizedRealm, normalizedToken)
         val inviteId = checkNotNull(invite.id) { "Null invite id is received from db for realm $realm" }
@@ -73,17 +79,17 @@ class InvitePublicController(
         resp: HttpServletResponse
     ): String {
         log.atWarn()
-            .addKeyValue("invite.id") { inviteId }
-            .addKeyValue("realm") { realm }
-            .addKeyValue("email") { maskSensitive(email) }
+            .addKeyValue(INVITE_ID_KEY) { inviteId }
+            .addKeyValue(INVITE_REALM_KEY) { realm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
             .log { "Invite target user already exists; revoking invite" }
 
         val revokeError = runCatching { inviteService.revoke(inviteId, SYSTEM_USER_ID) }
             .onFailure {
                 log.atError()
-                    .addKeyValue("invite.id") { inviteId }
-                    .addKeyValue("realm") { realm }
-                    .addKeyValue("email") { maskSensitive(email) }
+                    .addKeyValue(INVITE_ID_KEY) { inviteId }
+                    .addKeyValue(INVITE_REALM_KEY) { realm }
+                    .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
                     .setCause(it)
                     .log { "Failed to revoke invite after detecting existing user" }
             }
@@ -125,11 +131,11 @@ class InvitePublicController(
             inviteService.useOnce(inviteId)
 
             log.atInfo()
-                .addKeyValue("invite.id") { inviteId }
-                .addKeyValue("realm") { realm }
-                .addKeyValue("email") { maskSensitive(email) }
-                .addKeyValue("user.id") { createdUserId }
-                .addKeyValue("roles") { roles.joinToString(",") }
+                .addKeyValue(INVITE_ID_KEY) { inviteId }
+                .addKeyValue(INVITE_REALM_KEY) { realm }
+                .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
+                .addKeyValue(USER_ID_KEY) { createdUserId }
+                .addKeyValue(INVITE_ROLES_KEY) { roles.joinToString(",") }
                 .log { "Completed invite flow and triggered Keycloak actions" }
             "public/account_created"
         }.getOrElse { e ->
@@ -139,9 +145,9 @@ class InvitePublicController(
             val view = buildFailureView(shouldRevoke, inviteId, realm, email, keycloakStatus, model, resp)
 
             log.eventForInviteError(e, keycloakStatus = keycloakStatus, deduplicateKeycloak = true)
-                .addKeyValue("invite.id") { inviteId }
-                .addKeyValue("realm") { realm }
-                .addKeyValue("email") { maskSensitive(email) }
+                .addKeyValue(INVITE_ID_KEY) { inviteId }
+                .addKeyValue(INVITE_REALM_KEY) { realm }
+                .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
                 .setCause(e)
                 .log { "Failed to complete invite flow; rolling back created user if any" }
 
@@ -162,9 +168,9 @@ class InvitePublicController(
             runCatching { inviteService.revoke(inviteId, SYSTEM_USER_ID) }
                 .onFailure { revokeError ->
                     log.atError()
-                        .addKeyValue("invite.id") { inviteId }
-                        .addKeyValue("realm") { realm }
-                        .addKeyValue("email") { maskSensitive(email) }
+                        .addKeyValue(INVITE_ID_KEY) { inviteId }
+                        .addKeyValue(INVITE_REALM_KEY) { realm }
+                        .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
                         .setCause(revokeError)
                         .log { "Failed to revoke invite after invite flow error" }
                 }
@@ -197,9 +203,9 @@ class InvitePublicController(
             }
         }.onFailure { deletionError ->
             log.atDebug()
-                .addKeyValue("invite.id") { inviteId }
-                .addKeyValue("realm") { realm }
-                .addKeyValue("email") { maskSensitive(email) }
+                .addKeyValue(INVITE_ID_KEY) { inviteId }
+                .addKeyValue(INVITE_REALM_KEY) { realm }
+                .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
                 .setCause(deletionError)
                 .log { "Failed to rollback Keycloak user after invite error (Keycloak client logged details)" }
         }
@@ -217,6 +223,7 @@ class InvitePublicController(
                 root is InviteNotFoundException ||
                 root is IllegalArgumentException ||
                 root is IllegalStateException -> true
+
             else -> false
         }
     }

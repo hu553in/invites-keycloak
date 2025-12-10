@@ -3,7 +3,22 @@ package com.github.hu553in.invites_keycloak.client
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.hu553in.invites_keycloak.config.props.KeycloakProps
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
+import com.github.hu553in.invites_keycloak.util.ACTIONS_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_REALM_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_ROLES_KEY
 import com.github.hu553in.invites_keycloak.util.NANOS_PER_MILLI
+import com.github.hu553in.invites_keycloak.util.REQUEST_DURATION_MS_KEY
+import com.github.hu553in.invites_keycloak.util.REQUEST_METHOD_KEY
+import com.github.hu553in.invites_keycloak.util.REQUEST_REASON_KEY
+import com.github.hu553in.invites_keycloak.util.REQUEST_STATUS_KEY
+import com.github.hu553in.invites_keycloak.util.REQUEST_URI_KEY
+import com.github.hu553in.invites_keycloak.util.RETRY_ATTEMPT_KEY
+import com.github.hu553in.invites_keycloak.util.RETRY_MAX_ATTEMPTS_KEY
+import com.github.hu553in.invites_keycloak.util.ROLE_COUNT_KEY
+import com.github.hu553in.invites_keycloak.util.ROLE_KEY
+import com.github.hu553in.invites_keycloak.util.USER_EXISTS_KEY
+import com.github.hu553in.invites_keycloak.util.USER_ID_KEY
 import com.github.hu553in.invites_keycloak.util.eventForInviteError
 import com.github.hu553in.invites_keycloak.util.logger
 import com.github.hu553in.invites_keycloak.util.maskSensitive
@@ -113,15 +128,15 @@ class HttpKeycloakAdminClient(
         val accessToken = obtainAccessToken()
 
         log.atDebug()
-            .addKeyValue("realm") { normalizedRealm }
-            .addKeyValue("email") { maskSensitive(normalizedEmail) }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(normalizedEmail) }
             .log { "Checking if Keycloak user exists" }
 
         val exists = !executeRequest(
             message = "Failed to verify whether user exists in realm $normalizedRealm",
             ctx = logContext(
-                "realm" to { normalizedRealm },
-                "email" to { maskSensitive(normalizedEmail) }
+                INVITE_REALM_KEY to { normalizedRealm },
+                INVITE_EMAIL_KEY to { maskSensitive(normalizedEmail) }
             ),
             block = { retrySpec ->
                 webClient.get()
@@ -145,9 +160,9 @@ class HttpKeycloakAdminClient(
         ).isNullOrEmpty()
 
         log.atDebug()
-            .addKeyValue("realm") { normalizedRealm }
-            .addKeyValue("email") { maskSensitive(normalizedEmail) }
-            .addKeyValue("user_exists") { exists }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(normalizedEmail) }
+            .addKeyValue(USER_EXISTS_KEY) { exists }
             .log { "Keycloak user existence checked" }
 
         return exists
@@ -162,9 +177,9 @@ class HttpKeycloakAdminClient(
         val response = executeRequest(
             message = "Failed to create user in realm $normalizedRealm",
             ctx = logContext(
-                "realm" to { normalizedRealm },
-                "email" to { maskSensitive(normalizedEmail) },
-                "username" to { normalizedUsername }
+                INVITE_REALM_KEY to { normalizedRealm },
+                INVITE_EMAIL_KEY to { maskSensitive(normalizedEmail) },
+                USER_ID_KEY to { normalizedUsername }
             ),
             block = { retrySpec ->
                 webClient.post()
@@ -182,8 +197,8 @@ class HttpKeycloakAdminClient(
                     .retrieve()
                     .onStatus({ it.isSameCodeAs(HttpStatus.CONFLICT) }) {
                         log.atWarn()
-                            .addKeyValue("realm") { normalizedRealm }
-                            .addKeyValue("email") { maskSensitive(normalizedEmail) }
+                            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
+                            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(normalizedEmail) }
                             .log { "Keycloak user already exists; returning conflict" }
                         Mono.error(
                             KeycloakAdminClientException(
@@ -201,8 +216,8 @@ class HttpKeycloakAdminClient(
 
         val userId = extractUserId(response?.headers?.location)
         log.atInfo()
-            .addKeyValue("user.id") { userId }
-            .addKeyValue("realm") { normalizedRealm }
+            .addKeyValue(USER_ID_KEY) { userId }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
             .log { "Created Keycloak user" }
         return userId
     }
@@ -213,8 +228,8 @@ class HttpKeycloakAdminClient(
         val normalizedRoles = normalizeStrings(roles, required = false)
         if (normalizedRoles.isEmpty()) {
             log.atInfo()
-                .addKeyValue("user.id") { normalizedUserId }
-                .addKeyValue("realm") { normalizedRealm }
+                .addKeyValue(USER_ID_KEY) { normalizedUserId }
+                .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
                 .log { "Skipping role assignment because no roles were provided" }
             return
         }
@@ -227,9 +242,9 @@ class HttpKeycloakAdminClient(
         executeRequest(
             message = "Failed to assign roles to user $normalizedUserId in realm $normalizedRealm",
             ctx = logContext(
-                "realm" to { normalizedRealm },
-                "user.id" to { normalizedUserId },
-                "roles" to { normalizedRoles.joinToString(",") }
+                INVITE_REALM_KEY to { normalizedRealm },
+                USER_ID_KEY to { normalizedUserId },
+                INVITE_ROLES_KEY to { normalizedRoles.joinToString(",") }
             ),
             block = { retrySpec ->
                 webClient.post()
@@ -251,9 +266,9 @@ class HttpKeycloakAdminClient(
         )
 
         log.atInfo()
-            .addKeyValue("roles") { roleRepresentations.mapNotNull { it.name }.joinToString(",") }
-            .addKeyValue("user.id") { normalizedUserId }
-            .addKeyValue("realm") { normalizedRealm }
+            .addKeyValue(INVITE_ROLES_KEY) { roleRepresentations.mapNotNull { it.name }.joinToString(",") }
+            .addKeyValue(USER_ID_KEY) { normalizedUserId }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
             .log { "Assigned roles to Keycloak user" }
     }
 
@@ -261,8 +276,8 @@ class HttpKeycloakAdminClient(
         val representation = executeRequest(
             message = "Failed to resolve role $role in realm $realm",
             ctx = logContext(
-                "realm" to { realm },
-                "role" to { role }
+                INVITE_REALM_KEY to { realm },
+                ROLE_KEY to { role }
             ),
             block = { retrySpec ->
                 webClient.get()
@@ -282,8 +297,8 @@ class HttpKeycloakAdminClient(
             }
         ) ?: run {
             log.atError()
-                .addKeyValue("realm") { realm }
-                .addKeyValue("role") { role }
+                .addKeyValue(INVITE_REALM_KEY) { realm }
+                .addKeyValue(ROLE_KEY) { role }
                 .log { "Role is missing in Keycloak; treating as misconfiguration" }
             throw KeycloakAdminClientException(
                 message = "Role $role is not found in realm $realm",
@@ -293,8 +308,8 @@ class HttpKeycloakAdminClient(
 
         if (representation.id.isNullOrBlank() || representation.name.isNullOrBlank()) {
             log.atError()
-                .addKeyValue("realm") { realm }
-                .addKeyValue("role") { role }
+                .addKeyValue(INVITE_REALM_KEY) { realm }
+                .addKeyValue(ROLE_KEY) { role }
                 .log { "Role representation from Keycloak is incomplete" }
             throw KeycloakAdminClientException(
                 message = "Role $role has incomplete representation in realm $realm",
@@ -315,9 +330,9 @@ class HttpKeycloakAdminClient(
             message = "Failed to trigger execute-actions-email for user $normalizedUserId " +
                 "in realm $normalizedRealm with actions $actions",
             ctx = logContext(
-                "realm" to { normalizedRealm },
-                "user.id" to { normalizedUserId },
-                "actions" to { normalizedActions.joinToString(",") }
+                INVITE_REALM_KEY to { normalizedRealm },
+                USER_ID_KEY to { normalizedUserId },
+                ACTIONS_KEY to { normalizedActions.joinToString(",") }
             ),
             block = { retrySpec ->
                 webClient.put()
@@ -339,9 +354,9 @@ class HttpKeycloakAdminClient(
         )
 
         log.atInfo()
-            .addKeyValue("actions") { normalizedActions.joinToString(",") }
-            .addKeyValue("user.id") { normalizedUserId }
-            .addKeyValue("realm") { normalizedRealm }
+            .addKeyValue(ACTIONS_KEY) { normalizedActions.joinToString(",") }
+            .addKeyValue(USER_ID_KEY) { normalizedUserId }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
             .log { "Triggered execute-actions-email for Keycloak user" }
     }
 
@@ -353,8 +368,8 @@ class HttpKeycloakAdminClient(
         executeRequest(
             message = "Failed to delete user $normalizedUserId in realm $normalizedRealm",
             ctx = logContext(
-                "realm" to { normalizedRealm },
-                "user.id" to { normalizedUserId }
+                INVITE_REALM_KEY to { normalizedRealm },
+                USER_ID_KEY to { normalizedUserId }
             ),
             block = { retrySpec ->
                 webClient.delete()
@@ -369,8 +384,8 @@ class HttpKeycloakAdminClient(
         )
 
         log.atInfo()
-            .addKeyValue("user.id") { normalizedUserId }
-            .addKeyValue("realm") { normalizedRealm }
+            .addKeyValue(USER_ID_KEY) { normalizedUserId }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
             .log { "Deleted Keycloak user" }
     }
 
@@ -384,7 +399,7 @@ class HttpKeycloakAdminClient(
         do {
             val page = executeRequest(
                 message = "Failed to list roles for realm $normalizedRealm (page starting at $first)",
-                ctx = logContext("realm" to { normalizedRealm }),
+                ctx = logContext(INVITE_REALM_KEY to { normalizedRealm }),
                 block = { retrySpec ->
                     webClient.get()
                         .uri { builder ->
@@ -415,27 +430,33 @@ class HttpKeycloakAdminClient(
             .sorted()
 
         log.atDebug()
-            .addKeyValue("realm") { normalizedRealm }
-            .addKeyValue("role_count") { roles.size }
+            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
+            .addKeyValue(ROLE_COUNT_KEY) { roles.size }
             .log { "Listed Keycloak realm roles" }
 
         return roles
     }
 
-    private fun retrySpec(ctx: LogContext): RetryBackoffSpec {
+    private fun retrySpec(ctx: LogContext, message: String): RetryBackoffSpec {
         return Retry
             .backoff(keycloakProps.maxAttempts, keycloakProps.minBackoff)
             .filter { e -> e is RetryableException }
             .doBeforeRetry { signal ->
                 log.atDebug()
                     .withContext(ctx)
-                    .addKeyValue("retry_attempt") { signal.totalRetries() + 1 }
+                    .addKeyValue(RETRY_ATTEMPT_KEY) { signal.totalRetries() + 1 }
                     .setCause(signal.failure())
                     .log { "Retrying Keycloak request after failure" }
             }
-            .onRetryExhaustedThrow { _, _ ->
+            .onRetryExhaustedThrow { _, signal ->
+                val failure = signal.failure() ?: RetryableException()
+                log.eventForInviteError(failure)
+                    .withContext(ctx)
+                    .addKeyValue(RETRY_MAX_ATTEMPTS_KEY) { keycloakProps.maxAttempts }
+                    .setCause(failure)
+                    .log { "$message; Keycloak is unavailable after max retries" }
                 throw KeycloakAdminClientException(
-                    "Keycloak is unavailable after max retries",
+                    "$message; Keycloak is unavailable after max retries",
                     HttpStatus.SERVICE_UNAVAILABLE
                 )
             }
@@ -448,20 +469,20 @@ class HttpKeycloakAdminClient(
     ): T {
         val start = System.nanoTime()
         return try {
-            val result = block(retrySpec(ctx))
+            val result = block(retrySpec(ctx, message))
             val durationMs = (System.nanoTime() - start) / NANOS_PER_MILLI
             log.atDebug()
                 .withContext(ctx)
-                .addKeyValue("duration_ms") { durationMs }
+                .addKeyValue(REQUEST_DURATION_MS_KEY) { durationMs }
                 .log { "Keycloak request completed" }
             result
         } catch (e: WebClientResponseException) {
             val durationMs = (System.nanoTime() - start) / NANOS_PER_MILLI
             log.eventForInviteError(e, keycloakStatus = e.statusCode)
                 .withContext(ctx)
-                .addKeyValue("status") { e.statusCode.value() }
-                .addKeyValue("reason") { e.statusText }
-                .addKeyValue("duration_ms") { durationMs }
+                .addKeyValue(REQUEST_STATUS_KEY) { e.statusCode.value() }
+                .addKeyValue(REQUEST_REASON_KEY) { e.statusText }
+                .addKeyValue(REQUEST_DURATION_MS_KEY) { durationMs }
                 .setCause(e)
                 .log { message }
             throw KeycloakAdminClientException(message, e.statusCode, e)
@@ -469,9 +490,9 @@ class HttpKeycloakAdminClient(
             val durationMs = (System.nanoTime() - start) / NANOS_PER_MILLI
             log.eventForInviteError(e)
                 .withContext(ctx)
-                .addKeyValue("uri") { e.uri }
-                .addKeyValue("method") { e.method }
-                .addKeyValue("duration_ms") { durationMs }
+                .addKeyValue(REQUEST_URI_KEY) { e.uri }
+                .addKeyValue(REQUEST_METHOD_KEY) { e.method }
+                .addKeyValue(REQUEST_DURATION_MS_KEY) { durationMs }
                 .setCause(e)
                 .log { message }
             throw KeycloakAdminClientException(message, e)
@@ -543,7 +564,7 @@ class HttpKeycloakAdminClient(
 
         val response = executeRequest(
             message = "Failed to obtain access token for realm ${keycloakProps.realm}",
-            ctx = logContext("realm" to { keycloakProps.realm }),
+            ctx = logContext(INVITE_REALM_KEY to { keycloakProps.realm }),
             block = { retrySpec ->
                 webClient.post()
                     .uri("/realms/{realm}/protocol/openid-connect/token", keycloakProps.realm)
@@ -561,7 +582,7 @@ class HttpKeycloakAdminClient(
         val accessToken = response?.accessToken
         if (accessToken.isNullOrBlank()) {
             log.atError()
-                .addKeyValue("realm") { keycloakProps.realm }
+                .addKeyValue(INVITE_REALM_KEY) { keycloakProps.realm }
                 .log { "Keycloak returned an empty access token" }
             throw KeycloakAdminClientException(
                 "Keycloak returned an empty access token for realm ${keycloakProps.realm}"

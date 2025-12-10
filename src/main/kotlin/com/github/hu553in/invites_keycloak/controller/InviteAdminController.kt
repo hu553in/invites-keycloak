@@ -17,6 +17,11 @@ import com.github.hu553in.invites_keycloak.controller.InviteAdminMappings.toView
 import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.service.MailService
+import com.github.hu553in.invites_keycloak.util.ERROR_COUNT_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_EXPIRY_MINUTES_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_REALM_KEY
 import com.github.hu553in.invites_keycloak.util.eventForInviteError
 import com.github.hu553in.invites_keycloak.util.isClientSideInviteFailure
 import com.github.hu553in.invites_keycloak.util.logger
@@ -73,7 +78,7 @@ class InviteAdminController(
         val selectedRealm = resolveRealmOrDefault(realm, inviteProps)
         prepareForm(model, selectedRealm)
         log.atDebug()
-            .addKeyValue("realm") { selectedRealm }
+            .addKeyValue(INVITE_REALM_KEY) { selectedRealm }
             .log { "Rendering admin invite form" }
         return "admin/invite/new"
     }
@@ -126,9 +131,9 @@ class InviteAdminController(
             inviteForm.roles.addAll(configuredRoles(realmForForm, inviteProps))
         }
         log.atDebug()
-            .addKeyValue("realm") { realmForForm }
-            .addKeyValue("email") { maskSensitive(inviteForm.email) }
-            .addKeyValue("error_count") { bindingResult.errorCount }
+            .addKeyValue(INVITE_REALM_KEY) { realmForForm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(inviteForm.email) }
+            .addKeyValue(ERROR_COUNT_KEY) { bindingResult.errorCount }
             .log { "Invite form validation failed; re-rendering form" }
         prepareForm(model, realmForForm)
         return "admin/invite/new"
@@ -166,8 +171,8 @@ class InviteAdminController(
         model: Model
     ): String {
         log.atWarn()
-            .addKeyValue("realm") { inviteForm.realm }
-            .addKeyValue("email") { maskSensitive(inviteForm.email) }
+            .addKeyValue(INVITE_REALM_KEY) { inviteForm.realm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(inviteForm.email) }
             .setCause(e)
             .log { "Active invite already exists" }
         bindingResult.rejectValue("email", "email.duplicate", e.message ?: "Active invite already exists")
@@ -184,8 +189,8 @@ class InviteAdminController(
         model: Model
     ): String {
         log.eventForInviteError(e, deduplicateKeycloak = true)
-            .addKeyValue("realm") { inviteForm.realm }
-            .addKeyValue("email") { maskSensitive(inviteForm.email) }
+            .addKeyValue(INVITE_REALM_KEY) { inviteForm.realm }
+            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(inviteForm.email) }
             .setCause(e)
             .log { "Failed to create invite" }
         val errorMessage = if (e.isClientSideInviteFailure()) {
@@ -218,11 +223,11 @@ class InviteAdminController(
             "redirect:/admin/invite"
         }.getOrElse {
             log.eventForInviteError(it, deduplicateKeycloak = true)
-                .addKeyValue("invite.id") { id }
+                .addKeyValue(INVITE_ID_KEY) { id }
                 .apply {
                     inviteContext?.let { ctx ->
-                        addKeyValue("realm") { ctx.first }
-                        addKeyValue("email") { maskSensitive(ctx.second) }
+                        addKeyValue(INVITE_REALM_KEY) { ctx.first }
+                        addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(ctx.second) }
                     }
                 }
                 .setCause(it)
@@ -249,11 +254,11 @@ class InviteAdminController(
             "redirect:/admin/invite"
         }.getOrElse {
             log.eventForInviteError(it, deduplicateKeycloak = true)
-                .addKeyValue("invite.id") { id }
+                .addKeyValue(INVITE_ID_KEY) { id }
                 .apply {
                     inviteContext?.let { ctx ->
-                        addKeyValue("realm") { ctx.first }
-                        addKeyValue("email") { maskSensitive(ctx.second) }
+                        addKeyValue(INVITE_REALM_KEY) { ctx.first }
+                        addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(ctx.second) }
                     }
                 }
                 .setCause(it)
@@ -273,8 +278,8 @@ class InviteAdminController(
         val expiryDuration = validateExpiryMinutes(expiryMinutes, inviteProps)
         if (expiryDuration == null) {
             log.atWarn()
-                .addKeyValue("invite.id") { id }
-                .addKeyValue("expiry_minutes") { expiryMinutes }
+                .addKeyValue(INVITE_ID_KEY) { id }
+                .addKeyValue(INVITE_EXPIRY_MINUTES_KEY) { expiryMinutes }
                 .log { "Refusing to resend invite due to invalid expiryMinutes" }
             redirectAttributes.addFlashAttribute(
                 "errorMessage",
@@ -323,11 +328,11 @@ class InviteAdminController(
             }
         }.getOrElse {
             log.eventForInviteError(it, deduplicateKeycloak = true)
-                .addKeyValue("invite.id") { id }
+                .addKeyValue(INVITE_ID_KEY) { id }
                 .apply {
                     inviteContext?.let { ctx ->
-                        addKeyValue("realm") { ctx.first }
-                        addKeyValue("email") { maskSensitive(ctx.second) }
+                        addKeyValue(INVITE_REALM_KEY) { ctx.first }
+                        addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(ctx.second) }
                     }
                 }
                 .setCause(it)
@@ -349,8 +354,8 @@ class InviteAdminController(
         return runCatching { keycloakAdminClient.listRealmRoles(realm).toSet() }
             .onFailure {
                 log.atDebug()
-                    .addKeyValue("invite.id") { inviteId }
-                    .addKeyValue("realm") { realm }
+                    .addKeyValue(INVITE_ID_KEY) { inviteId }
+                    .addKeyValue(INVITE_REALM_KEY) { realm }
                     .setCause(it)
                     .log { "Failed to fetch realm roles before resend (Keycloak client logged details)" }
                 redirectAttributes.addFlashAttribute(
@@ -367,8 +372,8 @@ class InviteAdminController(
         redirectAttributes: RedirectAttributes
     ): String {
         log.atWarn()
-            .addKeyValue("invite.id") { inviteId }
-            .addKeyValue("realm") { realm }
+            .addKeyValue(INVITE_ID_KEY) { inviteId }
+            .addKeyValue(INVITE_REALM_KEY) { realm }
             .log { "Refusing to resend invite because some roles are missing in Keycloak" }
         redirectAttributes.addFlashAttribute(
             "errorMessage",
@@ -380,8 +385,9 @@ class InviteAdminController(
     private fun sendMail(created: InviteService.CreatedInvite, link: String): MailService.MailSendStatus {
         return mailService.sendInviteEmail(
             MailService.InviteMailData(
+                inviteId = created.invite.id,
+                realm = created.invite.realm,
                 email = created.invite.email,
-                target = created.invite.realm,
                 link = link,
                 expiresAt = created.invite.expiresAt
             )
@@ -443,7 +449,7 @@ class InviteAdminController(
             RoleFetchResult(roles, null, available = true)
         }.getOrElse {
             log.atDebug()
-                .addKeyValue("realm") { realm }
+                .addKeyValue(INVITE_REALM_KEY) { realm }
                 .setCause(it)
                 .log { "Failed to fetch roles for realm (Keycloak client logged details)" }
             RoleFetchResult(
@@ -476,7 +482,7 @@ class InviteAdminController(
         val allowedRoles = runCatching { keycloakAdminClient.listRealmRoles(realm).toSet() }
             .onFailure {
                 log.atDebug()
-                    .addKeyValue("realm") { realm }
+                    .addKeyValue(INVITE_REALM_KEY) { realm }
                     .setCause(it)
                     .log { "Failed to fetch roles for validation (Keycloak client logged details)" }
                 bindingResult.reject(

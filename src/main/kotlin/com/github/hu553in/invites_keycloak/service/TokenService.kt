@@ -1,6 +1,13 @@
 package com.github.hu553in.invites_keycloak.service
 
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
+import com.github.hu553in.invites_keycloak.util.ARG_KEY
+import com.github.hu553in.invites_keycloak.util.CONFIGURED_BYTES_KEY
+import com.github.hu553in.invites_keycloak.util.HASH_LENGTH_KEY
+import com.github.hu553in.invites_keycloak.util.MAC_ALGORITHM_KEY
+import com.github.hu553in.invites_keycloak.util.REQUIRED_MIN_BYTES_KEY
+import com.github.hu553in.invites_keycloak.util.SALT_BYTES_KEY
+import com.github.hu553in.invites_keycloak.util.TOKEN_BYTES_KEY
 import com.github.hu553in.invites_keycloak.util.logger
 import org.springframework.stereotype.Service
 import java.security.MessageDigest
@@ -21,8 +28,8 @@ class TokenService(
         val secretBytes = inviteProps.token.secret.toByteArray(Charsets.UTF_8).size
         if (secretBytes < MIN_TOKEN_SECRET_BYTES) {
             log.atError()
-                .addKeyValue("configured_bytes") { secretBytes }
-                .addKeyValue("required_min_bytes") { MIN_TOKEN_SECRET_BYTES }
+                .addKeyValue(CONFIGURED_BYTES_KEY) { secretBytes }
+                .addKeyValue(REQUIRED_MIN_BYTES_KEY) { MIN_TOKEN_SECRET_BYTES }
                 .log { "Invite token secret is too short; failing startup" }
             throw IllegalArgumentException(
                 "invite.token.secret size must be greater than or equal to $MIN_TOKEN_SECRET_BYTES bytes"
@@ -33,7 +40,7 @@ class TokenService(
             Mac.getInstance(inviteProps.token.macAlgorithm)
         } catch (e: NoSuchAlgorithmException) {
             log.atError()
-                .addKeyValue("mac_algorithm") { inviteProps.token.macAlgorithm }
+                .addKeyValue(MAC_ALGORITHM_KEY) { inviteProps.token.macAlgorithm }
                 .setCause(e)
                 .log { "Invite token MAC algorithm is invalid; failing startup" }
             throw IllegalArgumentException("invite.token.mac-algorithm is invalid", e)
@@ -66,7 +73,7 @@ class TokenService(
     fun generateToken(): String {
         val token = generateRandomString(inviteProps.token.bytes)
         log.atDebug()
-            .addKeyValue("token_bytes") { inviteProps.token.bytes }
+            .addKeyValue(TOKEN_BYTES_KEY) { inviteProps.token.bytes }
             .log { "Generated invite token" }
         return token
     }
@@ -74,7 +81,7 @@ class TokenService(
     fun generateSalt(): String {
         val salt = generateRandomString(inviteProps.token.saltBytes)
         log.atDebug()
-            .addKeyValue("salt_bytes") { inviteProps.token.saltBytes }
+            .addKeyValue(SALT_BYTES_KEY) { inviteProps.token.saltBytes }
             .log { "Generated invite salt" }
         return salt
     }
@@ -86,7 +93,7 @@ class TokenService(
         val bytes = mac().doFinal(payload(token, salt))
         val tokenHash = hexFormat.formatHex(bytes)
         log.atDebug()
-            .addKeyValue("hash_length") { tokenHash.length }
+            .addKeyValue(HASH_LENGTH_KEY) { tokenHash.length }
             .log { "Hashed invite token" }
         return tokenHash
     }
@@ -101,7 +108,7 @@ class TokenService(
             ) { "$argName is invalid" }
         } catch (e: IllegalArgumentException) {
             log.atDebug()
-                .addKeyValue("arg") { argName }
+                .addKeyValue(ARG_KEY) { argName }
                 .log { "Token hashing argument validation failed" }
             throw e
         }

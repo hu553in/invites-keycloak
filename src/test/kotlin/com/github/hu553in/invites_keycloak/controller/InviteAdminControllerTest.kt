@@ -203,8 +203,9 @@ class InviteAdminControllerTest(
         val expectedExpiry = clock.instant().plus(Duration.ofMinutes(1440))
         val createdInvite = InviteService.CreatedInvite(sampleInviteEntity(), "raw.token")
         val expectedMailData = MailService.InviteMailData(
+            inviteId = createdInvite.invite.id,
+            realm = createdInvite.invite.realm,
             email = createdInvite.invite.email,
-            target = createdInvite.invite.realm,
             link = "https://app.example.com/invite/${createdInvite.invite.realm}/${createdInvite.rawToken}",
             expiresAt = createdInvite.invite.expiresAt
         )
@@ -257,8 +258,9 @@ class InviteAdminControllerTest(
             "raw.token.no-roles"
         )
         val expectedMailData = MailService.InviteMailData(
+            inviteId = createdInvite.invite.id,
+            realm = createdInvite.invite.realm,
             email = createdInvite.invite.email,
-            target = createdInvite.invite.realm,
             link = "https://app.example.com/invite/${createdInvite.invite.realm}/${createdInvite.rawToken}",
             expiresAt = createdInvite.invite.expiresAt
         )
@@ -413,8 +415,9 @@ class InviteAdminControllerTest(
             "token.resend"
         )
         val expectedMailData = MailService.InviteMailData(
+            inviteId = created.invite.id,
+            realm = created.invite.realm,
             email = created.invite.email,
-            target = created.invite.realm,
             link = "https://app.example.com/invite/${created.invite.realm}/${created.rawToken}",
             expiresAt = created.invite.expiresAt
         )
@@ -454,8 +457,9 @@ class InviteAdminControllerTest(
             "token.resend.revoked"
         )
         val expectedMailData = MailService.InviteMailData(
+            inviteId = created.invite.id,
+            realm = created.invite.realm,
             email = created.invite.email,
-            target = created.invite.realm,
             link = "https://app.example.com/invite/${created.invite.realm}/${created.rawToken}",
             expiresAt = created.invite.expiresAt
         )
