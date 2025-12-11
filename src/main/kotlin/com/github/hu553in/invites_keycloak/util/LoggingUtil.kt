@@ -174,3 +174,14 @@ fun Logger.eventForInviteError(
         else -> this.atError()
     }
 }
+
+/**
+ * Convenience wrapper to avoid duplicate warn/error logs when a Keycloak call already logged the failure.
+ * Use this in controller layers and other outer layers when handling KeycloakAdminClientException.
+ */
+fun Logger.dedupedEventForInviteError(
+    error: Throwable,
+    keycloakStatus: HttpStatusCode? = null
+): LoggingEventBuilder {
+    return this.eventForInviteError(error, keycloakStatus = keycloakStatus, deduplicateKeycloak = true)
+}

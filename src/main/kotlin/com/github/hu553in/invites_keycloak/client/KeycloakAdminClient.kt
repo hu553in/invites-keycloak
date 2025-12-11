@@ -501,7 +501,9 @@ class HttpKeycloakAdminClient(
 
     private fun obtainAccessToken(): String {
         readCachedToken(allowWithinSkew = false)?.value?.let {
-            log.atDebug().log { "Using cached Keycloak access token" }
+            log.atDebug()
+                .addKeyValue(INVITE_REALM_KEY) { keycloakProps.realm }
+                .log { "Using cached Keycloak access token" }
             return it
         }
 
@@ -516,7 +518,9 @@ class HttpKeycloakAdminClient(
 
     private fun refreshIfPossible(cachedWithinSkew: CachedAccessToken): String {
         if (!cachedAccessTokenWriteLock.tryLock()) {
-            log.atDebug().log { "Using cached Keycloak access token within skew window" }
+            log.atDebug()
+                .addKeyValue(INVITE_REALM_KEY) { keycloakProps.realm }
+                .log { "Using cached Keycloak access token within skew window" }
             return cachedWithinSkew.value
         }
 
@@ -542,7 +546,9 @@ class HttpKeycloakAdminClient(
     private fun refreshWithLock(): String {
         cachedAccessTokenWriteLock.lock()
         return try {
-            log.atDebug().log { "Refreshing Keycloak access token" }
+            log.atDebug()
+                .addKeyValue(INVITE_REALM_KEY) { keycloakProps.realm }
+                .log { "Refreshing Keycloak access token" }
             readCachedToken(allowWithinSkew = false)?.value ?: fetchAndCacheAccessToken()
         } catch (
             @Suppress("TooGenericExceptionCaught")
@@ -590,7 +596,9 @@ class HttpKeycloakAdminClient(
         }
 
         cachedAccessToken = response.expiresIn?.let { CachedAccessToken(accessToken, now + it) }
-        log.atDebug().log { "Fetched new Keycloak access token" }
+        log.atDebug()
+            .addKeyValue(INVITE_REALM_KEY) { keycloakProps.realm }
+            .log { "Fetched new Keycloak access token" }
         return accessToken
     }
 

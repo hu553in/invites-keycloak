@@ -6,7 +6,7 @@ import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientExceptio
 import com.github.hu553in.invites_keycloak.util.ErrorMessages
 import com.github.hu553in.invites_keycloak.util.REQUEST_ROUTE_KEY
 import com.github.hu553in.invites_keycloak.util.REQUEST_STATUS_KEY
-import com.github.hu553in.invites_keycloak.util.eventForInviteError
+import com.github.hu553in.invites_keycloak.util.dedupedEventForInviteError
 import com.github.hu553in.invites_keycloak.util.logger
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -29,7 +29,7 @@ class ControllerExceptionHandler {
         req: HttpServletRequest,
         resp: HttpServletResponse
     ): String {
-        log.atWarn()
+        log.atDebug()
             .setCause(e)
             .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.UNAUTHORIZED.value() }
@@ -55,7 +55,7 @@ class ControllerExceptionHandler {
             HttpStatus.SERVICE_UNAVAILABLE
         }
 
-        log.eventForInviteError(e, keycloakStatus = responseStatus, deduplicateKeycloak = true)
+        log.dedupedEventForInviteError(e, keycloakStatus = responseStatus)
             .setCause(e)
             .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
             .addKeyValue(REQUEST_STATUS_KEY) { responseStatus.value() }
@@ -80,7 +80,7 @@ class ControllerExceptionHandler {
         req: HttpServletRequest,
         resp: HttpServletResponse
     ): String {
-        log.atWarn()
+        log.atDebug()
             .setCause(e)
             .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.NOT_FOUND.value() }

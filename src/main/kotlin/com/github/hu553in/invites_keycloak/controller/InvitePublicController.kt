@@ -12,7 +12,7 @@ import com.github.hu553in.invites_keycloak.util.INVITE_ROLES_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_TOKEN_LENGTH_KEY
 import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
 import com.github.hu553in.invites_keycloak.util.USER_ID_KEY
-import com.github.hu553in.invites_keycloak.util.eventForInviteError
+import com.github.hu553in.invites_keycloak.util.dedupedEventForInviteError
 import com.github.hu553in.invites_keycloak.util.extractKeycloakException
 import com.github.hu553in.invites_keycloak.util.keycloakStatusFrom
 import com.github.hu553in.invites_keycloak.util.logger
@@ -144,7 +144,7 @@ class InvitePublicController(
             val shouldRevoke = shouldRevokeInvite(e)
             val view = buildFailureView(shouldRevoke, inviteId, realm, email, keycloakStatus, model, resp)
 
-            log.eventForInviteError(e, keycloakStatus = keycloakStatus, deduplicateKeycloak = true)
+            log.dedupedEventForInviteError(e, keycloakStatus = keycloakStatus)
                 .addKeyValue(INVITE_ID_KEY) { inviteId }
                 .addKeyValue(INVITE_REALM_KEY) { realm }
                 .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }

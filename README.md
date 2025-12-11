@@ -9,8 +9,8 @@ and usage count; recipients redeem them to get an account provisioned with prede
   revoke/expiry/usage; view status (active, expired, used-up, revoked).
 - Invite flow: validate invite token, create Keycloak user, assign realm roles, trigger a required-actions email, and
   mark the invite as used. If any step in this flow fails, created Keycloak users are deleted to keep the flow atomic.
-  Permanent errors (for example missing roles or client-side 4xx from Keycloak) revoke the invite; transient errors keep
-  the invite usable.
+  Permanent errors (for example, missing roles or client-side 4xx from Keycloak) revoke the invite; transient errors
+  keep the invite usable.
 - Housekeeping: expired invites beyond retention are purged by a daily scheduled job.
 
 ## Architecture at a glance
@@ -55,7 +55,7 @@ and usage count; recipients redeem them to get an account provisioned with prede
 - Token claims: include roles in the ID token. Attach the built-in `roles` client scope or add a mapper for
   `realm_access.roles` (multivalued, in ID token, access token, and userinfo).
 - Service account: enable it for the client and grant realm-management roles needed by the backend admin API (minimum:
-  `manage-users`, `view-realm` and `manage-realm`). Missing these will cause 403s when listing roles or creating users.
+  `manage-users`, `view-realm`, and `manage-realm`). Missing these will cause 403s when listing roles or creating users.
 
 ### Reverse proxy / HTTPS termination
 
@@ -127,7 +127,12 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
       controllers avoid duplicating success logs.
     - Keycloak admin client logs HTTP failures with status, context, and duration; retries are logged at DEBUG with
       counts; controller advice adds route/status so requests are traceable without duplicating client details.
-    - Use MDC helpers (`withAuthDataInMdc`, `withInviteContextInMdc`) and `maskSensitive` to keep PII out of logs.
+    - When handling `KeycloakAdminClientException` outside the client, use `log.dedupedEventForInviteError(...)` so
+      upper layers don't double-log failures already captured in the client.
+    - Log level policy: client-side/validation issues -> WARN (except public invite validation/not-found handled at
+      DEBUG to avoid noise); Keycloak 4xx -> WARN; server/misconfig -> ERROR; routine reads/validation -> DEBUG; state
+      changes/audit -> INFO. Always mask emails via `maskSensitive` to keep PII out of logs and use MDC helpers
+      (`withAuthDataInMdc`, `withInviteContextInMdc`).
 
 ## Future roadmap
 

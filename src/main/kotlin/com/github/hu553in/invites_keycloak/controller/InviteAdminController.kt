@@ -22,7 +22,7 @@ import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_EXPIRY_MINUTES_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_REALM_KEY
-import com.github.hu553in.invites_keycloak.util.eventForInviteError
+import com.github.hu553in.invites_keycloak.util.dedupedEventForInviteError
 import com.github.hu553in.invites_keycloak.util.isClientSideInviteFailure
 import com.github.hu553in.invites_keycloak.util.logger
 import com.github.hu553in.invites_keycloak.util.maskSensitive
@@ -188,7 +188,7 @@ class InviteAdminController(
         bindingResult: BindingResult,
         model: Model
     ): String {
-        log.eventForInviteError(e, deduplicateKeycloak = true)
+        log.dedupedEventForInviteError(e)
             .addKeyValue(INVITE_REALM_KEY) { inviteForm.realm }
             .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(inviteForm.email) }
             .setCause(e)
@@ -222,7 +222,7 @@ class InviteAdminController(
             }
             "redirect:/admin/invite"
         }.getOrElse {
-            log.eventForInviteError(it, deduplicateKeycloak = true)
+            log.dedupedEventForInviteError(it)
                 .addKeyValue(INVITE_ID_KEY) { id }
                 .apply {
                     inviteContext?.let { ctx ->
@@ -253,7 +253,7 @@ class InviteAdminController(
             }
             "redirect:/admin/invite"
         }.getOrElse {
-            log.eventForInviteError(it, deduplicateKeycloak = true)
+            log.dedupedEventForInviteError(it)
                 .addKeyValue(INVITE_ID_KEY) { id }
                 .apply {
                     inviteContext?.let { ctx ->
@@ -327,7 +327,7 @@ class InviteAdminController(
                 "redirect:/admin/invite"
             }
         }.getOrElse {
-            log.eventForInviteError(it, deduplicateKeycloak = true)
+            log.dedupedEventForInviteError(it)
                 .addKeyValue(INVITE_ID_KEY) { id }
                 .apply {
                     inviteContext?.let { ctx ->
