@@ -1,5 +1,12 @@
 # Invites for your Keycloak 💌 🗝
 
+[![CI](https://github.com/hu553in/invites-keycloak/actions/workflows/ci.yml/badge.svg)](https://github.com/hu553in/invites-keycloak/actions/workflows/ci.yml)
+
+- [License](./LICENSE)
+- [How to contribute](./CONTRIBUTORS.md)
+
+---
+
 Spring Boot service for issuing and consuming Keycloak invitation links. Admins create invites with a limited lifetime
 and usage count; recipients redeem them to get an account provisioned with predefined realm roles.
 
@@ -134,19 +141,8 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
       changes/audit -> INFO. Always mask emails via `maskSensitive` to keep PII out of logs and use MDC helpers
       (`withAuthDataInMdc`, `withInviteContextInMdc`).
 
-## Future roadmap
+## Remaining urgent tasks
 
-- [x] Add admin logout
-- [x] Add admin invite deletion
-- [x] Timestamps must be shown in the browser's time zone (in the UI and email, if possible)
-- [x] Truncate IDs in the table and show the full ID on hover
-- [x] Move to env vars all configuration that can be moved
-- [x] Fix all styling issues
-- [x] Test everything and fix all found issues
-- [x] Add metrics
-- [x] Add tracing
-- [x] Store additional audit log data and show it in the table: revoked by, revoked at
-- [x] Cover everything with logs
-- [ ] Add detailed docs
+- [ ] Add any missing important info to this file
 - [ ] Add i18n
 - [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency (optional)
