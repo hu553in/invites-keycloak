@@ -3,7 +3,8 @@
 [![CI](https://github.com/hu553in/invites-keycloak/actions/workflows/ci.yml/badge.svg)](https://github.com/hu553in/invites-keycloak/actions/workflows/ci.yml)
 
 - [License](./LICENSE)
-- [How to contribute](./CONTRIBUTORS.md)
+- [How to contribute](./CONTRIBUTING.md)
+- [Code of conduct](./CODE_OF_CONDUCT.md)
 
 ---
 

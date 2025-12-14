@@ -1,7 +1,7 @@
 # Contributors
 
-Right now it's just me here — but you could be next! 🚀  
-Found a bug? Fixed a typo? Added something cool?  
+Right now it's just me here — but you could be next! 🚀
+Found a bug? Fixed a typo? Added something cool?
 Congrats, you're officially a contributor.
 
 ---
@@ -10,14 +10,14 @@ Congrats, you're officially a contributor.
 
 Super simple:
 
-1. Fork the repo  
-2. Make your change  
-3. Test your change  
-4. Follow code-style conventions  
-5. Open a PR  
+1. Fork the repo
+2. Make your change
+3. Test your change
+4. Follow code-style conventions
+5. Open a PR
 6. Celebrate with snacks 🎉
 
-Nothing special here.  
+Nothing special here.
 If the change makes the project better, it's welcome.
 
 ---
@@ -30,5 +30,5 @@ Open an issue and say hi 👋
 
 ## Thanks!
 
-Every contribution — big or tiny — helps this project grow.  
+Every contribution — big or tiny — helps this project grow.
 If you end up in this list, please brag about it. You deserve it.
