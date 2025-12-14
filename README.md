@@ -141,8 +141,9 @@ See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiri
       changes/audit -> INFO. Always mask emails via `maskSensitive` to keep PII out of logs and use MDC helpers
       (`withAuthDataInMdc`, `withInviteContextInMdc`).
 
-## Remaining urgent tasks
+## Remaining tasks
 
 - [ ] Add any missing important info to this file
 - [ ] Add i18n
-- [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency (optional)
+- [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency
+- [ ] Write Reddit post at [r/KeyCloak](https://www.reddit.com/r/KeyCloak/)
