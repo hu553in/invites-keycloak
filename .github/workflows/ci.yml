@@ -100,16 +100,10 @@ jobs:
           echo "tag=${GITHUB_REF_NAME}" >> ${GITHUB_OUTPUT}
       - run: gradle bootBuildImage --imageName=${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
       - run: docker push ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
-      - uses: TriPSs/conventional-changelog-action@v5
+      - uses: loopwerk/tag-changelog@v1
         id: changelog
         with:
-          preset: 'conventionalcommits'
-          output-file: false
-          skip-git-pull: true
-          skip-version-file: true
-          skip-commit: true
-          skip-tag: true
-          skip-bump: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: softprops/action-gh-release@v2
         with:
-          body: ${{ steps.changelog.outputs.clean_changelog }}
+          body: ${{ steps.changelog.outputs.changes }}
