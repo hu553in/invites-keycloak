@@ -44,7 +44,7 @@ jobs:
           path: build/reports/detekt
           overwrite: true
 
-  build-and-push:
+  publish:
     needs: check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -73,12 +73,12 @@ jobs:
           docker push ${{ steps.vars.outputs.image }}:${{ github.sha }}
           docker push ${{ steps.vars.outputs.image }}:latest
 
-  build-and-push-tag:
+  publish-tag:
     needs: check
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     env:
       REGISTRY: ghcr.io
@@ -100,15 +100,4 @@ jobs:
           echo "tag=${GITHUB_REF_NAME}" >> ${GITHUB_OUTPUT}
       - run: gradle bootBuildImage --imageName=${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
       - run: docker push ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
-
-  release:
-    needs: build-and-push-tag
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
       - uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true

@@ -42,3 +42,15 @@ check:
 .PHONY: test
 test:
 	./gradlew test
+
+.PHONY: release_patch
+release_patch: check
+	./gradlew release -Prelease.increment=patch
+
+.PHONY: release_minor
+release_minor: check
+	./gradlew release -Prelease.increment=minor
+
+.PHONY: release_major
+release_major: check
+	./gradlew release -Prelease.increment=major

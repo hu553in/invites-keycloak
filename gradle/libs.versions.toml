@@ -8,6 +8,7 @@ versions = "0.53.0"
 spring-dotenv = "4.0.0"
 wiremock = "3.13.2"
 springdoc = "2.8.14"
+axion-release = "1.21.1"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -20,6 +21,7 @@ spring-dependency-management = { id = "io.spring.dependency-management", version
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
+axion-release = { id = "pl.allegro.tech.build.axion-release", version.ref = "axion-release" }
 
 [libraries]
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
