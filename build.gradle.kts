@@ -21,7 +21,6 @@ version = "1.0.0"
 description = "Invites for your Keycloak"
 
 scmVersion {
-    useHighestVersion = true
     sanitizeVersion = true
     checks {
         uncommittedChanges.set(true)
@@ -30,11 +29,6 @@ scmVersion {
     }
     releaseBranchNames.set(setOf("main"))
     releaseOnlyOnReleaseBranches = true
-    hooks {
-        post {
-            it.push()
-        }
-    }
 }
 
 java {
