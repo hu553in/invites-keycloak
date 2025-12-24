@@ -105,6 +105,7 @@ jobs:
         with:
           preset: 'conventionalcommits'
           output-file: false
+          skip-pull: true
           skip-version-file: true
           skip-commit: true
           skip-tag: true
