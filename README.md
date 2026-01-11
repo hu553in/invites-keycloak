@@ -8,143 +8,350 @@
 
 ---
 
-Spring Boot service for issuing and consuming Keycloak invitation links. Admins create invites with a limited lifetime
-and usage count; recipients redeem them to get an account provisioned with predefined realm roles.
+A Spring Boot service for issuing and consuming **invitation links for Keycloak**.
+
+Administrators generate invitation links with a limited lifetime and usage count.  
+Recipients redeem these links to get a Keycloak account automatically provisioned with
+predefined realm roles.
+
+The service focuses on **safety, atomicity, and operational clarity** when automating
+user onboarding in Keycloak.
+
+---
 
 ## What the service does
 
-- Admin UI: create, resend (including revoked/expired/used-up), revoke, and delete invites per realm; delete them after
-  revoke/expiry/usage; view status (active, expired, used-up, revoked).
-- Invite flow: validate invite token, create Keycloak user, assign realm roles, trigger a required-actions email, and
-  mark the invite as used. If any step in this flow fails, created Keycloak users are deleted to keep the flow atomic.
-  Permanent errors (for example, missing roles or client-side 4xx from Keycloak) revoke the invite; transient errors
-  keep the invite usable.
-- Housekeeping: expired invites beyond retention are purged by a daily scheduled job.
+### Admin side
+
+- Create invites per realm with configurable expiry and usage limits.
+- Resend invites, including revoked, expired, or already used ones.
+- Revoke and delete invites explicitly.
+- Automatically delete invites after revoke, expiry, or usage.
+- View invite status: active, expired, used-up, or revoked.
+
+### Invite flow
+
+- Validate the invitation token.
+- Create a Keycloak user.
+- Assign predefined realm roles.
+- Trigger a required-actions email from Keycloak.
+- Mark the invite as used.
+
+The flow is **atomic**:
+
+- If any step fails, the created Keycloak user is deleted.
+- Permanent errors (for example: missing roles, client-side 4xx from Keycloak) revoke the invite.
+- Transient errors keep the invite usable for retry.
+
+### Housekeeping
+
+- Expired invites beyond the configured retention period are removed by a daily scheduled cleanup job.
+
+---
 
 ## Architecture at a glance
 
-- Spring Boot MVC + Thymeleaf (server-rendered admin & public views).
-- Keycloak admin REST calls via reactive `WebClient` with retries for transient failures.
-- PostgreSQL + Flyway for persistence; invites stored with token hash + salt.
-- Strict input normalization (trimming, lowercasing emails) and masked logging of sensitive values.
-- Structured logging uses SLF4J event builders; a servlet filter puts `current_user.id` (username or `system`) and
-  `current_user.sub` (OIDC subject when available) into MDC for every request.
+- Spring Boot MVC with Thymeleaf for server-rendered admin and public views.
+- Keycloak Admin REST API accessed via reactive WebClient with retries for transient failures.
+- PostgreSQL for persistence, with Flyway-managed schema migrations.
+- Invite tokens are stored as a hash with salt (raw tokens are never persisted).
+- Strict input normalization (for example: trimming and lowercasing emails).
+- Sensitive values are masked in logs by default.
+- Structured logging via SLF4J event builders.
+- A servlet filter enriches MDC with:
+  - `current_user.id` (username or `system`)
+  - `current_user.sub` (OIDC subject when available)
+
+---
 
 ## Configuration and environment
 
-- Everything is externalizable via environment variables thanks to Spring relaxed binding; prefer `.env` over editing
-  `src/main/resources/application.yml`. Compose loads `.env` via `env_file: .env`.
-- The bundled `.env.example.local` and `.env.example.docker` are for local development and showcasing only; they are not
-  exhaustive lists of tunables. Copy one to `.env` and adjust for your setup.
-- Profiles: `application.yml` defaults to `prod`. Set `SPRING_PROFILES_ACTIVE=local` in your `.env` for local runs (the
-  examples do this).
-- Keycloak: `KEYCLOAK_URL` and `KEYCLOAK_CLIENT_SECRET` are required. Defaults for realm/client ID/required role are
-  `master`/`invites-keycloak`/`invite-admin`; HTTP timeouts default to 5s connect and 10s response. Override any of
-  these via env if needed.
-- Invites: `INVITE_PUBLIC_BASE_URL` and `INVITE_TOKEN_SECRET` are required. Other invite defaults (expiry bounds, token
-  bytes/salt, MAC algorithm, realms map, cleanup retention) live in `application.yml` and can be overridden via env
-  vars.
-- Mail: enable by providing `SPRING_MAIL_HOST` (and related `SPRING_MAIL_*` as needed). `MAIL_FROM` is optional;
-  subject template defaults to `Invitation to %s`. To disable mail entirely, set `SPRING_AUTOCONFIGURE_EXCLUDE` to
-  `org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration,org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration`.
-- Database: defaults point to Postgres at `db:5432` with database/user/password `invites-keycloak`. Override via
-  `POSTGRES_HOSTNAME`/`POSTGRES_PORT`/`POSTGRES_DB`/`POSTGRES_USER`/`POSTGRES_PASSWORD` env vars.
+### General principles
 
-### Keycloak setup (all environments)
+- All configuration is externalized via environment variables using Spring relaxed binding.
+- Prefer `.env` files over editing `application.yml`.
+- Docker Compose loads `.env` automatically via `env_file: .env`.
 
-- Realm: use `master` or set `KEYCLOAK_REALM` to match.
-- Client: confidential client named `invites-keycloak` (or set `KEYCLOAK_CLIENT_ID`).
-    - Standard Flow enabled.
-    - Redirect URIs: `<app-base-url>/login/oauth2/code/keycloak`
-        - Example for local: `http://localhost:8080/login/oauth2/code/keycloak`.
-    - Web Origins: `<app-base-url>` (add the scheme/port the app is served on).
-    - Client secret: copy to `KEYCLOAK_CLIENT_SECRET`.
-- Role: realm role `invite-admin` (or `KEYCLOAK_REQUIRED_ROLE`) granted to the user who will sign in to the admin UI.
-- Token claims: include roles in the ID token. Attach the built-in `roles` client scope or add a mapper for
-  `realm_access.roles` (multivalued, in ID token, access token, and userinfo).
-- Service account: enable it for the client and grant realm-management roles needed by the backend admin API (minimum:
-  `manage-users`, `view-realm`, and `manage-realm`). Missing these will cause 403s when listing roles or creating users.
+The bundled `.env.example.local` and `.env.example.docker` files:
 
-### Reverse proxy / HTTPS termination
+- are meant for local development and demonstration
+- are not exhaustive lists of all available configuration options
 
-- The app respects forwarded headers (`server.forward-headers-strategy=framework` is set). Make sure your proxy sends
-  them; otherwise, OAuth redirects may downgrade to HTTP.
-- Required headers: `Host`, `X-Forwarded-Proto`, `X-Forwarded-Port`, `X-Forwarded-For`.
-- nginx example:
-  ```
-  proxy_set_header Host $host;
-  proxy_set_header X-Forwarded-Proto $scheme;
-  proxy_set_header X-Forwarded-Port $server_port;
-  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  ```
+Copy one of them to `.env` and adjust it for your setup.
+
+### Spring profiles
+
+- Default profile: `prod`
+- Local development: set `SPRING_PROFILES_ACTIVE=local` in `.env`
+  (the example files already do this)
+
+### Keycloak configuration
+
+Required:
+
+- `KEYCLOAK_URL`
+- `KEYCLOAK_CLIENT_SECRET`
+
+Defaults (override via env if needed):
+
+- Realm: `master`
+- Client ID: `invites-keycloak`
+- Required admin role: `invite-admin`
+- HTTP timeouts:
+  - Connect: 5 seconds
+  - Response: 10 seconds
+
+### Invite configuration
+
+Required:
+
+- `INVITE_PUBLIC_BASE_URL`
+- `INVITE_TOKEN_SECRET`
+
+Defaults for expiry bounds, token size, salt, MAC algorithm, realm mapping, and cleanup retention
+are defined in `application.yml` and can be overridden via environment variables.
+
+### Mail configuration
+
+- Enable mail by setting `SPRING_MAIL_HOST` (and related `SPRING_MAIL_*` variables).
+- `MAIL_FROM` is optional.
+- Default subject template: `Invitation to %s`.
+
+To disable mail entirely, set:
+
+- `SPRING_AUTOCONFIGURE_EXCLUDE` to  
+  `org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration,org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration`
+
+### Database configuration
+
+Defaults point to PostgreSQL running at `db:5432` with:
+
+- database: `invites-keycloak`
+- user: `invites-keycloak`
+- password: `invites-keycloak`
+
+Override using:
+
+- `POSTGRES_HOSTNAME`
+- `POSTGRES_PORT`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+
+---
+
+## Keycloak setup (all environments)
+
+### Realm
+
+- Use the `master` realm or set `KEYCLOAK_REALM` explicitly.
+
+### Client
+
+- Confidential client named `invites-keycloak` (or override with `KEYCLOAK_CLIENT_ID`).
+- Standard Flow enabled.
+- Redirect URI:
+  - `<app-base-url>/login/oauth2/code/keycloak`
+  - Example (local): `http://localhost:8080/login/oauth2/code/keycloak`
+- Web Origins:
+  - `<app-base-url>` (including scheme and port)
+- Copy the client secret to `KEYCLOAK_CLIENT_SECRET`.
+
+### Role
+
+- Realm role `invite-admin` (or override via `KEYCLOAK_REQUIRED_ROLE`).
+- Grant this role to users who should access the admin UI.
+
+### Token claims
+
+- Roles must be included in the ID token.
+- Attach the built-in `roles` client scope or add a mapper for:
+  - `realm_access.roles`
+  - multivalued
+  - included in ID token, access token, and userinfo
+
+### Service account
+
+- Enable the service account for the client.
+- Grant the following realm-management roles at minimum:
+  - `manage-users`
+  - `view-realm`
+  - `manage-realm`
+
+Missing roles will result in 403 errors when listing roles or creating users.
+
+---
+
+## Reverse proxy and HTTPS termination
+
+- The application respects forwarded headers.
+- `server.forward-headers-strategy=framework` is enabled.
+
+Ensure your reverse proxy sends:
+
+- `Host`
+- `X-Forwarded-Proto`
+- `X-Forwarded-Port`
+- `X-Forwarded-For`
+
+nginx example:
+
+```
+proxy_set_header Host $host;  
+proxy_set_header X-Forwarded-Proto $scheme;  
+proxy_set_header X-Forwarded-Port $server_port;  
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+Without correct forwarding, OAuth redirects may downgrade to HTTP.
+
+---
 
 ## Local development
 
-- Prerequisites: Java 21, Docker, Docker Compose plugin, and [pre-commit](https://pre-commit.com/).
-- Install git hooks once: `pre-commit install` (pre-commit runs `make check` and a few other checks).
-- Run the app locally (starts Postgres via Compose, then Boot): `make run_local`.
-- Fast dev loop: keep `docker compose up -d db` running; use `./gradlew bootRun` for hot restarts.
-- Tests: `make test` (unit/integration). Full linting + coverage: `make check`.
+### Prerequisites
 
-### Routes and UI
+- Java 21
+- Docker
+- Docker Compose plugin
+- [pre-commit](https://pre-commit.com)
 
-- `/` redirects to `/admin/invite` (login required).
-- `/admin/invite/**` is the admin UI for creating/resending/revoking invites; protected via Keycloak OAuth2 login.
-- `/invite/{realm}/{token}` is public: validates the token, creates the Keycloak user, assigns roles, sends a
-  required-actions email, and marks the invite as used.
-- Admin pages include a logout action that signs out of Keycloak and returns to the start page.
+### Setup
+
+- Install git hooks once:
+  ```
+  pre-commit install
+  ```
+- Run locally (starts Postgres via Compose, then Spring Boot):
+  ```
+  make run_local
+  ```
+- Fast dev loop:
+  - keep `docker compose up -d db` running
+  - start the app with `./gradlew bootRun`
+- Tests:
+  - unit and integration tests: `make test`
+  - full linting and coverage: `make check`
+
+---
+
+## Routes and UI
+
+- `/`  
+  Redirects to `/admin/invite` (authentication required).
+
+- `/admin/invite/**`  
+  Admin UI for creating, resending, revoking, and deleting invites.  
+  Protected by Keycloak OAuth2 login.
+
+- `/invite/{realm}/{token}`  
+  Public endpoint:
+  - validates the invite token
+  - creates the Keycloak user
+  - assigns roles
+  - triggers required-actions email
+  - marks the invite as used
+
+Admin pages include a logout action that signs out of Keycloak and returns to the start page.
+
+---
 
 ## Deploying to a VPS with Docker
 
-CI builds and pushes images to `ghcr.io/hu553in/invites-keycloak`:
+CI builds and pushes images to:
 
-- `latest` and commit SHA on pushes to `main`.
-- git tag name (for example `v1.2.3`) when the tag matches `v*`.
+- `ghcr.io/hu553in/invites-keycloak`
 
-To deploy:
+Published tags:
 
-1) On the VPS, provision `.env` with Keycloak, invite, mail, and database settings (keep secrets out of the compose
-   file).
-2) Update `docker-compose.yml` (or use an override file) to point the app image to the GHCR tag you want.
-3) Run `docker compose pull && docker compose up -d --wait`.
-4) Verify health at the configured health check path (defaults to `/actuator/health`).
+- `latest` and commit SHA on pushes to `main`
+- git tag name (for example `v1.2.3`) when the tag matches `v*`
+
+Deployment steps:
+
+1. Provision a `.env` file on the VPS with Keycloak, invite, mail, and database settings.
+2. Update `docker-compose.yml` (or an override file) to reference the desired image tag.
+3. Run:
+   ```
+   docker compose pull && docker compose up -d --wait
+   ```
+5. Verify service health at the configured health endpoint (default: `/actuator/health`).
+
+---
 
 ## Tech stack
 
-See versions in [libs.versions.toml](gradle/libs.versions.toml) and service wiring in
-[docker-compose.yml](docker-compose.yml).
+See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-compose.yml`.
 
 - Java 21, Kotlin 2, Gradle 9, Spring Boot 3
 - PostgreSQL 17, Flyway, Spring Data JPA
-- Spring Security OAuth2 Client, Thymeleaf, WebFlux (for the Keycloak admin client)
-- Micrometer + Prometheus registry, Micrometer tracing (OTLP exporter optional)
+- Spring Security OAuth2 Client, Thymeleaf
+- WebClient (reactive) for Keycloak admin API
+- Micrometer with Prometheus registry
+- Micrometer tracing (OTLP exporter optional)
 - Detekt, Kover, Testcontainers, WireMock
+
+---
 
 ## Observability
 
-- Actuator: `/actuator/health` and `/actuator/prometheus` are public; all other actuator endpoints require the Keycloak
-  `invite-admin` role. Configure your proxy/network accordingly.
-- Metrics: Prometheus scrape is enabled by default.
-- Tracing: OTLP exporter dependency is present but disabled by default (`management.tracing.export.enabled=false`). To
-  emit spans, set `MANAGEMENT_TRACING_EXPORT_ENABLED=true` and configure `MANAGEMENT_OTLP_TRACING_ENDPOINT`
-  (for example `http://otel-collector:4318/v1/traces`). Adjust sampling with `MANAGEMENT_TRACING_SAMPLING_PROBABILITY`.
-- Logging conventions:
-    - Servlet access log (opt-in: `access-logging.enabled=true`) emitted once per request with method, path, status,
-      duration, and MDC-enriched user/invite context (PII stays masked).
-    - Service layer owns INFO/audit logs for invite lifecycle (create/resend/revoke/delete/use) and includes the actor;
-      controllers avoid duplicating success logs.
-    - Keycloak admin client logs HTTP failures with status, context, and duration; retries are logged at DEBUG with
-      counts; controller advice adds route/status so requests are traceable without duplicating client details.
-    - When handling `KeycloakAdminClientException` outside the client, use `log.dedupedEventForInviteError(...)` so
-      upper layers don't double-log failures already captured in the client.
-    - Log level policy: client-side/validation issues -> WARN (except public invite validation/not-found handled at
-      DEBUG to avoid noise); Keycloak 4xx -> WARN; server/misconfig -> ERROR; routine reads/validation -> DEBUG; state
-      changes/audit -> INFO. Always mask emails via `maskSensitive` to keep PII out of logs and use MDC helpers
-      (`withAuthDataInMdc`, `withInviteContextInMdc`).
+- Actuator endpoints:
+  - `/actuator/health`
+  - `/actuator/prometheus`
+  These are public.
+- All other actuator endpoints require the `invite-admin` role.
+
+### Metrics
+
+- Prometheus scraping is enabled by default.
+
+### Tracing
+
+- OTLP exporter dependency is present but disabled by default.
+- Enable with:
+  ```
+  MANAGEMENT_TRACING_EXPORT_ENABLED=true
+  ```
+- Configure endpoint:
+  ```
+  MANAGEMENT_OTLP_TRACING_ENDPOINT=http://otel-collector:4318/v1/traces
+  ```
+- Adjust sampling with:
+  ```
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY
+  ```
+
+### Logging conventions
+
+- Optional servlet access log:
+  - enabled with `access-logging.enabled=true`
+  - emitted once per request
+  - includes method, path, status, duration, and MDC-enriched context
+- Service layer owns `INFO`-level audit logs for invite lifecycle events
+  (create, resend, revoke, delete, use).
+- Controllers avoid duplicating success logs.
+- Keycloak admin client logs:
+  - HTTP failures with status, context, and duration
+  - retries at `DEBUG` level with retry counts
+- Controller advice enriches logs with route and status for traceability.
+- Use `log.dedupedEventForInviteError(...)` when handling
+  `KeycloakAdminClientException` outside the client to avoid double-logging.
+- Log level policy:
+  - validation and client-side issues: `WARN`
+  - Keycloak 4xx: `WARN`
+  - server or misconfiguration issues: `ERROR`
+  - routine reads and validation: `DEBUG`
+  - state changes and audit events: `INFO`
+- Emails are always masked using `maskSensitive`.
+- MDC helpers:
+  - `withAuthDataInMdc`
+  - `withInviteContextInMdc`
+
+---
 
 ## Remaining tasks
 
-- [ ] Add any missing important info to this file
-- [ ] Add i18n
-- [ ] Replace `WebClient` with `RestClient` -> remove WebFlux dependency
-- [ ] Write Reddit post at [r/KeyCloak](https://www.reddit.com/r/KeyCloak/)
+- [ ] Add any missing important information to this file
+- [ ] Add i18n support
+- [ ] Replace WebClient with RestClient and remove the WebFlux dependency
+- [ ] Write a project announcement on https://www.reddit.com/r/KeyCloak/
