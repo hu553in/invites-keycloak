@@ -237,14 +237,14 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
 
 ## Routes and UI
 
-- `/`
+- `/`<br>
   Redirects to `/admin/invite` (authentication required).
 
-- `/admin/invite/**`
-  Admin UI for creating, resending, revoking, and deleting invites.
+- `/admin/invite/**`<br>
+  Admin UI for creating, resending, revoking, and deleting invites.<br>
   Protected by Keycloak OAuth2 login.
 
-- `/invite/{realm}/{token}`
+- `/invite/{realm}/{token}`<br>
   Public endpoint:
   - validates the invite token
   - creates the Keycloak user
@@ -297,7 +297,7 @@ See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-
 
 - Actuator endpoints:
   - `/actuator/health`
-  - `/actuator/prometheus`
+  - `/actuator/prometheus`<br>
   These are public.
 - All other actuator endpoints require the `invite-admin` role.
 
