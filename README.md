@@ -10,7 +10,7 @@
 
 A Spring Boot service for issuing and consuming **invitation links for Keycloak**.
 
-Administrators generate invitation links with a limited lifetime and usage count.  
+Administrators generate invitation links with a limited lifetime and usage count.
 Recipients redeem these links to get a Keycloak account automatically provisioned with
 predefined realm roles.
 
@@ -119,7 +119,7 @@ are defined in `application.yml` and can be overridden via environment variables
 
 To disable mail entirely, set:
 
-- `SPRING_AUTOCONFIGURE_EXCLUDE` to  
+- `SPRING_AUTOCONFIGURE_EXCLUDE` to
   `org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration,org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration`
 
 ### Database configuration
@@ -197,9 +197,9 @@ Ensure your reverse proxy sends:
 nginx example:
 
 ```
-proxy_set_header Host $host;  
-proxy_set_header X-Forwarded-Proto $scheme;  
-proxy_set_header X-Forwarded-Port $server_port;  
+proxy_set_header Host $host;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Port $server_port;
 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 ```
 
@@ -237,14 +237,14 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
 
 ## Routes and UI
 
-- `/`  
+- `/`
   Redirects to `/admin/invite` (authentication required).
 
-- `/admin/invite/**`  
-  Admin UI for creating, resending, revoking, and deleting invites.  
+- `/admin/invite/**`
+  Admin UI for creating, resending, revoking, and deleting invites.
   Protected by Keycloak OAuth2 login.
 
-- `/invite/{realm}/{token}`  
+- `/invite/{realm}/{token}`
   Public endpoint:
   - validates the invite token
   - creates the Keycloak user
