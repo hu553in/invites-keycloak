@@ -14,7 +14,7 @@ Administrators generate invitation links with a limited lifetime and usage count
 Recipients redeem these links to get a Keycloak account automatically provisioned with
 predefined realm roles.
 
-The service focuses on **safety, atomicity, and operational clarity** when automating
+The service focuses on **safety, failure resilience, and operational clarity** when automating
 user onboarding in Keycloak.
 
 ---
@@ -42,6 +42,8 @@ user onboarding in Keycloak.
 - `POST` requires:
   - a valid CSRF token
   - a one-time confirmation challenge issued by the `GET` page
+- The confirmation challenge expires after 10 minutes.
+  Reopen the invite link to get a fresh confirmation page and challenge.
 - Reopening the confirmation page for the same invite in the same browser session invalidates
   previously issued confirmation challenges for that invite (the latest page wins).
 - While a redeem `POST` is in progress for an invite, the same browser session cannot issue
@@ -93,6 +95,7 @@ The bundled `.env.example.local` and `.env.example.docker` files:
 
 - are meant for local development and demonstration
 - are not exhaustive lists of all available configuration options
+- contain placeholder values (for example, `KEYCLOAK_URL=https://id.example.com`) that must be replaced
 
 Copy one of them to `.env` and adjust it for your setup.
 
@@ -108,6 +111,18 @@ Required:
 
 - `KEYCLOAK_URL`
 - `KEYCLOAK_CLIENT_SECRET`
+
+`KEYCLOAK_URL` must be the **Keycloak base URL** (scheme + host + optional port/base path),
+without the realm suffix (do not append `/realms/{realm}`).
+
+Examples:
+
+- `https://sso.example.com`
+- `https://sso.example.com/auth` (if Keycloak is served under a base path)
+
+The application builds the OIDC issuer URL as `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}` and
+resolves OIDC discovery during startup, so `KEYCLOAK_URL` must be reachable from the runtime
+environment (host process or container) and use a trusted certificate if HTTPS is enabled.
 
 Defaults (override via env if needed):
 
@@ -127,6 +142,15 @@ Required:
 
 Defaults for expiry bounds, token size, salt, MAC algorithm, realm mapping, and cleanup retention
 are defined in `application.yml` and can be overridden via environment variables.
+
+`invite.realms` is the allowlist of realms available in the admin UI.
+`invite.realms.<realm>.roles` defines the default (preselected) realm roles for invites in that realm.
+
+Example env overrides:
+
+- `INVITE_REALMS_MASTER_ROLES_0=invite-admin`
+- `INVITE_REALMS_MASTER_ROLES_1=another-role`
+- `INVITE_REALMS_PARTNERS_ROLES_0=partner-user`
 
 ### Mail configuration
 
@@ -246,6 +270,11 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
   ```
   pre-commit install
   ```
+- Before the first start, replace placeholder values in `.env`, especially:
+  - `KEYCLOAK_URL`
+  - `KEYCLOAK_CLIENT_SECRET`
+  - `INVITE_TOKEN_SECRET`
+  - `INVITE_PUBLIC_BASE_URL`
 - Run locally (starts Postgres via Compose, then Spring Boot):
   ```
   make run_local
@@ -290,7 +319,7 @@ CI builds and pushes images to:
 Published tags:
 
 - `latest` and commit SHA on pushes to `main`
-- git tag name (for example `v1.2.3`) when the tag matches `v*`
+- git tag name (for example, `v1.2.3`) when the tag matches `v*`
 
 Deployment steps:
 
@@ -308,7 +337,7 @@ Deployment steps:
 
 See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-compose.yml`.
 
-- Java 21, Kotlin 2, Gradle 9, Spring Boot 3
+- Java 21, Kotlin 2, Gradle 9, Spring Boot 4
 - PostgreSQL 17, Flyway, Spring Data JPA
 - Spring Security OAuth2 Client, Thymeleaf
 - WebClient (reactive) for Keycloak admin API
