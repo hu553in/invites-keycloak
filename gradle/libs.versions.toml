@@ -1,13 +1,13 @@
 [versions]
 kotlin = "2.2.21"
-spring-boot = "3.5.8"
+spring-boot = "3.5.11"
 spring-dependency-management = "1.1.7"
-kover = "0.9.3"
+kover = "0.9.7"
 detekt = "1.23.8"
 versions = "0.53.0"
-spring-dotenv = "4.0.0"
+spring-dotenv = "5.1.0"
 wiremock = "3.13.2"
-springdoc = "2.8.14"
+springdoc = "2.8.15"
 axion-release = "1.21.1"
 
 [plugins]
@@ -51,5 +51,5 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
-spring-dotenv = { module = "me.paulschwarz:spring-dotenv", version.ref = "spring-dotenv" }
+spring-dotenv = { module = "me.paulschwarz:springboot3-dotenv", version.ref = "spring-dotenv" }
 wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }

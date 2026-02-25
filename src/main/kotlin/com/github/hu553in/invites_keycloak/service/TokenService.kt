@@ -1,7 +1,9 @@
 package com.github.hu553in.invites_keycloak.service
 
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
+import com.github.hu553in.invites_keycloak.util.ARG_EXPECTED_BYTES_KEY
 import com.github.hu553in.invites_keycloak.util.ARG_KEY
+import com.github.hu553in.invites_keycloak.util.ARG_VALUE_LENGTH_KEY
 import com.github.hu553in.invites_keycloak.util.CONFIGURED_BYTES_KEY
 import com.github.hu553in.invites_keycloak.util.HASH_LENGTH_KEY
 import com.github.hu553in.invites_keycloak.util.MAC_ALGORITHM_KEY
@@ -109,6 +111,9 @@ class TokenService(
         } catch (e: IllegalArgumentException) {
             log.atDebug()
                 .addKeyValue(ARG_KEY) { argName }
+                .addKeyValue(ARG_EXPECTED_BYTES_KEY) { bytes }
+                .addKeyValue(ARG_VALUE_LENGTH_KEY) { arg.length }
+                .setCause(e)
                 .log { "Token hashing argument validation failed" }
             throw e
         }

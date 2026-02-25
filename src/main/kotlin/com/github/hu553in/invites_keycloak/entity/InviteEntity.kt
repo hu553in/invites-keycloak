@@ -1,6 +1,7 @@
 package com.github.hu553in.invites_keycloak.entity
 
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
+import com.github.hu553in.invites_keycloak.exception.InvalidInviteReason
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -80,7 +81,7 @@ class InviteEntity(
 ) {
     fun incrementUses() {
         if (uses + 1 > maxUses) {
-            throw InvalidInviteException()
+            throw InvalidInviteException(reason = InvalidInviteReason.OVERUSED)
         }
         uses += 1
     }

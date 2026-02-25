@@ -18,20 +18,26 @@ import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.service.MailService
 import com.github.hu553in.invites_keycloak.util.ERROR_COUNT_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_CREATED_ID_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_EXPIRY_MINUTES_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
-import com.github.hu553in.invites_keycloak.util.INVITE_REALM_KEY
-import com.github.hu553in.invites_keycloak.util.dedupedEventForInviteError
-import com.github.hu553in.invites_keycloak.util.isClientSideInviteFailure
+import com.github.hu553in.invites_keycloak.util.KEYCLOAK_OPERATION_KEY
+import com.github.hu553in.invites_keycloak.util.KEYCLOAK_REALM_KEY
+import com.github.hu553in.invites_keycloak.util.MAIL_STATUS_KEY
+import com.github.hu553in.invites_keycloak.util.dedupedEventForAppError
+import com.github.hu553in.invites_keycloak.util.eventForAppError
+import com.github.hu553in.invites_keycloak.util.isClientSideAppFailure
 import com.github.hu553in.invites_keycloak.util.logger
 import com.github.hu553in.invites_keycloak.util.maskSensitive
 import com.github.hu553in.invites_keycloak.util.withInviteContextInMdc
+import com.github.hu553in.invites_keycloak.util.withMdc
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
+import org.slf4j.spi.LoggingEventBuilder
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -78,7 +84,7 @@ class InviteAdminController(
         val selectedRealm = resolveRealmOrDefault(realm, inviteProps)
         prepareForm(model, selectedRealm)
         log.atDebug()
-            .addKeyValue(INVITE_REALM_KEY) { selectedRealm }
+            .addKeyValue(KEYCLOAK_REALM_KEY) { selectedRealm }
             .log { "Rendering admin invite form" }
         return "admin/invite/new"
     }
@@ -131,7 +137,7 @@ class InviteAdminController(
             inviteForm.roles.addAll(configuredRoles(realmForForm, inviteProps))
         }
         log.atDebug()
-            .addKeyValue(INVITE_REALM_KEY) { realmForForm }
+            .addKeyValue(KEYCLOAK_REALM_KEY) { realmForForm }
             .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(inviteForm.email) }
             .addKeyValue(ERROR_COUNT_KEY) { bindingResult.errorCount }
             .log { "Invite form validation failed; re-rendering form" }
@@ -158,9 +164,15 @@ class InviteAdminController(
         )
 
         val link = buildInviteLink(inviteProps, realm, created.rawToken)
+        val mailStatus = sendMail(created, link)
         redirectAttributes.addFlashAttribute("successMessage", "Invite created for ${created.invite.email}")
         redirectAttributes.addFlashAttribute("inviteLink", link)
-        applyMailFlash(sendMail(created, link), created.invite.email, redirectAttributes)
+        applyMailFlash(mailStatus, created.invite.email, redirectAttributes)
+        withInviteContextInMdc(created.invite.id, created.invite.realm, created.invite.email) {
+            log.atInfo()
+                .addKeyValue(MAIL_STATUS_KEY) { mailStatus.logValue() }
+                .log { "Completed admin invite creation flow" }
+        }
         return "redirect:/admin/invite"
     }
 
@@ -171,7 +183,7 @@ class InviteAdminController(
         model: Model
     ): String {
         log.atWarn()
-            .addKeyValue(INVITE_REALM_KEY) { inviteForm.realm }
+            .addKeyValue(KEYCLOAK_REALM_KEY) { inviteForm.realm }
             .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(inviteForm.email) }
             .setCause(e)
             .log { "Active invite already exists" }
@@ -188,12 +200,12 @@ class InviteAdminController(
         bindingResult: BindingResult,
         model: Model
     ): String {
-        log.dedupedEventForInviteError(e)
-            .addKeyValue(INVITE_REALM_KEY) { inviteForm.realm }
+        log.dedupedEventForAppError(e)
+            .addKeyValue(KEYCLOAK_REALM_KEY) { inviteForm.realm }
             .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(inviteForm.email) }
             .setCause(e)
             .log { "Failed to create invite" }
-        val errorMessage = if (e.isClientSideInviteFailure()) {
+        val errorMessage = if (e.isClientSideAppFailure()) {
             "Unable to create invite; please check input and try again."
         } else {
             "Unable to create invite due to server error. Please retry later."
@@ -222,16 +234,7 @@ class InviteAdminController(
             }
             "redirect:/admin/invite"
         }.getOrElse {
-            log.dedupedEventForInviteError(it)
-                .addKeyValue(INVITE_ID_KEY) { id }
-                .apply {
-                    inviteContext?.let { ctx ->
-                        addKeyValue(INVITE_REALM_KEY) { ctx.first }
-                        addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(ctx.second) }
-                    }
-                }
-                .setCause(it)
-                .log { "Failed to revoke invite" }
+            logInviteAdminActionFailure(it, id, inviteContext, "Failed to revoke invite")
             redirectAttributes.addFlashAttribute("errorMessage", it.message ?: "Failed to revoke invite")
             "redirect:/admin/invite"
         }
@@ -253,16 +256,7 @@ class InviteAdminController(
             }
             "redirect:/admin/invite"
         }.getOrElse {
-            log.dedupedEventForInviteError(it)
-                .addKeyValue(INVITE_ID_KEY) { id }
-                .apply {
-                    inviteContext?.let { ctx ->
-                        addKeyValue(INVITE_REALM_KEY) { ctx.first }
-                        addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(ctx.second) }
-                    }
-                }
-                .setCause(it)
-                .log { "Failed to delete invite" }
+            logInviteAdminActionFailure(it, id, inviteContext, "Failed to delete invite")
             redirectAttributes.addFlashAttribute("errorMessage", it.message ?: "Failed to delete invite")
             "redirect:/admin/invite"
         }
@@ -305,45 +299,44 @@ class InviteAdminController(
             }
 
             withInviteContextInMdc(invite.id, invite.realm, invite.email) {
-                val allowedRoles = fetchAllowedRolesForResend(id, invite.realm, invite.roles, redirectAttributes)
-                    ?: return@withInviteContextInMdc "redirect:/admin/invite"
+                val allowedRoles = fetchAllowedRolesForResend(invite.realm, invite.roles, redirectAttributes)
+                when {
+                    allowedRoles == null -> "redirect:/admin/invite"
+                    invite.roles.isNotEmpty() && !allowedRoles.containsAll(invite.roles) ->
+                        refuseResendDueToMissingRoles(redirectAttributes)
 
-                if (invite.roles.isNotEmpty() && !allowedRoles.containsAll(invite.roles)) {
-                    return@withInviteContextInMdc refuseResendDueToMissingRoles(id, invite.realm, redirectAttributes)
-                }
+                    else -> {
+                        val created = inviteService.resendInvite(
+                            inviteId = id,
+                            expiresAt = clock.instant().plus(expiryDuration),
+                            createdBy = authentication.nameOrSystem()
+                        )
+                        val realm = created.invite.realm
+                        val link = buildInviteLink(inviteProps, realm, created.rawToken)
+                        val mailStatus = sendMail(created, link)
 
-                val created = inviteService.resendInvite(
-                    inviteId = id,
-                    expiresAt = clock.instant().plus(expiryDuration),
-                    createdBy = authentication.nameOrSystem()
-                )
-                val realm = created.invite.realm
-                val link = buildInviteLink(inviteProps, realm, created.rawToken)
-                val mailStatus = sendMail(created, link)
-
-                redirectAttributes.addFlashAttribute("successMessage", "Invite resent to ${created.invite.email}")
-                redirectAttributes.addFlashAttribute("inviteLink", link)
-                applyMailFlash(mailStatus, created.invite.email, redirectAttributes)
-                "redirect:/admin/invite"
-            }
-        }.getOrElse {
-            log.dedupedEventForInviteError(it)
-                .addKeyValue(INVITE_ID_KEY) { id }
-                .apply {
-                    inviteContext?.let { ctx ->
-                        addKeyValue(INVITE_REALM_KEY) { ctx.first }
-                        addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(ctx.second) }
+                        redirectAttributes.addFlashAttribute(
+                            "successMessage",
+                            "Invite resent to ${created.invite.email}"
+                        )
+                        redirectAttributes.addFlashAttribute("inviteLink", link)
+                        applyMailFlash(mailStatus, created.invite.email, redirectAttributes)
+                        log.atInfo()
+                            .addKeyValue(INVITE_CREATED_ID_KEY) { created.invite.id }
+                            .addKeyValue(MAIL_STATUS_KEY) { mailStatus.logValue() }
+                            .log { "Completed admin invite resend flow" }
+                        "redirect:/admin/invite"
                     }
                 }
-                .setCause(it)
-                .log { "Failed to resend invite" }
+            }
+        }.getOrElse {
+            logInviteAdminActionFailure(it, id, inviteContext, "Failed to resend invite")
             redirectAttributes.addFlashAttribute("errorMessage", it.message ?: "Failed to resend invite")
             "redirect:/admin/invite"
         }
     }
 
     private fun fetchAllowedRolesForResend(
-        inviteId: UUID,
         realm: String,
         roles: Set<String>,
         redirectAttributes: RedirectAttributes
@@ -353,11 +346,11 @@ class InviteAdminController(
         }
         return runCatching { keycloakAdminClient.listRealmRoles(realm).toSet() }
             .onFailure {
-                log.atDebug()
-                    .addKeyValue(INVITE_ID_KEY) { inviteId }
-                    .addKeyValue(INVITE_REALM_KEY) { realm }
-                    .setCause(it)
-                    .log { "Failed to fetch realm roles before resend (Keycloak client logged details)" }
+                logRoleFetchFailure(
+                    error = it,
+                    operation = "list_realm_roles_for_resend",
+                    message = "Failed to fetch realm roles before resend (Keycloak client logged details)"
+                )
                 redirectAttributes.addFlashAttribute(
                     "errorMessage",
                     "Cannot resend invite now: roles are unavailable (Keycloak may be down)."
@@ -367,13 +360,9 @@ class InviteAdminController(
     }
 
     private fun refuseResendDueToMissingRoles(
-        inviteId: UUID,
-        realm: String,
         redirectAttributes: RedirectAttributes
     ): String {
         log.atWarn()
-            .addKeyValue(INVITE_ID_KEY) { inviteId }
-            .addKeyValue(INVITE_REALM_KEY) { realm }
             .log { "Refusing to resend invite because some roles are missing in Keycloak" }
         redirectAttributes.addFlashAttribute(
             "errorMessage",
@@ -444,19 +433,22 @@ class InviteAdminController(
     }
 
     private fun fetchRoles(realm: String): RoleFetchResult {
-        return runCatching {
-            val roles = keycloakAdminClient.listRealmRoles(realm)
-            RoleFetchResult(roles, null, available = true)
-        }.getOrElse {
-            log.atDebug()
-                .addKeyValue(INVITE_REALM_KEY) { realm }
-                .setCause(it)
-                .log { "Failed to fetch roles for realm (Keycloak client logged details)" }
-            RoleFetchResult(
-                roles = emptyList(),
-                errorMessage = "Roles are temporarily unavailable. Keycloak may be down; please retry later.",
-                available = false
-            )
+        return withMdc(KEYCLOAK_REALM_KEY to realm) {
+            runCatching {
+                val roles = keycloakAdminClient.listRealmRoles(realm)
+                RoleFetchResult(roles, null, available = true)
+            }.getOrElse {
+                logRoleFetchFailure(
+                    error = it,
+                    operation = "list_realm_roles_for_form",
+                    message = "Failed to fetch roles for realm (Keycloak client logged details)"
+                )
+                RoleFetchResult(
+                    roles = emptyList(),
+                    errorMessage = "Roles are temporarily unavailable. Keycloak may be down; please retry later.",
+                    available = false
+                )
+            }
         }
     }
 
@@ -465,38 +457,61 @@ class InviteAdminController(
         requestedRoles: Set<String>,
         bindingResult: BindingResult
     ): Set<String>? {
-        val sanitizedRoles = requestedRoles
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .toCollection(LinkedHashSet())
+        return withMdc(KEYCLOAK_REALM_KEY to realm) {
+            val sanitizedRoles = requestedRoles
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .toCollection(LinkedHashSet())
 
-        val rolesToUse = if (sanitizedRoles.isEmpty()) {
-            configuredRoles(realm, inviteProps)
-        } else {
-            sanitizedRoles
-        }
-        if (rolesToUse.isEmpty()) {
-            return rolesToUse.takeUnless { bindingResult.hasErrors() }
-        }
-
-        val allowedRoles = runCatching { keycloakAdminClient.listRealmRoles(realm).toSet() }
-            .onFailure {
-                log.atDebug()
-                    .addKeyValue(INVITE_REALM_KEY) { realm }
-                    .setCause(it)
-                    .log { "Failed to fetch roles for validation (Keycloak client logged details)" }
-                bindingResult.reject(
-                    "roles.unavailable",
-                    "Unable to fetch realm roles from Keycloak right now. Please try again."
-                )
+            val rolesToUse = if (sanitizedRoles.isEmpty()) {
+                configuredRoles(realm, inviteProps)
+            } else {
+                sanitizedRoles
             }
-            .getOrNull()
+            if (rolesToUse.isEmpty()) {
+                rolesToUse.takeUnless { bindingResult.hasErrors() }
+            } else {
+                val allowedRoles = runCatching { keycloakAdminClient.listRealmRoles(realm).toSet() }
+                    .onFailure {
+                        logRoleFetchFailure(
+                            error = it,
+                            operation = "list_realm_roles_for_validation",
+                            message = "Failed to fetch roles for validation (Keycloak client logged details)"
+                        )
+                        bindingResult.reject(
+                            "roles.unavailable",
+                            "Unable to fetch realm roles from Keycloak right now. Please try again."
+                        )
+                    }
+                    .getOrNull()
 
-        if (allowedRoles != null && !allowedRoles.containsAll(rolesToUse)) {
-            bindingResult.rejectValue("roles", "roles.invalid", "Selected roles are not available in Keycloak")
+                if (allowedRoles != null && !allowedRoles.containsAll(rolesToUse)) {
+                    bindingResult.rejectValue("roles", "roles.invalid", "Selected roles are not available in Keycloak")
+                }
+
+                rolesToUse.takeUnless { bindingResult.hasErrors() }
+            }
         }
+    }
 
-        return rolesToUse.takeUnless { bindingResult.hasErrors() }
+    private fun logInviteAdminActionFailure(
+        error: Throwable,
+        inviteId: UUID,
+        inviteContext: Pair<String, String>?,
+        message: String
+    ) {
+        log.dedupedEventForAppError(error)
+            .addKeyValue(INVITE_ID_KEY) { inviteId }
+            .addOptionalInviteContext(inviteContext)
+            .setCause(error)
+            .log { message }
+    }
+
+    private fun logRoleFetchFailure(error: Throwable, operation: String, message: String) {
+        log.eventForAppError(error)
+            .addKeyValue(KEYCLOAK_OPERATION_KEY) { operation }
+            .setCause(error)
+            .log { message }
     }
 
     data class InviteForm(
@@ -511,4 +526,13 @@ class InviteAdminController(
         var maxUses: Int = 1,
         var roles: MutableSet<String> = linkedSetOf()
     )
+}
+
+private fun LoggingEventBuilder.addOptionalInviteContext(
+    inviteContext: Pair<String, String>?
+): LoggingEventBuilder {
+    inviteContext ?: return this
+    return this
+        .addKeyValue(KEYCLOAK_REALM_KEY) { inviteContext.first }
+        .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(inviteContext.second) }
 }

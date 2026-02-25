@@ -63,11 +63,12 @@ class CurrentUserLoggingFilterTest {
         // act
         mockMvc.get("/logging-test") {
             accept = MediaType.TEXT_PLAIN
-        }.andExpect {
-            status { isOk() }
         }
+            // assert
+            .andExpect {
+                status { isOk() }
+            }
 
-        // assert
         val events = listAppender.list
         val mdcValues = events.map { it.mdcPropertyMap[CURRENT_USER_ID_KEY] }
         assertThat(events).isNotEmpty
@@ -94,11 +95,12 @@ class CurrentUserLoggingFilterTest {
         mockMvc.get("/logging-test") {
             accept = MediaType.TEXT_PLAIN
             with(authentication(auth))
-        }.andExpect {
-            status { isOk() }
         }
+            // assert
+            .andExpect {
+                status { isOk() }
+            }
 
-        // assert
         val events = listAppender.list
         val subjects = events.map { it.mdcPropertyMap[CURRENT_USER_SUBJECT_KEY] }
         assertThat(subjects)

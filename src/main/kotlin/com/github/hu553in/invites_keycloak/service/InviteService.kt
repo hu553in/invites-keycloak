@@ -4,18 +4,17 @@ import com.github.hu553in.invites_keycloak.config.props.InviteProps
 import com.github.hu553in.invites_keycloak.entity.InviteEntity
 import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
+import com.github.hu553in.invites_keycloak.exception.InvalidInviteReason
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.repo.InviteRepository
 import com.github.hu553in.invites_keycloak.util.INVITE_COUNT_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_CREATED_BY_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_CREATED_ID_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_DELETED_BY_KEY
-import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_EXPIRES_AT_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_MAX_USES_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_PREVIOUS_ID_KEY
-import com.github.hu553in.invites_keycloak.util.INVITE_REALM_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_RESENT_BY_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_REVOKED_BY_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_REVOKED_EXPIRED_COUNT_KEY
@@ -23,11 +22,13 @@ import com.github.hu553in.invites_keycloak.util.INVITE_REVOKED_OVERUSED_COUNT_KE
 import com.github.hu553in.invites_keycloak.util.INVITE_ROLES_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_TOKEN_LENGTH_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_USES_KEY
+import com.github.hu553in.invites_keycloak.util.KEYCLOAK_REALM_KEY
 import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
 import com.github.hu553in.invites_keycloak.util.logger
-import com.github.hu553in.invites_keycloak.util.maskSensitive
 import com.github.hu553in.invites_keycloak.util.normalizeString
 import com.github.hu553in.invites_keycloak.util.normalizeStrings
+import com.github.hu553in.invites_keycloak.util.withInviteContextInMdc
+import com.github.hu553in.invites_keycloak.util.withMdc
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -76,96 +77,98 @@ class InviteService(
         val maxExpiresAt = now.plus(inviteProps.expiry.max)
 
         val normalizedEmail = normalizeString(email, "email must not be blank", true)
-        val expiredRevoked = inviteRepository.revokeExpired(normalizedRealm, normalizedEmail, now, SYSTEM_USER_ID)
-        val overusedRevoked = inviteRepository.revokeOverused(normalizedRealm, normalizedEmail, now, SYSTEM_USER_ID)
-        log.atDebug()
-            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
-            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(normalizedEmail) }
-            .addKeyValue(INVITE_REVOKED_EXPIRED_COUNT_KEY) { expiredRevoked }
-            .addKeyValue(INVITE_REVOKED_OVERUSED_COUNT_KEY) { overusedRevoked }
-            .log { "Revoked stale invites before creating a new one" }
+        return withInviteContextInMdc(inviteId = null, realm = normalizedRealm, email = normalizedEmail) {
+            val expiredRevoked = inviteRepository.revokeExpired(normalizedRealm, normalizedEmail, now, SYSTEM_USER_ID)
+            val overusedRevoked = inviteRepository.revokeOverused(normalizedRealm, normalizedEmail, now, SYSTEM_USER_ID)
+            log.atDebug()
+                .addKeyValue(INVITE_REVOKED_EXPIRED_COUNT_KEY) { expiredRevoked }
+                .addKeyValue(INVITE_REVOKED_OVERUSED_COUNT_KEY) { overusedRevoked }
+                .log { "Revoked stale invites before creating a new one" }
 
-        val targetExpiresAt = expiresAt ?: now.plus(inviteProps.expiry.default)
-        require(!targetExpiresAt.isBefore(minExpiresAt) && !targetExpiresAt.isAfter(maxExpiresAt)) {
-            "expiresAt must be between ${inviteProps.expiry.min} and ${inviteProps.expiry.max} from now " +
-                "(accepted: $minExpiresAt .. $maxExpiresAt)"
+            val targetExpiresAt = expiresAt ?: now.plus(inviteProps.expiry.default)
+            require(!targetExpiresAt.isBefore(minExpiresAt) && !targetExpiresAt.isAfter(maxExpiresAt)) {
+                "expiresAt must be between ${inviteProps.expiry.min} and ${inviteProps.expiry.max} from now " +
+                    "(accepted: $minExpiresAt .. $maxExpiresAt)"
+            }
+
+            if (inviteRepository.existsActiveByRealmAndEmail(normalizedRealm, normalizedEmail, now)) {
+                throw ActiveInviteExistsException(normalizedRealm, normalizedEmail)
+            }
+
+            val normalizedCreatedBy = normalizeString(createdBy, "createdBy must not be blank")
+
+            val token = tokenService.generateToken()
+            val salt = tokenService.generateSalt()
+            val tokenHash = tokenService.hashToken(token, salt)
+
+            val normalizedRoles = normalizeStrings(
+                strings = roles,
+                default = realmConfig.roles,
+                required = false
+            )
+
+            val invite = InviteEntity(
+                realm = normalizedRealm,
+                tokenHash = tokenHash,
+                salt = salt,
+                email = normalizedEmail,
+                createdBy = normalizedCreatedBy,
+                createdAt = now,
+                expiresAt = targetExpiresAt,
+                maxUses = maxUses,
+                roles = normalizedRoles
+            )
+
+            val saved = inviteRepository.save(invite)
+            val rawToken = buildRawToken(token, salt)
+            log.atInfo()
+                .addKeyValue(INVITE_ID_KEY) { saved.id }
+                .addKeyValue(INVITE_EXPIRES_AT_KEY) { targetExpiresAt }
+                .addKeyValue(INVITE_MAX_USES_KEY) { maxUses }
+                .addKeyValue(INVITE_ROLES_KEY) { normalizedRoles.joinToString(",") }
+                .addKeyValue(INVITE_CREATED_BY_KEY) { normalizedCreatedBy }
+                .log { "Created invite" }
+            CreatedInvite(saved, rawToken)
         }
-
-        if (inviteRepository.existsActiveByRealmAndEmail(normalizedRealm, normalizedEmail, now)) {
-            throw ActiveInviteExistsException(normalizedRealm, normalizedEmail)
-        }
-
-        val normalizedCreatedBy = normalizeString(createdBy, "createdBy must not be blank")
-
-        val token = tokenService.generateToken()
-        val salt = tokenService.generateSalt()
-        val tokenHash = tokenService.hashToken(token, salt)
-
-        val normalizedRoles = normalizeStrings(
-            strings = roles,
-            default = realmConfig.roles,
-            required = false
-        )
-
-        val invite = InviteEntity(
-            realm = normalizedRealm,
-            tokenHash = tokenHash,
-            salt = salt,
-            email = normalizedEmail,
-            createdBy = normalizedCreatedBy,
-            createdAt = now,
-            expiresAt = targetExpiresAt,
-            maxUses = maxUses,
-            roles = normalizedRoles
-        )
-
-        val saved = inviteRepository.save(invite)
-        val rawToken = buildRawToken(token, salt)
-        log.atInfo()
-            .addKeyValue(INVITE_ID_KEY) { saved.id }
-            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
-            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(normalizedEmail) }
-            .addKeyValue(INVITE_EXPIRES_AT_KEY) { targetExpiresAt }
-            .addKeyValue(INVITE_MAX_USES_KEY) { maxUses }
-            .addKeyValue(INVITE_ROLES_KEY) { normalizedRoles.joinToString(",") }
-            .addKeyValue(INVITE_CREATED_BY_KEY) { normalizedCreatedBy }
-            .log { "Created invite" }
-        return CreatedInvite(saved, rawToken)
     }
 
     @Transactional(readOnly = true)
     fun validateToken(realm: String, rawToken: String): InviteEntity {
-        return try {
-            val (token, salt) = parseRawToken(rawToken)
-            val tokenHash = tokenService.hashToken(token, salt)
+        return withMdc(KEYCLOAK_REALM_KEY to realm) {
+            try {
+                val now = clock.instant()
+                val (token, salt) = parseRawToken(rawToken)
+                val tokenHash = tokenService.hashToken(token, salt)
 
-            inviteRepository.findValidByRealmAndTokenHash(realm, tokenHash, clock.instant())
-                .map {
-                    log.atDebug()
-                        .addKeyValue(INVITE_ID_KEY) { it.id }
-                        .addKeyValue(INVITE_REALM_KEY) { it.realm }
-                        .log { "Validated invite token" }
-                    it
-                }
-                .orElseThrow { InvalidInviteException() }
-        } catch (e: IllegalArgumentException) {
-            log.atDebug()
-                .addKeyValue(INVITE_REALM_KEY) { realm }
-                .addKeyValue(INVITE_TOKEN_LENGTH_KEY) { rawToken.length }
-                .setCause(e)
-                .log { "Invite token parsing failed" }
-            throw InvalidInviteException("Invite token is malformed", e)
+                val invite = inviteRepository.findByRealmAndTokenHash(realm, tokenHash)
+                    .orElseThrow(::InviteNotFoundException)
+
+                throwIfInviteUnavailable(invite, now)
+
+                log.atDebug()
+                    .addKeyValue(INVITE_ID_KEY) { invite.id }
+                    .log { "Validated invite token" }
+
+                invite
+            } catch (e: IllegalArgumentException) {
+                log.atDebug()
+                    .addKeyValue(INVITE_TOKEN_LENGTH_KEY) { rawToken.length }
+                    .setCause(e)
+                    .log { "Invite token parsing failed" }
+                throw InvalidInviteException(cause = e, reason = InvalidInviteReason.MALFORMED)
+            }
         }
     }
 
     @Transactional
     fun useOnce(inviteId: UUID): InviteEntity {
-        return inviteRepository.findValidByIdForUpdate(inviteId, clock.instant())
-            .orElseThrow { InvalidInviteException() }
+        val now = clock.instant()
+        return inviteRepository.findByIdForUpdate(inviteId)
+            .orElseThrow(::InviteNotFoundException)
+            .also { throwIfInviteUnavailable(it, now) }
             .also {
                 it.incrementUses()
                 log.atInfo()
-                    .addKeyValue(INVITE_ID_KEY) { inviteId }
                     .addKeyValue(INVITE_USES_KEY) { it.uses }
                     .addKeyValue(INVITE_MAX_USES_KEY) { it.maxUses }
                     .log { "Marked invite as used once" }
@@ -181,9 +184,6 @@ class InviteService(
         check(invite.isActive(now)) { "Invite $inviteId is not active; revoke is only allowed for active invites." }
         invite.markRevoked(normalizedRevokedBy, now)
         log.atInfo()
-            .addKeyValue(INVITE_ID_KEY) { inviteId }
-            .addKeyValue(INVITE_REALM_KEY) { invite.realm }
-            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(invite.email) }
             .addKeyValue(INVITE_REVOKED_BY_KEY) { normalizedRevokedBy }
             .log { "Revoked invite" }
     }
@@ -199,9 +199,6 @@ class InviteService(
         val normalizedDeletedBy = normalizeString(deletedBy, "deletedBy must not be blank")
         inviteRepository.delete(invite)
         log.atInfo()
-            .addKeyValue(INVITE_ID_KEY) { inviteId }
-            .addKeyValue(INVITE_REALM_KEY) { invite.realm }
-            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(invite.email) }
             .addKeyValue(INVITE_DELETED_BY_KEY) { normalizedDeletedBy }
             .log { "Deleted invite" }
         return invite
@@ -228,8 +225,6 @@ class InviteService(
         log.atInfo()
             .addKeyValue(INVITE_PREVIOUS_ID_KEY) { inviteId }
             .addKeyValue(INVITE_CREATED_ID_KEY) { created.invite.id }
-            .addKeyValue(INVITE_REALM_KEY) { created.invite.realm }
-            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(created.invite.email) }
             .addKeyValue(INVITE_EXPIRES_AT_KEY) { expiresAt }
             .addKeyValue(INVITE_RESENT_BY_KEY) { normalizedCreatedBy }
             .log { "Resent invite (previous invite revoked)" }
@@ -242,7 +237,7 @@ class InviteService(
             .map {
                 log.atDebug()
                     .addKeyValue(INVITE_ID_KEY) { inviteId }
-                    .addKeyValue(INVITE_REALM_KEY) { it.realm }
+                    .addKeyValue(KEYCLOAK_REALM_KEY) { it.realm }
                     .log { "Fetched invite" }
                 it
             }
@@ -266,10 +261,18 @@ class InviteService(
 
     private fun parseRawToken(rawToken: String): Pair<String, String> {
         val parts = rawToken.split(RAW_TOKEN_DELIMITER, limit = 2)
-        if (parts.size != 2 || parts.any { it.isBlank() }) {
-            throw InvalidInviteException()
-        }
+        require(parts.size == 2 && parts.none { it.isBlank() }) { "Malformed invite token format" }
         return parts[0] to parts[1]
+    }
+
+    private fun throwIfInviteUnavailable(invite: InviteEntity, now: Instant) {
+        val reason = when {
+            !invite.expiresAt.isAfter(now) -> InvalidInviteReason.EXPIRED
+            invite.uses >= invite.maxUses -> InvalidInviteReason.OVERUSED
+            invite.revoked -> InvalidInviteReason.REVOKED
+            else -> return
+        }
+        throw InvalidInviteException(reason = reason)
     }
 
     private fun buildRawToken(token: String, salt: String): String = "$token$RAW_TOKEN_DELIMITER$salt"

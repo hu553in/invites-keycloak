@@ -14,5 +14,5 @@ indent_style = tab
 [gradlew.bat]
 end_of_line = crlf
 
-[{*.y*ml,*.json,*.xml}]
+[{*.y*ml,*.json,*.toml,*.xml,*.md}]
 indent_size = 2

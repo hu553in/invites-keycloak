@@ -247,6 +247,19 @@ class SecurityConfigTest(
     }
 
     @Test
+    fun `favicon endpoint stays public`() {
+        // act
+        val result = mockMvc.perform(get("/favicon.ico"))
+            // assert
+            .andExpect(status().isOk)
+            .andReturn()
+
+        assertThat(result.response.contentType).isEqualTo("image/x-icon")
+        assertThat(result.response.getHeader(HttpHeaders.CACHE_CONTROL)).contains("max-age=3600")
+        assertThat(result.response.contentAsByteArray).isNotEmpty()
+    }
+
+    @Test
     fun `actuator health is public`() {
         // act
         mockMvc.perform(get("/actuator/health"))

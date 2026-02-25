@@ -7,6 +7,7 @@ import com.github.hu553in.invites_keycloak.entity.InviteEntity
 import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.service.MailService
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito
@@ -116,6 +117,26 @@ class InviteAdminControllerTest(
     }
 
     @Test
+    fun `list view renders overused status and disables actions`() {
+        // arrange
+        val invite = sampleInviteEntity().apply { uses = maxUses }
+        given(inviteService.listInvites()).willReturn(listOf(invite))
+
+        // act
+        val result = mockMvc.get("/admin/invite")
+
+        // assert
+        result.andExpect {
+            status { isOk() }
+            view { name("admin/invite/list") }
+        }
+        val html = result.andReturn().response.contentAsString
+        assertThat(html).contains("Overused")
+        assertThat(html).contains("disabled=\"disabled\"")
+        then(inviteService).should().listInvites()
+    }
+
+    @Test
     fun `new invite form uses default realm`() {
         // arrange
         given(keycloakAdminClient.listRealmRoles("master")).willReturn(listOf("default-admin"))
@@ -145,14 +166,16 @@ class InviteAdminControllerTest(
         // act
         mockMvc.get("/admin/invite/new") {
             param("realm", "other")
-        }.andExpect {
-            status { isOk() }
-            model {
-                attribute("selectedRealm", "other")
-                attribute("rolesVisible", true)
-                attribute("rolesAvailable", true)
-            }
         }
+            // assert
+            .andExpect {
+                status { isOk() }
+                model {
+                    attribute("selectedRealm", "other")
+                    attribute("rolesVisible", true)
+                    attribute("rolesAvailable", true)
+                }
+            }
 
         then(keycloakAdminClient).should().listRealmRoles("other")
     }

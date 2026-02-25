@@ -4,6 +4,8 @@ import com.github.hu553in.invites_keycloak.client.KeycloakAdminClient
 import com.github.hu553in.invites_keycloak.config.TestClientRegistrationRepositoryConfig
 import com.github.hu553in.invites_keycloak.entity.InviteEntity
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
+import com.github.hu553in.invites_keycloak.exception.InvalidInviteReason
+import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
 import com.github.hu553in.invites_keycloak.exception.handler.ControllerExceptionHandler
 import com.github.hu553in.invites_keycloak.service.InviteService
@@ -140,7 +142,8 @@ class InvitePublicControllerTest {
     @Test
     fun `validateInvite renders generic error when invite invalid`() {
         // arrange
-        given(inviteService.validateToken("master", "token")).willThrow(InvalidInviteException())
+        given(inviteService.validateToken("master", "token"))
+            .willThrow(InvalidInviteException(reason = InvalidInviteReason.EXPIRED))
 
         // act
         val result = mockMvc.get("/invite/master/token")
@@ -150,6 +153,43 @@ class InvitePublicControllerTest {
             status { isUnauthorized() }
             view { name("generic_error") }
         }
+        then(keycloakAdminClient).shouldHaveNoInteractions()
+    }
+
+    @Test
+    fun `validateInvite accepts trailing slash in invite url`() {
+        // arrange
+        given(inviteService.validateToken("master", "token"))
+            .willThrow(InvalidInviteException(reason = InvalidInviteReason.EXPIRED))
+
+        // act
+        val result = mockMvc.get("/invite/master/token/")
+
+        // assert
+        result.andExpect {
+            status { isUnauthorized() }
+            view { name("generic_error") }
+        }
+        then(inviteService).should().validateToken("master", "token")
+        then(keycloakAdminClient).shouldHaveNoInteractions()
+    }
+
+    @Test
+    fun `validateInvite renders not found when invite is missing`() {
+        // arrange
+        given(inviteService.validateToken("master", "token"))
+            .willThrow(InviteNotFoundException())
+
+        // act
+        val result = mockMvc.get("/invite/master/token")
+
+        // assert
+        result.andExpect {
+            status { isNotFound() }
+            view { name("generic_error") }
+            model { attribute("error_message", "Invite is not found") }
+        }
+        then(inviteService).should().validateToken("master", "token")
         then(keycloakAdminClient).shouldHaveNoInteractions()
     }
 

@@ -2,6 +2,7 @@ package com.github.hu553in.invites_keycloak.repo
 
 import com.github.hu553in.invites_keycloak.config.TestcontainersConfig
 import com.github.hu553in.invites_keycloak.entity.InviteEntity
+import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
@@ -10,10 +11,13 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
+import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.TestConstructor
+import java.sql.Timestamp
 import java.time.Clock
 import java.time.temporal.ChronoUnit
+import java.util.*
 
 @EnableAutoConfiguration
 @EntityScan(basePackageClasses = [InviteEntity::class])
@@ -30,11 +34,13 @@ class InviteRepositoryTestConfig {
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 class InviteRepositoryTest(
     private val inviteRepository: InviteRepository,
-    private val clock: Clock
+    private val clock: Clock,
+    private val jdbcClient: JdbcClient,
+    private val entityManager: EntityManager
 ) {
 
     @Test
-    fun `findValidByRealmAndTokenHash returns active invite`() {
+    fun `findByRealmAndTokenHash returns active invite`() {
         // arrange
         val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
         val expiresAt = now.plusSeconds(3600)
@@ -49,11 +55,10 @@ class InviteRepositoryTest(
             maxUses = 2,
             roles = setOf("realm-admin")
         )
-
         val saved = inviteRepository.saveAndFlush(invite)
 
         // act
-        val found = inviteRepository.findValidByRealmAndTokenHash("master", "token-hash", clock.instant())
+        val found = inviteRepository.findByRealmAndTokenHash("master", "token-hash")
 
         // assert
         assertThat(found).isPresent()
@@ -63,7 +68,53 @@ class InviteRepositoryTest(
     }
 
     @Test
-    fun `findValidByRealmAndTokenHash does not return revoked invite`() {
+    fun `findByRealmAndTokenHash returns empty when realm differs`() {
+        // arrange
+        val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
+        val invite = InviteEntity(
+            realm = "master",
+            tokenHash = "token-hash",
+            salt = "salt-value",
+            email = "user@example.com",
+            createdBy = "creator",
+            createdAt = now,
+            expiresAt = now.plusSeconds(3600),
+            roles = setOf("realm-admin")
+        )
+        inviteRepository.saveAndFlush(invite)
+
+        // act
+        val found = inviteRepository.findByRealmAndTokenHash("other-realm", "token-hash")
+
+        // assert
+        assertThat(found).isNotPresent()
+    }
+
+    @Test
+    fun `findByRealmAndTokenHash returns empty when token hash differs`() {
+        // arrange
+        val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
+        val invite = InviteEntity(
+            realm = "master",
+            tokenHash = "token-hash",
+            salt = "salt-value",
+            email = "user@example.com",
+            createdBy = "creator",
+            createdAt = now,
+            expiresAt = now.plusSeconds(3600),
+            roles = setOf("realm-admin")
+        )
+        inviteRepository.saveAndFlush(invite)
+
+        // act
+        val found = inviteRepository.findByRealmAndTokenHash("master", "different-token-hash")
+
+        // assert
+        assertThat(found).isNotPresent()
+    }
+
+    @Test
+    fun `findByRealmAndTokenHash returns revoked invite`() {
         // arrange
         val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
         val expiresAt = now.plusSeconds(3600)
@@ -79,14 +130,14 @@ class InviteRepositoryTest(
             revoked = true,
             roles = setOf("realm-admin")
         )
-
         inviteRepository.saveAndFlush(invite)
 
         // act
-        val found = inviteRepository.findValidByRealmAndTokenHash("master", "token-hash", clock.instant())
+        val found = inviteRepository.findByRealmAndTokenHash("master", "token-hash")
 
         // assert
-        assertThat(found).isNotPresent()
+        assertThat(found).isPresent()
+        assertThat(found.get().revoked).isTrue()
     }
 
     @Test
@@ -106,15 +157,20 @@ class InviteRepositoryTest(
         )
         inviteRepository.saveAndFlush(invite)
 
-        // act & assert
+        // act
         assertThat(
             inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", clock.instant())
-        ).isTrue()
+        )
+            // assert
+            .isTrue()
 
+        // act
         val pastInstant = clock.instant().plusSeconds(7200)
         assertThat(
             inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", pastInstant)
-        ).isFalse()
+        )
+            // assert
+            .isFalse()
     }
 
     @Test
@@ -135,14 +191,16 @@ class InviteRepositoryTest(
         )
         inviteRepository.saveAndFlush(invite)
 
-        // act & assert
+        // act
         assertThat(
             inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", clock.instant())
-        ).isFalse()
+        )
+            // assert
+            .isFalse()
     }
 
     @Test
-    fun `findValidByRealmAndTokenHash does not return overused invite`() {
+    fun `findByRealmAndTokenHash returns overused invite`() {
         // arrange
         val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
         val expiresAt = now.plusSeconds(3600)
@@ -158,18 +216,53 @@ class InviteRepositoryTest(
             uses = 2,
             roles = setOf("realm-admin")
         )
-
         inviteRepository.saveAndFlush(invite)
 
         // act
-        val found = inviteRepository.findValidByRealmAndTokenHash("master", "token-hash", clock.instant())
+        val found = inviteRepository.findByRealmAndTokenHash("master", "token-hash")
 
         // assert
-        assertThat(found).isNotPresent()
+        assertThat(found).isPresent()
+        assertThat(found.get().uses).isEqualTo(2)
     }
 
     @Test
-    fun `findValidByIdForUpdate returns active invite`() {
+    fun `findByRealmAndTokenHash returns expired invite`() {
+        // arrange
+        val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
+        val invite = InviteEntity(
+            realm = "master",
+            tokenHash = "expired-token-hash",
+            salt = "salt-value",
+            email = "user@example.com",
+            createdBy = "creator",
+            createdAt = now,
+            expiresAt = now.plusSeconds(3600),
+            maxUses = 2,
+            roles = setOf("realm-admin")
+        )
+
+        val saved = inviteRepository.saveAndFlush(invite)
+        val expiredAt = now.minusSeconds(1)
+
+        // column is not updatable in JPA -> use JDBC
+        jdbcClient
+            .sql("update invite set expires_at = ? where id = ?")
+            .param(expiredAt.toSqlTimestamp())
+            .param(saved.id)
+            .update()
+        entityManager.clear()
+
+        // act
+        val found = inviteRepository.findByRealmAndTokenHash("master", "expired-token-hash")
+
+        // assert
+        assertThat(found).isPresent()
+        assertThat(found.get().expiresAt).isBeforeOrEqualTo(now)
+    }
+
+    @Test
+    fun `findByIdForUpdate returns active invite`() {
         // arrange
         val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
         val expiresAt = now.plusSeconds(3600)
@@ -184,11 +277,10 @@ class InviteRepositoryTest(
             maxUses = 2,
             roles = setOf("realm-admin")
         )
-
         val saved = inviteRepository.saveAndFlush(invite)
 
         // act
-        val found = inviteRepository.findValidByIdForUpdate(saved.id!!, clock.instant())
+        val found = inviteRepository.findByIdForUpdate(saved.id!!)
 
         // assert
         assertThat(found).isPresent()
@@ -198,7 +290,16 @@ class InviteRepositoryTest(
     }
 
     @Test
-    fun `findValidByIdForUpdate does not return revoked invite`() {
+    fun `findByIdForUpdate returns empty when invite is missing`() {
+        // act
+        val found = inviteRepository.findByIdForUpdate(UUID.randomUUID())
+
+        // assert
+        assertThat(found).isNotPresent()
+    }
+
+    @Test
+    fun `findByIdForUpdate returns revoked invite`() {
         // arrange
         val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
         val expiresAt = now.plusSeconds(3600)
@@ -214,18 +315,18 @@ class InviteRepositoryTest(
             revoked = true,
             roles = setOf("realm-admin")
         )
-
         val saved = inviteRepository.saveAndFlush(invite)
 
         // act
-        val found = inviteRepository.findValidByIdForUpdate(saved.id!!, clock.instant())
+        val found = inviteRepository.findByIdForUpdate(saved.id!!)
 
         // assert
-        assertThat(found).isNotPresent()
+        assertThat(found).isPresent()
+        assertThat(found.get().revoked).isTrue()
     }
 
     @Test
-    fun `findValidByIdForUpdate does not return overused invite`() {
+    fun `findByIdForUpdate returns overused invite`() {
         // arrange
         val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
         val expiresAt = now.plusSeconds(3600)
@@ -241,13 +342,49 @@ class InviteRepositoryTest(
             uses = 2,
             roles = setOf("realm-admin")
         )
-
         val saved = inviteRepository.saveAndFlush(invite)
 
         // act
-        val found = inviteRepository.findValidByIdForUpdate(saved.id!!, clock.instant())
+        val found = inviteRepository.findByIdForUpdate(saved.id!!)
 
         // assert
-        assertThat(found).isNotPresent()
+        assertThat(found).isPresent()
+        assertThat(found.get().uses).isEqualTo(2)
     }
+
+    @Test
+    fun `findByIdForUpdate returns expired invite`() {
+        // arrange
+        val now = clock.instant().truncatedTo(ChronoUnit.MILLIS)
+        val invite = InviteEntity(
+            realm = "master",
+            tokenHash = "expired-token-hash",
+            salt = "salt-value",
+            email = "user@example.com",
+            createdBy = "creator",
+            createdAt = now,
+            expiresAt = now.plusSeconds(3600),
+            maxUses = 2,
+            roles = setOf("realm-admin")
+        )
+
+        val saved = inviteRepository.saveAndFlush(invite)
+        val expiredAt = now.minusSeconds(1)
+
+        // column is not updatable in JPA -> use JDBC
+        jdbcClient.sql("update invite set expires_at = ? where id = ?")
+            .param(expiredAt.toSqlTimestamp())
+            .param(saved.id)
+            .update()
+        entityManager.clear()
+
+        // act
+        val found = inviteRepository.findByIdForUpdate(saved.id!!)
+
+        // assert
+        assertThat(found).isPresent()
+        assertThat(found.get().expiresAt).isBeforeOrEqualTo(now)
+    }
+
+    private fun java.time.Instant.toSqlTimestamp(): Timestamp = Timestamp.from(this)
 }

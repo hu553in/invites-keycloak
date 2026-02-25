@@ -37,7 +37,7 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers(healthAndPrometheusMatcher).permitAll()
-                    .requestMatchers("/", "/invite/**", "/css/**", "/js/**", "/images/**").permitAll()
+                    .requestMatchers("/", "/favicon.ico", "/invite/**", "/css/**", "/js/**", "/images/**").permitAll()
                     .anyRequest().hasRole(keycloakProps.requiredRole)
             }
             .oauth2Login { oauth2 ->

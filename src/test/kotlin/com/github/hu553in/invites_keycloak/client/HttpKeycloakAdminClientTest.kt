@@ -1,7 +1,12 @@
 package com.github.hu553in.invites_keycloak.client
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.github.hu553in.invites_keycloak.config.props.KeycloakProps
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
+import com.github.hu553in.invites_keycloak.util.KEYCLOAK_OPERATION_KEY
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
@@ -18,20 +23,28 @@ import com.github.tomakehurst.wiremock.client.WireMock.put
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
+import com.github.tomakehurst.wiremock.http.Fault
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientRequestException
+import org.springframework.web.reactive.function.client.WebClientResponseException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class HttpKeycloakAdminClientTest {
@@ -39,6 +52,9 @@ class HttpKeycloakAdminClientTest {
     private lateinit var server: WireMockServer
     private lateinit var client: KeycloakAdminClient
     private lateinit var clock: MutableClock
+    private lateinit var listAppender: ListAppender<ILoggingEvent>
+    private lateinit var logger: Logger
+    private var previousLoggerLevel: Level? = null
 
     @BeforeAll
     fun setupSuite() {
@@ -72,6 +88,18 @@ class HttpKeycloakAdminClientTest {
             clock = clock,
             webClientBuilder = WebClient.builder()
         )
+
+        logger = LoggerFactory.getLogger(HttpKeycloakAdminClient::class.java) as Logger
+        previousLoggerLevel = logger.level
+        logger.level = Level.DEBUG
+        listAppender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(listAppender)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        logger.detachAppender(listAppender)
+        logger.level = previousLoggerLevel
     }
 
     @Test
@@ -167,6 +195,50 @@ class HttpKeycloakAdminClientTest {
     }
 
     @Test
+    fun `userExists wraps webclient response exception with status and cause`() {
+        // arrange
+        server.stubFor(
+            get(urlPathEqualTo("/admin/realms/invite-realm/users"))
+                .withQueryParam("email", equalTo("user@example.com"))
+                .withQueryParam("exact", equalTo("true"))
+                .withQueryParam("max", equalTo("1"))
+                .withQueryParam("briefRepresentation", equalTo("true"))
+                .withHeader("Authorization", equalTo("Bearer admin-token"))
+                .willReturn(aResponse().withStatus(429).withStatusMessage("Too Many Requests"))
+        )
+
+        // act
+        assertThatThrownBy { client.userExists("invite-realm", "user@example.com") }
+            // assert
+            .isInstanceOfSatisfying(KeycloakAdminClientException::class.java) { e ->
+                assertThat(e.statusCode?.value()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value())
+                assertThat(e.cause).isInstanceOf(WebClientResponseException::class.java)
+            }
+    }
+
+    @Test
+    fun `userExists wraps webclient request exception with cause when network fails`() {
+        // arrange
+        server.stubFor(
+            get(urlPathEqualTo("/admin/realms/invite-realm/users"))
+                .withQueryParam("email", equalTo("user@example.com"))
+                .withQueryParam("exact", equalTo("true"))
+                .withQueryParam("max", equalTo("1"))
+                .withQueryParam("briefRepresentation", equalTo("true"))
+                .withHeader("Authorization", equalTo("Bearer admin-token"))
+                .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER))
+        )
+
+        // act
+        assertThatThrownBy { client.userExists("invite-realm", "user@example.com") }
+            // assert
+            .isInstanceOfSatisfying(KeycloakAdminClientException::class.java) { e ->
+                assertThat(e.statusCode).isNull()
+                assertThat(e.cause).isInstanceOf(WebClientRequestException::class.java)
+            }
+    }
+
+    @Test
     fun `assignRealmRoles resolves roles and posts mapping`() {
         // arrange
         server.stubFor(
@@ -230,6 +302,24 @@ class HttpKeycloakAdminClientTest {
             // assert
             .isInstanceOf(KeycloakAdminClientException::class.java)
             .hasMessageContaining("not found")
+    }
+
+    @Test
+    fun `assignRealmRoles throws when role representation is incomplete`() {
+        // arrange
+        server.stubFor(
+            get(urlEqualTo("/admin/realms/invite-realm/roles/broken-role"))
+                .withHeader("Authorization", equalTo("Bearer admin-token"))
+                .willReturn(okJson("""{"id":"","name":"broken-role"}"""))
+        )
+
+        // act
+        assertThatThrownBy { client.assignRealmRoles("invite-realm", "user-id", setOf("broken-role")) }
+            // assert
+            .isInstanceOfSatisfying(KeycloakAdminClientException::class.java) { e ->
+                assertThat(e.statusCode?.value()).isEqualTo(HttpStatus.BAD_REQUEST.value())
+                assertThat(e.message).contains("incomplete representation")
+            }
     }
 
     @Test
@@ -361,6 +451,82 @@ class HttpKeycloakAdminClientTest {
     }
 
     @Test
+    fun `obtainAccessToken logs warn when refresh fails and cached token is reused inside skew`() {
+        // arrange
+        stubTokenScenario(
+            firstToken = "t-warn",
+            firstExpiresIn = 30,
+            secondStatus = 500
+        )
+        stubUserExists(realm = "skew-warn-realm", token = "t-warn")
+
+        // act
+        client.userExists("skew-warn-realm", "user@example.com")
+        advanceSeconds(26)
+        val exists = client.userExists("skew-warn-realm", "user@example.com")
+
+        // assert
+        assertThat(exists).isTrue()
+        val event = listAppender.list.first {
+            it.formattedMessage == "Failed to refresh Keycloak access token; using cached token within skew window"
+        }
+        assertThat(event.level).isEqualTo(Level.WARN)
+        assertThat(event.mdcPropertyMap).containsEntry(KEYCLOAK_OPERATION_KEY, "obtain_access_token")
+    }
+
+    @Test
+    fun `obtainAccessToken logs debug when refresh lock is contended and cached token is reused within skew`() {
+        // arrange
+        stubTokenScenario(
+            firstToken = "t-lock",
+            firstExpiresIn = 30,
+            secondStatus = 200,
+            secondToken = "unused"
+        )
+        stubUserExists(realm = "lock-realm", token = "t-lock")
+        client.userExists("lock-realm", "user@example.com")
+        advanceSeconds(26)
+
+        val lockField = client.javaClass.getDeclaredField("cachedAccessTokenWriteLock").apply { isAccessible = true }
+        val lock = lockField.get(client) as java.util.concurrent.locks.Lock
+        val cachedTokenField = client.javaClass.getDeclaredField("cachedAccessToken").apply { isAccessible = true }
+        val cachedWithinSkew = cachedTokenField.get(client)
+        val refreshIfPossible = client.javaClass.declaredMethods
+            .first { it.name == "refreshIfPossible" }
+            .apply { isAccessible = true }
+        val lockedLatch = CountDownLatch(1)
+        val releaseLatch = CountDownLatch(1)
+        val locker = Thread {
+            lock.lock()
+            try {
+                lockedLatch.countDown()
+                releaseLatch.await(5, TimeUnit.SECONDS)
+            } finally {
+                lock.unlock()
+            }
+        }
+        locker.start()
+        assertThat(lockedLatch.await(5, TimeUnit.SECONDS)).isTrue()
+
+        // act
+        try {
+            val token = refreshIfPossible.invoke(client, cachedWithinSkew) as String
+
+            // assert
+            assertThat(token).isEqualTo("t-lock")
+        } finally {
+            releaseLatch.countDown()
+            locker.join(5000)
+        }
+
+        val event = listAppender.list.first {
+            it.formattedMessage == "Using cached Keycloak access token within skew window"
+        }
+        assertThat(event.level).isEqualTo(Level.DEBUG)
+        server.verify(1, postRequestedFor(urlEqualTo("/realms/master/protocol/openid-connect/token")))
+    }
+
+    @Test
     fun `obtainAccessToken fetches new token after expiry`() {
         // arrange
         stubTokenScenario(
@@ -384,6 +550,64 @@ class HttpKeycloakAdminClientTest {
             getRequestedFor(urlPathEqualTo("/admin/realms/exp-realm/users"))
                 .withHeader("Authorization", equalTo("Bearer t-new"))
         )
+    }
+
+    @Test
+    fun `obtainAccessToken throws with preserved cause when retries exhausted`() {
+        // arrange
+        server.resetAll()
+        server.stubFor(
+            post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
+                .willReturn(aResponse().withStatus(500))
+        )
+
+        // act
+        assertThatThrownBy { client.userExists("retry-realm", "user@example.com") }
+            // assert
+            .isInstanceOfSatisfying(KeycloakAdminClientException::class.java) { e ->
+                assertThat(e.statusCode?.value()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value())
+                assertThat(e.cause).isNotNull()
+            }
+    }
+
+    @Test
+    fun `failed token refresh after expiry clears cached token and rethrows`() {
+        // arrange
+        stubTokenScenario(
+            firstToken = "t-exp",
+            firstExpiresIn = 10,
+            secondStatus = 500
+        )
+        stubUserExists(realm = "expired-refresh-realm", token = "t-exp")
+        client.userExists("expired-refresh-realm", "user@example.com")
+        advanceSeconds(11)
+
+        // act
+        assertThatThrownBy { client.userExists("expired-refresh-realm", "user@example.com") }
+            // assert
+            .isInstanceOf(KeycloakAdminClientException::class.java)
+
+        val cacheField = client.javaClass.getDeclaredField("cachedAccessToken").apply { isAccessible = true }
+        assertThat(cacheField.get(client)).isNull()
+    }
+
+    @Test
+    fun `obtainAccessToken throws when token endpoint returns empty access token`() {
+        // arrange
+        server.resetAll()
+        server.stubFor(
+            post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
+                .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
+                .willReturn(okJson("""{"access_token":"","expires_in":300}"""))
+        )
+
+        // act
+        assertThatThrownBy { client.userExists("empty-token-realm", "user@example.com") }
+            // assert
+            .isInstanceOfSatisfying(KeycloakAdminClientException::class.java) { e ->
+                assertThat(e.statusCode).isNull()
+                assertThat(e.message).contains("empty access token")
+            }
     }
 
     private fun stubToken(token: String = "admin-token") {

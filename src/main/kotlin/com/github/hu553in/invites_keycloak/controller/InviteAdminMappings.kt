@@ -2,6 +2,7 @@ package com.github.hu553in.invites_keycloak.controller
 
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
 import com.github.hu553in.invites_keycloak.entity.InviteEntity
+import com.github.hu553in.invites_keycloak.exception.InvalidInviteReason
 import java.time.Instant
 import java.util.*
 
@@ -16,7 +17,7 @@ object InviteAdminMappings {
         val uses: Int,
         val maxUses: Int,
         val expired: Boolean,
-        val usedUp: Boolean,
+        val overused: Boolean,
         val revoked: Boolean,
         val revokedAt: Instant?,
         val revokedBy: String?,
@@ -28,12 +29,12 @@ object InviteAdminMappings {
 
     fun InviteEntity.toView(now: Instant): InviteView {
         val expired = expiresAt.isBefore(now)
-        val usedUp = uses >= maxUses
-        val active = !revoked && !expired && !usedUp
+        val overused = uses >= maxUses
+        val active = !revoked && !expired && !overused
         val (statusLabel, statusClass) = when {
-            revoked -> "Revoked" to "revoked"
-            expired -> "Expired" to "expired"
-            usedUp -> "Used-up" to "used-up"
+            revoked -> "Revoked" to InvalidInviteReason.REVOKED.key
+            expired -> "Expired" to InvalidInviteReason.EXPIRED.key
+            overused -> "Overused" to InvalidInviteReason.OVERUSED.key
             else -> "Active" to "active"
         }
 
@@ -47,7 +48,7 @@ object InviteAdminMappings {
             uses = uses,
             maxUses = maxUses,
             expired = expired,
-            usedUp = usedUp,
+            overused = overused,
             revoked = revoked,
             revokedAt = revokedAt,
             revokedBy = revokedBy,

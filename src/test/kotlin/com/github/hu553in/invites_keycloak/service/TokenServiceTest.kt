@@ -1,8 +1,17 @@
 package com.github.hu553in.invites_keycloak.service
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
+import com.github.hu553in.invites_keycloak.util.ARG_EXPECTED_BYTES_KEY
+import com.github.hu553in.invites_keycloak.util.ARG_KEY
+import com.github.hu553in.invites_keycloak.util.ARG_VALUE_LENGTH_KEY
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.mockito.BDDMockito.mock
+import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.test.Test
 
@@ -100,6 +109,36 @@ class TokenServiceTest {
 
         // assert
         assertThat(ok).isTrue()
+    }
+
+    @Test
+    fun `hashToken logs malformed argument diagnostics at debug level`() {
+        // arrange
+        val validSalt = tokenService.generateSalt()
+        val logger = LoggerFactory.getLogger(TokenService::class.java) as Logger
+        val previousLevel = logger.level
+        logger.level = Level.DEBUG
+        val listAppender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(listAppender)
+
+        try {
+            // act
+            assertThatThrownBy { tokenService.hashToken("", validSalt) }
+                // assert
+                .isInstanceOf(IllegalArgumentException::class.java)
+
+            val event = listAppender.list.first { it.formattedMessage == "Token hashing argument validation failed" }
+            val keyValues = (event.keyValuePairs ?: emptyList())
+                .associate { it.key to (it.value?.toString() ?: "null") }
+
+            assertThat(event.level).isEqualTo(Level.DEBUG)
+            assertThat(keyValues).containsEntry(ARG_KEY, "token")
+            assertThat(keyValues).containsEntry(ARG_EXPECTED_BYTES_KEY, inviteProps.token.bytes.toString())
+            assertThat(keyValues).containsEntry(ARG_VALUE_LENGTH_KEY, "0")
+        } finally {
+            logger.detachAppender(listAppender)
+            logger.level = previousLevel
+        }
     }
 
     private fun verifyAlphabet(s: String) {

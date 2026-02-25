@@ -5,18 +5,18 @@ import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.util.ErrorMessages
-import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
-import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
-import com.github.hu553in.invites_keycloak.util.INVITE_REALM_KEY
+import com.github.hu553in.invites_keycloak.util.INVITE_FLOW_SHOULD_REVOKE_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_ROLES_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_TOKEN_LENGTH_KEY
+import com.github.hu553in.invites_keycloak.util.KEYCLOAK_REALM_KEY
+import com.github.hu553in.invites_keycloak.util.REQUEST_STATUS_KEY
 import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
 import com.github.hu553in.invites_keycloak.util.USER_ID_KEY
-import com.github.hu553in.invites_keycloak.util.dedupedEventForInviteError
+import com.github.hu553in.invites_keycloak.util.dedupedEventForAppError
+import com.github.hu553in.invites_keycloak.util.eventForAppError
 import com.github.hu553in.invites_keycloak.util.extractKeycloakException
 import com.github.hu553in.invites_keycloak.util.keycloakStatusFrom
 import com.github.hu553in.invites_keycloak.util.logger
-import com.github.hu553in.invites_keycloak.util.maskSensitive
 import com.github.hu553in.invites_keycloak.util.withInviteContextInMdc
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -43,7 +43,7 @@ class InvitePublicController(
 
     private val log by logger()
 
-    @GetMapping("/{realm}/{token}")
+    @GetMapping("/{realm}/{token}", "/{realm}/{token}/")
     @Operation(summary = "Validate invite")
     fun validateInvite(
         @PathVariable @NotBlank realm: String,
@@ -54,7 +54,7 @@ class InvitePublicController(
         val normalizedRealm = realm.trim()
         val normalizedToken = token.trim()
         log.atDebug()
-            .addKeyValue(INVITE_REALM_KEY) { normalizedRealm }
+            .addKeyValue(KEYCLOAK_REALM_KEY) { normalizedRealm }
             .addKeyValue(INVITE_TOKEN_LENGTH_KEY) { normalizedToken.length }
             .log { "Validating invite token" }
         val invite = inviteService.validateToken(normalizedRealm, normalizedToken)
@@ -64,36 +64,25 @@ class InvitePublicController(
             val userExists = keycloakAdminClient.userExists(normalizedRealm, email)
 
             if (userExists) {
-                return@withInviteContextInMdc handleExistingUser(normalizedRealm, inviteId, email, model, resp)
+                handleExistingUser(inviteId, model, resp)
+            } else {
+                completeInvite(normalizedRealm, inviteId, email, invite.roles, model, resp)
             }
-
-            completeInvite(normalizedRealm, inviteId, email, invite.roles, model, resp)
         }
     }
 
     private fun handleExistingUser(
-        realm: String,
         inviteId: UUID,
-        email: String,
         model: Model,
         resp: HttpServletResponse
     ): String {
         log.atWarn()
-            .addKeyValue(INVITE_ID_KEY) { inviteId }
-            .addKeyValue(INVITE_REALM_KEY) { realm }
-            .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
             .log { "Invite target user already exists; revoking invite" }
 
-        val revokeError = runCatching { inviteService.revoke(inviteId, SYSTEM_USER_ID) }
-            .onFailure {
-                log.atError()
-                    .addKeyValue(INVITE_ID_KEY) { inviteId }
-                    .addKeyValue(INVITE_REALM_KEY) { realm }
-                    .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
-                    .setCause(it)
-                    .log { "Failed to revoke invite after detecting existing user" }
-            }
-            .exceptionOrNull()
+        val revokeError = revokeInviteAndLogFailure(
+            inviteId = inviteId,
+            failureMessage = "Failed to revoke invite after detecting existing user"
+        )
 
         if (revokeError != null) {
             model.addAttribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
@@ -131,23 +120,19 @@ class InvitePublicController(
             inviteService.useOnce(inviteId)
 
             log.atInfo()
-                .addKeyValue(INVITE_ID_KEY) { inviteId }
-                .addKeyValue(INVITE_REALM_KEY) { realm }
-                .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
                 .addKeyValue(USER_ID_KEY) { createdUserId }
                 .addKeyValue(INVITE_ROLES_KEY) { roles.joinToString(",") }
                 .log { "Completed invite flow and triggered Keycloak actions" }
             "public/account_created"
         }.getOrElse { e ->
-            rollbackUser(realm, inviteId, email, createdUserId)
+            rollbackUser(realm, createdUserId)
             val keycloakStatus = keycloakStatusFrom(e)
             val shouldRevoke = shouldRevokeInvite(e)
-            val view = buildFailureView(shouldRevoke, inviteId, realm, email, keycloakStatus, model, resp)
+            val view = buildFailureView(shouldRevoke, inviteId, keycloakStatus, model, resp)
 
-            log.dedupedEventForInviteError(e, keycloakStatus = keycloakStatus)
-                .addKeyValue(INVITE_ID_KEY) { inviteId }
-                .addKeyValue(INVITE_REALM_KEY) { realm }
-                .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
+            log.dedupedEventForAppError(e, keycloakStatus = keycloakStatus)
+                .addKeyValue(INVITE_FLOW_SHOULD_REVOKE_KEY) { shouldRevoke }
+                .addKeyValue(REQUEST_STATUS_KEY) { resp.status }
                 .setCause(e)
                 .log { "Failed to complete invite flow; rolling back created user if any" }
 
@@ -158,22 +143,15 @@ class InvitePublicController(
     private fun buildFailureView(
         shouldRevoke: Boolean,
         inviteId: UUID,
-        realm: String,
-        email: String,
         keycloakStatus: HttpStatusCode?,
         model: Model,
         resp: HttpServletResponse
     ): String {
         if (shouldRevoke) {
-            runCatching { inviteService.revoke(inviteId, SYSTEM_USER_ID) }
-                .onFailure { revokeError ->
-                    log.atError()
-                        .addKeyValue(INVITE_ID_KEY) { inviteId }
-                        .addKeyValue(INVITE_REALM_KEY) { realm }
-                        .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
-                        .setCause(revokeError)
-                        .log { "Failed to revoke invite after invite flow error" }
-                }
+            revokeInviteAndLogFailure(
+                inviteId = inviteId,
+                failureMessage = "Failed to revoke invite after invite flow error"
+            )
             model.addAttribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID)
             model.addAttribute("error_details", ErrorMessages.INVITE_NO_LONGER_VALID_DETAILS)
             resp.status = HttpStatus.GONE.value()
@@ -196,19 +174,27 @@ class InvitePublicController(
         return "generic_error"
     }
 
-    private fun rollbackUser(realm: String, inviteId: UUID, email: String, createdUserId: String?) {
+    private fun rollbackUser(realm: String, createdUserId: String?) {
         runCatching {
             if (createdUserId != null) {
                 keycloakAdminClient.deleteUser(realm, createdUserId)
             }
         }.onFailure { deletionError ->
-            log.atDebug()
-                .addKeyValue(INVITE_ID_KEY) { inviteId }
-                .addKeyValue(INVITE_REALM_KEY) { realm }
-                .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(email) }
+            log.eventForAppError(deletionError)
+                .addKeyValue(USER_ID_KEY) { createdUserId }
                 .setCause(deletionError)
                 .log { "Failed to rollback Keycloak user after invite error (Keycloak client logged details)" }
         }
+    }
+
+    private fun revokeInviteAndLogFailure(inviteId: UUID, failureMessage: String): Throwable? {
+        return runCatching { inviteService.revoke(inviteId, SYSTEM_USER_ID) }
+            .onFailure { revokeError ->
+                log.atError()
+                    .setCause(revokeError)
+                    .log { failureMessage }
+            }
+            .exceptionOrNull()
     }
 
     private fun shouldRevokeInvite(error: Throwable): Boolean {

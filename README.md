@@ -26,8 +26,8 @@ user onboarding in Keycloak.
 - Create invites per realm with configurable expiry and usage limits.
 - Resend invites, including revoked, expired, or already used ones.
 - Revoke and delete invites explicitly.
-- Automatically delete invites after revoke, expiry, or usage.
-- View invite status: active, expired, used-up, or revoked.
+- Automatically clean up expired invites after the configured retention period (daily job).
+- View invite status: active, expired, overused, or revoked.
 
 ### Invite flow
 
@@ -121,6 +121,13 @@ To disable mail entirely, set:
 
 - `SPRING_AUTOCONFIGURE_EXCLUDE` to
   `org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration,org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration`
+
+### SpringDoc configuration
+
+- API docs and Swagger UI are disabled by default.
+- Enable via:
+  - `SPRINGDOC_API_DOCS_ENABLED=true`
+  - `SPRINGDOC_SWAGGER_UI_ENABLED=true`
 
 ### Database configuration
 
@@ -275,7 +282,7 @@ Deployment steps:
    ```
    docker compose pull && docker compose up -d --wait
    ```
-5. Verify service health at the configured health endpoint (default: `/actuator/health`).
+4. Verify service health at the configured health endpoint (default: `/actuator/health`).
 
 ---
 
@@ -295,10 +302,9 @@ See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-
 
 ## Observability
 
-- Actuator endpoints:
+- Actuator endpoints (these are public):
   - `/actuator/health`
-  - `/actuator/prometheus`<br>
-  These are public.
+  - `/actuator/prometheus`
 - All other actuator endpoints require the `invite-admin` role.
 
 ### Metrics
@@ -334,12 +340,13 @@ See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-
   - HTTP failures with status, context, and duration
   - retries at `DEBUG` level with retry counts
 - Controller advice enriches logs with route and status for traceability.
-- Use `log.dedupedEventForInviteError(...)` when handling
+- Use `log.dedupedEventForAppError(...)` when handling
   `KeycloakAdminClientException` outside the client to avoid double-logging.
 - Log level policy:
   - validation and client-side issues: `WARN`
-  - Keycloak 4xx: `WARN`
-  - server or misconfiguration issues: `ERROR`
+  - Keycloak 4xx (misconfiguration-like: `400/401/403/404/422`): `ERROR`
+  - other Keycloak 4xx: `WARN`
+  - server issues and unexpected failures: `ERROR`
   - routine reads and validation: `DEBUG`
   - state changes and audit events: `INFO`
 - Emails are always masked using `maskSensitive`.

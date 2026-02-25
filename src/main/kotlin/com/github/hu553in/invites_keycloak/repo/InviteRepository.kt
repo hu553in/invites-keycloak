@@ -56,18 +56,7 @@ interface InviteRepository : JpaRepository<InviteEntity, UUID> {
     )
     fun revokeOverused(realm: String, email: String, now: Instant, revokedBy: String): Int
 
-    @Query(
-        """
-        select invite
-        from InviteEntity invite
-        where invite.realm = :realm
-          and invite.tokenHash = :tokenHash
-          and invite.revoked = false
-          and invite.expiresAt > :now
-          and invite.uses < invite.maxUses
-        """
-    )
-    fun findValidByRealmAndTokenHash(realm: String, tokenHash: String, now: Instant): Optional<InviteEntity>
+    fun findByRealmAndTokenHash(realm: String, tokenHash: String): Optional<InviteEntity>
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
@@ -75,12 +64,9 @@ interface InviteRepository : JpaRepository<InviteEntity, UUID> {
         select invite
         from InviteEntity invite
         where invite.id = :id
-          and invite.revoked = false
-          and invite.expiresAt > :now
-          and invite.uses < invite.maxUses
         """
     )
-    fun findValidByIdForUpdate(id: UUID, now: Instant): Optional<InviteEntity>
+    fun findByIdForUpdate(id: UUID): Optional<InviteEntity>
 
     fun deleteByExpiresAtBefore(cutoff: Instant): Long
 }

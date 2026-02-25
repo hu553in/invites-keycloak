@@ -87,6 +87,12 @@ management:
     sampling:
       probability: 1.0
 
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 invite:
   public-base-url: # required and can't have default value
   expiry:

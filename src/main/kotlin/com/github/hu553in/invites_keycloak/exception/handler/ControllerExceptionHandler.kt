@@ -4,12 +4,17 @@ import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
 import com.github.hu553in.invites_keycloak.util.ErrorMessages
+import com.github.hu553in.invites_keycloak.util.INVITE_INVALID_REASON_KEY
+import com.github.hu553in.invites_keycloak.util.REQUEST_METHOD_KEY
 import com.github.hu553in.invites_keycloak.util.REQUEST_ROUTE_KEY
 import com.github.hu553in.invites_keycloak.util.REQUEST_STATUS_KEY
-import com.github.hu553in.invites_keycloak.util.dedupedEventForInviteError
+import com.github.hu553in.invites_keycloak.util.REQUEST_URI_KEY
+import com.github.hu553in.invites_keycloak.util.dedupedEventForAppError
+import com.github.hu553in.invites_keycloak.util.eventForAppError
 import com.github.hu553in.invites_keycloak.util.logger
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.spi.LoggingEventBuilder
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -29,10 +34,11 @@ class ControllerExceptionHandler {
         req: HttpServletRequest,
         resp: HttpServletResponse
     ): String {
-        log.atDebug()
+        log.eventForAppError(e)
             .setCause(e)
-            .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
+            .addRequestContext(req)
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.UNAUTHORIZED.value() }
+            .addKeyValue(INVITE_INVALID_REASON_KEY) { e.reason.key }
             .log { "${InvalidInviteException::class.simpleName} exception occurred" }
         if (!model.containsAttribute("error_message")) {
             model.addAttribute("error_message", "Invite is invalid")
@@ -55,9 +61,9 @@ class ControllerExceptionHandler {
             HttpStatus.SERVICE_UNAVAILABLE
         }
 
-        log.dedupedEventForInviteError(e, keycloakStatus = responseStatus)
+        log.dedupedEventForAppError(e, keycloakStatus = responseStatus)
             .setCause(e)
-            .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
+            .addRequestContext(req)
             .addKeyValue(REQUEST_STATUS_KEY) { responseStatus.value() }
             .log { "Keycloak admin client exception handled at controller layer" }
 
@@ -80,10 +86,11 @@ class ControllerExceptionHandler {
         req: HttpServletRequest,
         resp: HttpServletResponse
     ): String {
-        log.atDebug()
+        log.eventForAppError(e)
             .setCause(e)
-            .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
+            .addRequestContext(req)
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.NOT_FOUND.value() }
+            .addKeyValue(INVITE_INVALID_REASON_KEY) { "not_found" }
             .log { "${InviteNotFoundException::class.simpleName} exception occurred" }
         if (!model.containsAttribute("error_message")) {
             model.addAttribute("error_message", e.message ?: "Invite is not found")
@@ -94,9 +101,9 @@ class ControllerExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleUnknown(e: Exception, model: Model, req: HttpServletRequest, resp: HttpServletResponse): String {
-        log.atError()
+        log.eventForAppError(e)
             .setCause(e)
-            .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
+            .addRequestContext(req)
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.SERVICE_UNAVAILABLE.value() }
             .log { "Unknown exception handled at controller layer" }
         model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
@@ -114,4 +121,11 @@ private fun Model.addAttributeIfAbsent(name: String, value: Any) {
 
 private fun HttpServletRequest.routePatternOrUnknown(): String {
     return this.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) as? String ?: "unknown"
+}
+
+private fun LoggingEventBuilder.addRequestContext(req: HttpServletRequest): LoggingEventBuilder {
+    return this
+        .addKeyValue(REQUEST_METHOD_KEY) { req.method }
+        .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
+        .addKeyValue(REQUEST_URI_KEY) { req.requestURI }
 }

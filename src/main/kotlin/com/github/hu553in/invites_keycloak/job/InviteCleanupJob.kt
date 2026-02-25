@@ -10,6 +10,7 @@ import com.github.hu553in.invites_keycloak.util.withAuthDataInMdc
 import org.springframework.context.annotation.Profile
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 
@@ -24,11 +25,12 @@ class InviteCleanupJob(
     private val log by logger()
 
     @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.DAYS)
+    @Transactional
     fun cleanupInvites() {
         withAuthDataInMdc(SYSTEM_USER_ID) {
-            runCatching {
-                val retention = inviteProps.cleanup.retention
-                val cutoff = clock.instant().minus(retention)
+            val retention = inviteProps.cleanup.retention
+            val cutoff = clock.instant().minus(retention)
+            try {
                 log.atDebug()
                     .addKeyValue(RETENTION_DAYS_KEY) { retention.toDays() }
                     .log { "Starting invite cleanup job" }
@@ -44,10 +46,15 @@ class InviteCleanupJob(
                         .addKeyValue(RETENTION_DAYS_KEY) { retention.toDays() }
                         .log { "Invite cleanup job finished with no deletions" }
                 }
-            }.onFailure {
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception
+            ) {
                 log.atError()
-                    .setCause(it)
+                    .addKeyValue(RETENTION_DAYS_KEY) { retention.toDays() }
+                    .setCause(e)
                     .log { "Invite cleanup job failed" }
+                throw e
             }
         }
     }
