@@ -1,5 +1,6 @@
 package com.github.hu553in.invites_keycloak.config.props
 
+import com.github.hu553in.invites_keycloak.util.MailMessages
 import jakarta.validation.constraints.NotBlank
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.validation.annotation.Validated
@@ -9,5 +10,5 @@ import org.springframework.validation.annotation.Validated
 data class MailProps(
     val from: String? = null,
     @field:NotBlank
-    val subjectTemplate: String = "Invitation to %s"
+    val subjectTemplate: String = MailMessages.DEFAULT_INVITE_SUBJECT_TEMPLATE
 )

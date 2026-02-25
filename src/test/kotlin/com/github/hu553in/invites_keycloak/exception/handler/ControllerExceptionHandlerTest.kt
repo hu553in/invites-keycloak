@@ -21,8 +21,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.security.test.context.support.WithMockUser
@@ -75,8 +75,8 @@ class ControllerExceptionHandlerTest {
             status { isBadRequest() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CANNOT_BE_COMPLETED)
-                attribute("error_details", ErrorMessages.INVITE_CANNOT_BE_COMPLETED_DETAILS)
+                attribute("error_message", ErrorMessages.INVITE_CANNOT_BE_REDEEMED)
+                attribute("error_details", ErrorMessages.INVITE_CANNOT_BE_REDEEMED_DETAILS)
             }
         }
     }
@@ -108,7 +108,10 @@ class ControllerExceptionHandlerTest {
         result.andExpect {
             status { isUnauthorized() }
             view { name("generic_error") }
-            model { attribute("error_message", "Invite is invalid") }
+            model {
+                attribute("error_message", ErrorMessages.INVITE_INVALID)
+                attribute("error_details", ErrorMessages.INVITE_INVALID_DETAILS)
+            }
         }
 
         val event =
@@ -151,7 +154,10 @@ class ControllerExceptionHandlerTest {
         result.andExpect {
             status { isNotFound() }
             view { name("generic_error") }
-            model { attribute("error_message", "Invite is not found") }
+            model {
+                attribute("error_message", ErrorMessages.INVITE_NOT_FOUND)
+                attribute("error_details", ErrorMessages.INVITE_NOT_FOUND_DETAILS)
+            }
         }
 
         val event =

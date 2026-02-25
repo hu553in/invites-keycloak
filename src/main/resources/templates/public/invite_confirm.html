@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Confirm invite - Invites for your Keycloak 💌 🗝</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex min-h-screen items-center justify-center
+             bg-gradient-to-br from-emerald-50 via-white to-sky-50 text-slate-900 antialiased">
+<main class="mx-4 w-full max-w-xl rounded-2xl border border-emerald-200/80 bg-white/90
+             p-6 text-center shadow-2xl shadow-emerald-100 backdrop-blur sm:p-8 sm:text-left">
+    <h1 class="text-2xl font-semibold text-emerald-800">Create account</h1>
+    <form class="mt-4" method="post" th:action="@{|/invite/${realm}/${token}|}">
+        <input type="hidden" name="challenge" th:value="${redeemChallenge}"/>
+        <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold
+                       text-white shadow-lg shadow-emerald-300 transition
+                       hover:-translate-y-0.5 hover:bg-emerald-700
+                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+                       focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300">
+            Create account
+        </button>
+    </form>
+</main>
+</body>
+</html>

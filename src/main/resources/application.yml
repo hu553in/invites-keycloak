@@ -61,7 +61,6 @@ management:
     health:
       show-details: when_authorized
       probes:
-        enabled: true
         add-additional-paths: true
       group:
         liveness:

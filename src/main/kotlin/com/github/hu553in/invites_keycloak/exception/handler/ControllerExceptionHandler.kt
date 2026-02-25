@@ -40,9 +40,8 @@ class ControllerExceptionHandler {
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.UNAUTHORIZED.value() }
             .addKeyValue(INVITE_INVALID_REASON_KEY) { e.reason.key }
             .log { "${InvalidInviteException::class.simpleName} exception occurred" }
-        if (!model.containsAttribute("error_message")) {
-            model.addAttribute("error_message", "Invite is invalid")
-        }
+        model.addAttributeIfAbsent("error_message", ErrorMessages.INVITE_INVALID)
+        model.addAttributeIfAbsent("error_details", ErrorMessages.INVITE_INVALID_DETAILS)
         resp.status = HttpStatus.UNAUTHORIZED.value()
         return "generic_error"
     }
@@ -68,8 +67,8 @@ class ControllerExceptionHandler {
             .log { "Keycloak admin client exception handled at controller layer" }
 
         if (responseStatus.is4xxClientError) {
-            model.addAttributeIfAbsent("error_message", ErrorMessages.INVITE_CANNOT_BE_COMPLETED)
-            model.addAttributeIfAbsent("error_details", ErrorMessages.INVITE_CANNOT_BE_COMPLETED_DETAILS)
+            model.addAttributeIfAbsent("error_message", ErrorMessages.INVITE_CANNOT_BE_REDEEMED)
+            model.addAttributeIfAbsent("error_details", ErrorMessages.INVITE_CANNOT_BE_REDEEMED_DETAILS)
         } else {
             model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
             model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
@@ -92,9 +91,8 @@ class ControllerExceptionHandler {
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.NOT_FOUND.value() }
             .addKeyValue(INVITE_INVALID_REASON_KEY) { "not_found" }
             .log { "${InviteNotFoundException::class.simpleName} exception occurred" }
-        if (!model.containsAttribute("error_message")) {
-            model.addAttribute("error_message", e.message ?: "Invite is not found")
-        }
+        model.addAttributeIfAbsent("error_message", ErrorMessages.INVITE_NOT_FOUND)
+        model.addAttributeIfAbsent("error_details", ErrorMessages.INVITE_NOT_FOUND_DETAILS)
         resp.status = HttpStatus.NOT_FOUND.value()
         return "generic_error"
     }

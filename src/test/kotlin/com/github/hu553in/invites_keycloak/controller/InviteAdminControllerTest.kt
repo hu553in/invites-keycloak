@@ -7,6 +7,8 @@ import com.github.hu553in.invites_keycloak.entity.InviteEntity
 import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.service.MailService
+import com.github.hu553in.invites_keycloak.util.SuccessMessages
+import com.github.hu553in.invites_keycloak.util.UiMessageLevels
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -18,9 +20,9 @@ import org.mockito.BDDMockito.then
 import org.mockito.BDDMockito.verifyNoInteractions
 import org.mockito.BDDMockito.verifyNoMoreInteractions
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
@@ -259,9 +261,9 @@ class InviteAdminControllerTest(
             status { is3xxRedirection() }
             redirectedUrl("/admin/invite")
             flash {
-                attribute("successMessage", "Invite created for admin@example.com")
+                attribute("successMessage", SuccessMessages.adminInviteCreated("admin@example.com"))
                 attributeExists("inviteLink")
-                attribute("mailStatusLevel", "info")
+                attribute("mailStatusLevel", UiMessageLevels.INFO)
             }
         }
 
@@ -312,9 +314,9 @@ class InviteAdminControllerTest(
             status { is3xxRedirection() }
             redirectedUrl("/admin/invite")
             flash {
-                attribute("successMessage", "Invite created for no-roles@example.com")
+                attribute("successMessage", SuccessMessages.adminInviteCreated("no-roles@example.com"))
                 attributeExists("inviteLink")
-                attribute("mailStatusLevel", "info")
+                attribute("mailStatusLevel", UiMessageLevels.INFO)
             }
         }
 
@@ -461,7 +463,7 @@ class InviteAdminControllerTest(
             redirectedUrl("/admin/invite")
             flash {
                 attribute("inviteLink", "https://app.example.com/invite/other/token.resend")
-                attribute("mailStatusLevel", "warning")
+                attribute("mailStatusLevel", UiMessageLevels.WARNING)
             }
         }
         then(inviteService).should().resendInvite(inviteId, expectedExpiry, "system")
@@ -503,7 +505,7 @@ class InviteAdminControllerTest(
             redirectedUrl("/admin/invite")
             flash {
                 attribute("inviteLink", "https://app.example.com/invite/other/token.resend.revoked")
-                attribute("mailStatusLevel", "info")
+                attribute("mailStatusLevel", UiMessageLevels.INFO)
             }
         }
         then(inviteService).should().resendInvite(inviteId, expectedExpiry, "system")
@@ -567,7 +569,7 @@ class InviteAdminControllerTest(
         result.andExpect {
             status { is3xxRedirection() }
             redirectedUrl("/admin/invite")
-            flash { attribute("successMessage", "Invite deleted for user@example.com") }
+            flash { attribute("successMessage", SuccessMessages.adminInviteDeleted("user@example.com")) }
         }
         then(inviteService).should().delete(inviteId)
     }

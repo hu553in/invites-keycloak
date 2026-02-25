@@ -17,7 +17,9 @@ import com.github.hu553in.invites_keycloak.controller.InviteAdminMappings.toView
 import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.service.MailService
+import com.github.hu553in.invites_keycloak.util.AdminErrorMessages
 import com.github.hu553in.invites_keycloak.util.ERROR_COUNT_KEY
+import com.github.hu553in.invites_keycloak.util.ErrorCodes
 import com.github.hu553in.invites_keycloak.util.INVITE_CREATED_ID_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_EXPIRY_MINUTES_KEY
@@ -25,6 +27,8 @@ import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
 import com.github.hu553in.invites_keycloak.util.KEYCLOAK_OPERATION_KEY
 import com.github.hu553in.invites_keycloak.util.KEYCLOAK_REALM_KEY
 import com.github.hu553in.invites_keycloak.util.MAIL_STATUS_KEY
+import com.github.hu553in.invites_keycloak.util.SuccessMessages
+import com.github.hu553in.invites_keycloak.util.UiMessageLevels
 import com.github.hu553in.invites_keycloak.util.dedupedEventForAppError
 import com.github.hu553in.invites_keycloak.util.eventForAppError
 import com.github.hu553in.invites_keycloak.util.isClientSideAppFailure
@@ -165,7 +169,7 @@ class InviteAdminController(
 
         val link = buildInviteLink(inviteProps, realm, created.rawToken)
         val mailStatus = sendMail(created, link)
-        redirectAttributes.addFlashAttribute("successMessage", "Invite created for ${created.invite.email}")
+        redirectAttributes.addFlashAttribute("successMessage", SuccessMessages.adminInviteCreated(created.invite.email))
         redirectAttributes.addFlashAttribute("inviteLink", link)
         applyMailFlash(mailStatus, created.invite.email, redirectAttributes)
         withInviteContextInMdc(created.invite.id, created.invite.realm, created.invite.email) {
@@ -187,7 +191,11 @@ class InviteAdminController(
             .addKeyValue(INVITE_EMAIL_KEY) { maskSensitive(inviteForm.email) }
             .setCause(e)
             .log { "Active invite already exists" }
-        bindingResult.rejectValue("email", "email.duplicate", e.message ?: "Active invite already exists")
+        bindingResult.rejectValue(
+            "email",
+            ErrorCodes.ADMIN_EMAIL_DUPLICATE,
+            AdminErrorMessages.activeInviteAlreadyExists(e.email, e.realm)
+        )
         val realmForRetry = resolveRealmOrDefault(inviteForm.realm, inviteProps)
         inviteForm.realm = realmForRetry
         prepareForm(model, realmForRetry)
@@ -206,11 +214,11 @@ class InviteAdminController(
             .setCause(e)
             .log { "Failed to create invite" }
         val errorMessage = if (e.isClientSideAppFailure()) {
-            "Unable to create invite; please check input and try again."
+            AdminErrorMessages.CREATE_INVITE_INPUT_INVALID
         } else {
-            "Unable to create invite due to server error. Please retry later."
+            AdminErrorMessages.CREATE_INVITE_SERVER_ERROR
         }
-        bindingResult.reject("createInvite", errorMessage)
+        bindingResult.reject(ErrorCodes.ADMIN_INVITE_CREATE_FAILED, errorMessage)
         val realmForRetry = resolveRealmOrDefault(inviteForm.realm, inviteProps)
         inviteForm.realm = realmForRetry
         prepareForm(model, realmForRetry)
@@ -230,12 +238,12 @@ class InviteAdminController(
             }
             withInviteContextInMdc(id, invite.realm, invite.email) {
                 inviteService.revoke(id, authentication.nameOrSystem())
-                redirectAttributes.addFlashAttribute("successMessage", "Invite revoked for ${invite.email}")
+                redirectAttributes.addFlashAttribute("successMessage", SuccessMessages.adminInviteRevoked(invite.email))
             }
             "redirect:/admin/invite"
         }.getOrElse {
             logInviteAdminActionFailure(it, id, inviteContext, "Failed to revoke invite")
-            redirectAttributes.addFlashAttribute("errorMessage", it.message ?: "Failed to revoke invite")
+            redirectAttributes.addFlashAttribute("errorMessage", it.message ?: AdminErrorMessages.REVOKE_INVITE_FAILED)
             "redirect:/admin/invite"
         }
     }
@@ -252,12 +260,15 @@ class InviteAdminController(
                 inviteContext = it.realm to it.email
             }
             withInviteContextInMdc(id, deleted.realm, deleted.email) {
-                redirectAttributes.addFlashAttribute("successMessage", "Invite deleted for ${deleted.email}")
+                redirectAttributes.addFlashAttribute(
+                    "successMessage",
+                    SuccessMessages.adminInviteDeleted(deleted.email)
+                )
             }
             "redirect:/admin/invite"
         }.getOrElse {
             logInviteAdminActionFailure(it, id, inviteContext, "Failed to delete invite")
-            redirectAttributes.addFlashAttribute("errorMessage", it.message ?: "Failed to delete invite")
+            redirectAttributes.addFlashAttribute("errorMessage", it.message ?: AdminErrorMessages.DELETE_INVITE_FAILED)
             "redirect:/admin/invite"
         }
     }
@@ -277,8 +288,10 @@ class InviteAdminController(
                 .log { "Refusing to resend invite due to invalid expiryMinutes" }
             redirectAttributes.addFlashAttribute(
                 "errorMessage",
-                "Expiry minutes must be between ${inviteProps.expiry.min.toMinutes()} and " +
-                    "${inviteProps.expiry.max.toMinutes()}."
+                AdminErrorMessages.expiryRangeInvalid(
+                    inviteProps.expiry.min.toMinutes(),
+                    inviteProps.expiry.max.toMinutes()
+                )
             )
             return "redirect:/admin/invite"
         }
@@ -317,7 +330,7 @@ class InviteAdminController(
 
                         redirectAttributes.addFlashAttribute(
                             "successMessage",
-                            "Invite resent to ${created.invite.email}"
+                            SuccessMessages.adminInviteResent(created.invite.email)
                         )
                         redirectAttributes.addFlashAttribute("inviteLink", link)
                         applyMailFlash(mailStatus, created.invite.email, redirectAttributes)
@@ -331,7 +344,7 @@ class InviteAdminController(
             }
         }.getOrElse {
             logInviteAdminActionFailure(it, id, inviteContext, "Failed to resend invite")
-            redirectAttributes.addFlashAttribute("errorMessage", it.message ?: "Failed to resend invite")
+            redirectAttributes.addFlashAttribute("errorMessage", it.message ?: AdminErrorMessages.RESEND_INVITE_FAILED)
             "redirect:/admin/invite"
         }
     }
@@ -353,7 +366,7 @@ class InviteAdminController(
                 )
                 redirectAttributes.addFlashAttribute(
                     "errorMessage",
-                    "Cannot resend invite now: roles are unavailable (Keycloak may be down)."
+                    AdminErrorMessages.RESEND_ROLES_UNAVAILABLE
                 )
             }
             .getOrNull()
@@ -366,7 +379,7 @@ class InviteAdminController(
             .log { "Refusing to resend invite because some roles are missing in Keycloak" }
         redirectAttributes.addFlashAttribute(
             "errorMessage",
-            "Cannot resend: invite roles no longer exist in Keycloak. Create a new invite with valid roles."
+            AdminErrorMessages.RESEND_ROLES_MISSING
         )
         return "redirect:/admin/invite"
     }
@@ -389,12 +402,12 @@ class InviteAdminController(
         redirectAttributes: RedirectAttributes
     ) {
         val (message, severity) = when (status) {
-            MailService.MailSendStatus.OK -> "Invite email sent to $email" to "info"
+            MailService.MailSendStatus.OK -> SuccessMessages.adminInviteEmailSent(email) to UiMessageLevels.INFO
             MailService.MailSendStatus.NOT_CONFIGURED ->
-                "Invite email not sent: SMTP is not configured." to "warning"
+                AdminErrorMessages.MAIL_NOT_SENT_SMTP_NOT_CONFIGURED to UiMessageLevels.WARNING
 
             MailService.MailSendStatus.FAIL ->
-                "Invite email could not be sent. Please check the mail logs." to "error"
+                AdminErrorMessages.MAIL_NOT_SENT_CHECK_LOGS to UiMessageLevels.ERROR
         }
         redirectAttributes.addFlashAttribute("mailStatusMessage", message)
         redirectAttributes.addFlashAttribute("mailStatusLevel", severity)
@@ -445,7 +458,7 @@ class InviteAdminController(
                 )
                 RoleFetchResult(
                     roles = emptyList(),
-                    errorMessage = "Roles are temporarily unavailable. Keycloak may be down; please retry later.",
+                    errorMessage = AdminErrorMessages.ROLES_UNAVAILABLE_FOR_FORM,
                     available = false
                 )
             }
@@ -479,14 +492,18 @@ class InviteAdminController(
                             message = "Failed to fetch roles for validation (Keycloak client logged details)"
                         )
                         bindingResult.reject(
-                            "roles.unavailable",
-                            "Unable to fetch realm roles from Keycloak right now. Please try again."
+                            ErrorCodes.ADMIN_ROLES_UNAVAILABLE,
+                            AdminErrorMessages.ROLES_UNAVAILABLE_FOR_VALIDATION
                         )
                     }
                     .getOrNull()
 
                 if (allowedRoles != null && !allowedRoles.containsAll(rolesToUse)) {
-                    bindingResult.rejectValue("roles", "roles.invalid", "Selected roles are not available in Keycloak")
+                    bindingResult.rejectValue(
+                        "roles",
+                        ErrorCodes.ADMIN_ROLES_INVALID,
+                        AdminErrorMessages.ROLES_INVALID
+                    )
                 }
 
                 rolesToUse.takeUnless { bindingResult.hasErrors() }

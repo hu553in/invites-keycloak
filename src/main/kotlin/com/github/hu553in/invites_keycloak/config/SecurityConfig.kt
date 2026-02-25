@@ -1,9 +1,9 @@
 package com.github.hu553in.invites_keycloak.config
 
 import com.github.hu553in.invites_keycloak.config.props.KeycloakProps
-import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest
-import org.springframework.boot.actuate.health.HealthEndpoint
-import org.springframework.boot.actuate.metrics.export.prometheus.PrometheusScrapeEndpoint
+import org.springframework.boot.health.actuate.endpoint.HealthEndpoint
+import org.springframework.boot.micrometer.metrics.autoconfigure.export.prometheus.PrometheusScrapeEndpoint
+import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -37,7 +37,15 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers(healthAndPrometheusMatcher).permitAll()
-                    .requestMatchers("/", "/favicon.ico", "/invite/**", "/css/**", "/js/**", "/images/**").permitAll()
+                    .requestMatchers(
+                        "/",
+                        "/favicon.ico",
+                        "/robots.txt",
+                        "/invite/**",
+                        "/css/**",
+                        "/js/**",
+                        "/images/**"
+                    ).permitAll()
                     .anyRequest().hasRole(keycloakProps.requiredRole)
             }
             .oauth2Login { oauth2 ->

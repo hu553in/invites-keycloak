@@ -16,8 +16,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.mock.web.MockHttpServletRequest
@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController
     controllers = [AccessLoggingFilterTest.TestLoggingController::class],
     properties = ["access-logging.enabled=true"]
 )
-@AutoConfigureMockMvc(addFilters = true)
+@AutoConfigureMockMvc
 @Import(
     AccessLoggingFilter::class,
     ControllerExceptionHandler::class,

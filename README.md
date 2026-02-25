@@ -31,13 +31,30 @@ user onboarding in Keycloak.
 
 ### Invite flow
 
-- Validate the invitation token.
-- Create a Keycloak user.
-- Assign predefined realm roles.
-- Trigger a required-actions email from Keycloak.
-- Mark the invite as used.
+- `GET /invite/{realm}/{token}` validates the invitation token and renders a confirmation page.
+- `POST /invite/{realm}/{token}` (on form submission) performs the redeem flow:
+  - create a Keycloak user
+  - assign predefined realm roles
+  - trigger a required-actions email from Keycloak
+  - mark the invite as used
+- Successful `POST` requests redirect to `/invite/success` (PRG) to avoid form resubmission on refresh.
+- `GET` performs **no side effects**.
+- `POST` requires:
+  - a valid CSRF token
+  - a one-time confirmation challenge issued by the `GET` page
+- Reopening the confirmation page for the same invite in the same browser session invalidates
+  previously issued confirmation challenges for that invite (the latest page wins).
+- While a redeem `POST` is in progress for an invite, the same browser session cannot issue
+  a new confirmation challenge for that invite.
+- The confirmation challenge is stored in the server-side HTTP session.
+  A small serializable challenge map is stored as a session attribute.
+  For multi-instance deployments, configure either session affinity (`sticky sessions`)
+  or shared session state (for example, Spring Session with Redis).
+- Confirmation challenge and in-flight protections are scoped to a single HTTP session.
+  They prevent re-entry and refresh races within the same browser session, but do not
+  coordinate different browsers/devices/sessions using the same invite link at the same time.
 
-The flow is **atomic**:
+The redeem flow (`POST`) uses **compensating actions** to stay failure-safe:
 
 - If any step fails, the created Keycloak user is deleted.
 - Permanent errors (for example: missing roles, client-side 4xx from Keycloak) revoke the invite.
@@ -252,12 +269,13 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
   Protected by Keycloak OAuth2 login.
 
 - `/invite/{realm}/{token}`<br>
-  Public endpoint:
-  - validates the invite token
-  - creates the Keycloak user
-  - assigns roles
-  - triggers required-actions email
-  - marks the invite as used
+  Public invite endpoint (also accepts a trailing slash for both `GET` and `POST`):
+  - `GET` renders a minimal confirmation page (no side effects)
+  - `POST` redeems the invite after explicit confirmation (`CSRF` + one-time challenge)
+    and redirects to `/invite/success`
+
+- `/invite/success`<br>
+  Public success page used as the redirect target after successful invite redemption.
 
 Admin pages include a logout action that signs out of Keycloak and returns to the start page.
 

@@ -22,8 +22,8 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -36,7 +36,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -129,7 +129,7 @@ class SecurityConfigTest(
         val initial = mockMvc.perform(get("/admin/test").session(session))
             // assert
             .andExpect(status().is3xxRedirection)
-            .andExpect(redirectedUrlPattern("**/oauth2/authorization/keycloak"))
+            .andExpect(redirectedUrl("/oauth2/authorization/keycloak"))
             .andReturn()
 
         // act
@@ -247,6 +247,29 @@ class SecurityConfigTest(
     }
 
     @Test
+    fun `public invite redeem requires csrf`() {
+        // act
+        mockMvc.perform(
+            post("/invite/master/token")
+                .param("challenge", "test-challenge")
+        )
+            // assert
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `public invite redeem reaches application with csrf`() {
+        // act
+        mockMvc.perform(
+            post("/invite/master/token")
+                .param("challenge", "test-challenge")
+                .with(csrf())
+        )
+            // assert
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
     fun `favicon endpoint stays public`() {
         // act
         val result = mockMvc.perform(get("/favicon.ico"))
@@ -257,6 +280,19 @@ class SecurityConfigTest(
         assertThat(result.response.contentType).isEqualTo("image/x-icon")
         assertThat(result.response.getHeader(HttpHeaders.CACHE_CONTROL)).contains("max-age=3600")
         assertThat(result.response.contentAsByteArray).isNotEmpty()
+    }
+
+    @Test
+    fun `robots endpoint stays public`() {
+        // act
+        val result = mockMvc.perform(get("/robots.txt"))
+            // assert
+            .andExpect(status().isOk)
+            .andReturn()
+
+        assertThat(result.response.contentType).isEqualTo(MediaType.TEXT_PLAIN_VALUE)
+        assertThat(result.response.getHeader(HttpHeaders.CACHE_CONTROL)).contains("max-age=3600")
+        assertThat(result.response.contentAsString).isEqualTo("User-agent: *\nDisallow: /\n")
     }
 
     @Test
@@ -308,7 +344,7 @@ class SecurityConfigTest(
         val initial = mockMvc.perform(get("/admin/test").session(session))
             // assert
             .andExpect(status().is3xxRedirection)
-            .andExpect(redirectedUrlPattern("**/oauth2/authorization/keycloak"))
+            .andExpect(redirectedUrl("/oauth2/authorization/keycloak"))
             .andReturn()
 
         // act

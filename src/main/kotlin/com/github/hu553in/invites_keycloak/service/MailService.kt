@@ -2,6 +2,7 @@ package com.github.hu553in.invites_keycloak.service
 
 import com.github.hu553in.invites_keycloak.config.props.MailProps
 import com.github.hu553in.invites_keycloak.util.MAIL_STATUS_KEY
+import com.github.hu553in.invites_keycloak.util.MailMessages
 import com.github.hu553in.invites_keycloak.util.logger
 import com.github.hu553in.invites_keycloak.util.withInviteContextInMdc
 import jakarta.mail.MessagingException
@@ -77,7 +78,7 @@ class MailService(
                 log.atWarn()
                     .setCause(it)
                     .log { "Falling back to default invite email subject template" }
-                "Invitation to $realm"
+                MailMessages.defaultInviteSubject(realm)
             }
     }
 

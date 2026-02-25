@@ -1,6 +1,8 @@
 package com.github.hu553in.invites_keycloak.controller
 
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
+import com.github.hu553in.invites_keycloak.util.AdminErrorMessages
+import com.github.hu553in.invites_keycloak.util.ErrorCodes
 import com.github.hu553in.invites_keycloak.util.userIdOrSystem
 import org.springframework.security.core.Authentication
 import org.springframework.ui.Model
@@ -84,12 +86,20 @@ object InviteAdminFormSupport {
         val normalized = realm.trim()
         return when {
             normalized.isEmpty() -> {
-                bindingResult.rejectValue("realm", "realm.empty", "Realm is required")
+                bindingResult.rejectValue(
+                    "realm",
+                    ErrorCodes.ADMIN_REALM_EMPTY,
+                    AdminErrorMessages.REALM_REQUIRED
+                )
                 null
             }
 
             !inviteProps.realms.containsKey(normalized) -> {
-                bindingResult.rejectValue("realm", "realm.invalid", "Realm is not allowed")
+                bindingResult.rejectValue(
+                    "realm",
+                    ErrorCodes.ADMIN_REALM_INVALID,
+                    AdminErrorMessages.REALM_NOT_ALLOWED
+                )
                 null
             }
 
@@ -112,8 +122,8 @@ object InviteAdminFormSupport {
         if (duration == null && bindingResult != null) {
             bindingResult.rejectValue(
                 "expiryMinutes",
-                "expiry.invalid",
-                "Expiry must be between $minMinutes and $maxMinutes minutes"
+                ErrorCodes.ADMIN_EXPIRY_INVALID,
+                AdminErrorMessages.expiryRangeInvalid(minMinutes, maxMinutes)
             )
         }
         return duration

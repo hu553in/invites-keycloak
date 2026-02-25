@@ -11,6 +11,7 @@ import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
 import com.github.hu553in.invites_keycloak.util.KEYCLOAK_REALM_KEY
 import com.github.hu553in.invites_keycloak.util.MAIL_STATUS_KEY
+import com.github.hu553in.invites_keycloak.util.MailMessages
 import com.github.hu553in.invites_keycloak.util.maskSensitive
 import com.github.hu553in.invites_keycloak.util.objectProvider
 import jakarta.mail.Session
@@ -92,7 +93,7 @@ class MailServiceTest {
 
         // assert
         assertThat(status).isEqualTo(MailSendStatus.OK)
-        assertThat(msg.subject).isEqualTo("Invitation to master")
+        assertThat(msg.subject).isEqualTo(MailMessages.defaultInviteSubject("master"))
         assertThat(msg.allRecipients).hasSize(1)
         assertThat(msg.allRecipients[0].toString()).isEqualTo("user@example.com")
         assertThat(msg.content.toString()).contains(data.link)
@@ -216,7 +217,7 @@ class MailServiceTest {
 
         // assert
         assertThat(status).isEqualTo(MailSendStatus.OK)
-        assertThat(msg.subject).isEqualTo("Invitation to master")
+        assertThat(msg.subject).isEqualTo(MailMessages.defaultInviteSubject("master"))
         val fallbackEvent = listAppender.list.first {
             it.formattedMessage == "Falling back to default invite email subject template"
         }
