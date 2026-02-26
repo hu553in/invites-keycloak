@@ -1,4 +1,4 @@
-import io.gitlab.arturbosch.detekt.getSupportedKotlinVersion
+import dev.detekt.gradle.plugin.getSupportedKotlinVersion
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
@@ -33,7 +33,7 @@ scmVersion {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
@@ -73,13 +73,13 @@ dependencies {
 
     testRuntimeOnly(libs.junit.platform.launcher)
 
-    detektPlugins(libs.detekt.formatting)
+    detektPlugins(libs.detekt.ktlint)
 }
 
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
-        jvmTarget.set(JvmTarget.JVM_21)
+        jvmTarget.set(JvmTarget.JVM_25)
     }
 }
 
@@ -103,6 +103,7 @@ tasks.withType<Test> {
 detekt {
     buildUponDefaultConfig = true
     parallel = true
+    autoCorrect = project.hasProperty("detektAutoCorrect")
     config.setFrom(files("$rootDir/config/detekt.yml"))
 }
 

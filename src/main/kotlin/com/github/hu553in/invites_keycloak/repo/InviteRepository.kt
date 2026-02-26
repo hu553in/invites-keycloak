@@ -22,7 +22,7 @@ interface InviteRepository : JpaRepository<InviteEntity, UUID> {
           and invite.revoked = false
           and invite.expiresAt > :now
           and invite.uses < invite.maxUses
-        """
+        """,
     )
     fun existsActiveByRealmAndEmail(realm: String, email: String, now: Instant): Boolean
 
@@ -37,7 +37,7 @@ interface InviteRepository : JpaRepository<InviteEntity, UUID> {
           and invite.email = :email
           and invite.revoked = false
           and invite.expiresAt <= :now
-        """
+        """,
     )
     fun revokeExpired(realm: String, email: String, now: Instant, revokedBy: String): Int
 
@@ -52,7 +52,7 @@ interface InviteRepository : JpaRepository<InviteEntity, UUID> {
           and invite.email = :email
           and invite.revoked = false
           and invite.uses >= invite.maxUses
-        """
+        """,
     )
     fun revokeOverused(realm: String, email: String, now: Instant, revokedBy: String): Int
 
@@ -64,7 +64,7 @@ interface InviteRepository : JpaRepository<InviteEntity, UUID> {
         select invite
         from InviteEntity invite
         where invite.id = :id
-        """
+        """,
     )
     fun findByIdForUpdate(id: UUID): Optional<InviteEntity>
 

@@ -85,7 +85,7 @@ class LoggingUtilTest {
         // arrange
         val nested = RuntimeException(
             "outer",
-            IllegalStateException("inner", KeycloakAdminClientException("kc", HttpStatus.BAD_GATEWAY))
+            IllegalStateException("inner", KeycloakAdminClientException("kc", HttpStatus.BAD_GATEWAY)),
         )
 
         // act
@@ -106,7 +106,7 @@ class LoggingUtilTest {
         withMdc(
             "alpha" to "  outer  ",
             "beta" to "   ",
-            "gamma" to "  value  "
+            "gamma" to "  value  ",
         ) {
             // assert
             assertThat(MDC.get("alpha")).isEqualTo("outer")
@@ -146,7 +146,5 @@ class LoggingUtilTest {
         assertThat(MDC.get(KEYCLOAK_REALM_KEY)).isEqualTo("existing-realm")
     }
 
-    private fun lastLevel(): Level {
-        return listAppender.list.last().level
-    }
+    private fun lastLevel(): Level = listAppender.list.last().level
 }

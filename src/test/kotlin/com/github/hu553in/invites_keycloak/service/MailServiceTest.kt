@@ -47,7 +47,7 @@ class MailServiceTest {
                 suffix = ".html"
                 characterEncoding = Charsets.UTF_8.name()
                 templateMode = TemplateMode.HTML
-            }
+            },
         )
     }
 
@@ -85,7 +85,7 @@ class MailServiceTest {
             realm = "master",
             email = "user@example.com",
             link = "https://example.org/invite/master/token",
-            expiresAt = Instant.parse("2025-02-01T10:15:30Z")
+            expiresAt = Instant.parse("2025-02-01T10:15:30Z"),
         )
 
         // act
@@ -118,7 +118,7 @@ class MailServiceTest {
             realm = "master",
             email = "user@example.com",
             link = "https://example.org/invite/master/token",
-            expiresAt = clock.instant()
+            expiresAt = clock.instant(),
         )
 
         // act
@@ -144,7 +144,7 @@ class MailServiceTest {
             realm = "master",
             email = "user@example.com",
             link = "https://example.org/invite/master/token",
-            expiresAt = clock.instant()
+            expiresAt = clock.instant(),
         )
 
         // act
@@ -175,7 +175,7 @@ class MailServiceTest {
             realm = "master",
             email = "invalid-email@",
             link = "https://example.org/invite/master/token",
-            expiresAt = clock.instant()
+            expiresAt = clock.instant(),
         )
 
         // act
@@ -202,14 +202,14 @@ class MailServiceTest {
         val svc = MailService(
             objectProvider(sender),
             templateEngine,
-            MailProps(subjectTemplate = "Invitation to %q")
+            MailProps(subjectTemplate = "Invitation to %q"),
         )
         val data = InviteMailData(
             inviteId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
             realm = "master",
             email = "user@example.com",
             link = "https://example.org/invite/master/token",
-            expiresAt = clock.instant()
+            expiresAt = clock.instant(),
         )
 
         // act
@@ -226,8 +226,6 @@ class MailServiceTest {
         assertThat(sentEvent.keyValues()).containsEntry(MAIL_STATUS_KEY, "ok")
     }
 
-    private fun ILoggingEvent.keyValues(): Map<String, String> {
-        return (this.keyValuePairs ?: emptyList())
-            .associate { it.key to (it.value?.toString() ?: "null") }
-    }
+    private fun ILoggingEvent.keyValues(): Map<String, String> = (this.keyValuePairs ?: emptyList())
+        .associate { it.key to (it.value?.toString() ?: "null") }
 }

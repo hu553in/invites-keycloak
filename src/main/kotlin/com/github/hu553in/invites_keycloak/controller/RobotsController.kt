@@ -13,10 +13,8 @@ private const val ROBOTS_TXT = "User-agent: *\nDisallow: /\n"
 class RobotsController {
 
     @GetMapping("/robots.txt")
-    fun robots(): ResponseEntity<String> {
-        return ResponseEntity.ok()
-            .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS))
-            .contentType(MediaType.TEXT_PLAIN)
-            .body(ROBOTS_TXT)
-    }
+    fun robots(): ResponseEntity<String> = ResponseEntity.ok()
+        .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS))
+        .contentType(MediaType.TEXT_PLAIN)
+        .body(ROBOTS_TXT)
 }

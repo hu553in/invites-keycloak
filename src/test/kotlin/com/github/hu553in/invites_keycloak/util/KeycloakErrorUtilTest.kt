@@ -44,7 +44,7 @@ class KeycloakErrorUtilTest {
             "Too Many Requests",
             HttpHeaders.EMPTY,
             ByteArray(0),
-            StandardCharsets.UTF_8
+            StandardCharsets.UTF_8,
         )
         val keycloakError = KeycloakAdminClientException("kc", webClientError)
         val wrapped = RuntimeException("outer", IllegalStateException("inner", keycloakError))

@@ -36,7 +36,7 @@ class InviteRepositoryTest(
     private val inviteRepository: InviteRepository,
     private val clock: Clock,
     private val jdbcClient: JdbcClient,
-    private val entityManager: EntityManager
+    private val entityManager: EntityManager,
 ) {
 
     @Test
@@ -53,7 +53,7 @@ class InviteRepositoryTest(
             createdAt = now,
             expiresAt = expiresAt,
             maxUses = 2,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         val saved = inviteRepository.saveAndFlush(invite)
 
@@ -79,7 +79,7 @@ class InviteRepositoryTest(
             createdBy = "creator",
             createdAt = now,
             expiresAt = now.plusSeconds(3600),
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         inviteRepository.saveAndFlush(invite)
 
@@ -102,7 +102,7 @@ class InviteRepositoryTest(
             createdBy = "creator",
             createdAt = now,
             expiresAt = now.plusSeconds(3600),
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         inviteRepository.saveAndFlush(invite)
 
@@ -128,7 +128,7 @@ class InviteRepositoryTest(
             expiresAt = expiresAt,
             maxUses = 2,
             revoked = true,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         inviteRepository.saveAndFlush(invite)
 
@@ -153,13 +153,13 @@ class InviteRepositoryTest(
             createdBy = "creator",
             createdAt = now,
             expiresAt = expiresAt,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         inviteRepository.saveAndFlush(invite)
 
         // act
         assertThat(
-            inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", clock.instant())
+            inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", clock.instant()),
         )
             // assert
             .isTrue()
@@ -167,7 +167,7 @@ class InviteRepositoryTest(
         // act
         val pastInstant = clock.instant().plusSeconds(7200)
         assertThat(
-            inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", pastInstant)
+            inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", pastInstant),
         )
             // assert
             .isFalse()
@@ -187,13 +187,13 @@ class InviteRepositoryTest(
             expiresAt = now.plusSeconds(3600),
             maxUses = 1,
             uses = 1,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         inviteRepository.saveAndFlush(invite)
 
         // act
         assertThat(
-            inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", clock.instant())
+            inviteRepository.existsActiveByRealmAndEmail("master", "user@example.com", clock.instant()),
         )
             // assert
             .isFalse()
@@ -214,7 +214,7 @@ class InviteRepositoryTest(
             expiresAt = expiresAt,
             maxUses = 2,
             uses = 2,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         inviteRepository.saveAndFlush(invite)
 
@@ -239,7 +239,7 @@ class InviteRepositoryTest(
             createdAt = now,
             expiresAt = now.plusSeconds(3600),
             maxUses = 2,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
 
         val saved = inviteRepository.saveAndFlush(invite)
@@ -275,7 +275,7 @@ class InviteRepositoryTest(
             createdAt = now,
             expiresAt = expiresAt,
             maxUses = 2,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         val saved = inviteRepository.saveAndFlush(invite)
 
@@ -313,7 +313,7 @@ class InviteRepositoryTest(
             expiresAt = expiresAt,
             maxUses = 2,
             revoked = true,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         val saved = inviteRepository.saveAndFlush(invite)
 
@@ -340,7 +340,7 @@ class InviteRepositoryTest(
             expiresAt = expiresAt,
             maxUses = 2,
             uses = 2,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
         val saved = inviteRepository.saveAndFlush(invite)
 
@@ -365,7 +365,7 @@ class InviteRepositoryTest(
             createdAt = now,
             expiresAt = now.plusSeconds(3600),
             maxUses = 2,
-            roles = setOf("realm-admin")
+            roles = setOf("realm-admin"),
         )
 
         val saved = inviteRepository.saveAndFlush(invite)

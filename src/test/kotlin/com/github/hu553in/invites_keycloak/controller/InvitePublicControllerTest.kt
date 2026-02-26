@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit
 @Import(
     ControllerExceptionHandler::class,
     TestClientRegistrationRepositoryConfig::class,
-    InvitePublicControllerTest.TestConfig::class
+    InvitePublicControllerTest.TestConfig::class,
 )
 @Suppress("LargeClass")
 class InvitePublicControllerTest {
@@ -695,7 +695,7 @@ class InvitePublicControllerTest {
             "bad request",
             org.springframework.http.HttpHeaders(),
             ByteArray(0),
-            null
+            null,
         )
         val exception = KeycloakAdminClientException("role missing", clientError)
 
@@ -731,7 +731,7 @@ class InvitePublicControllerTest {
             "conflict",
             org.springframework.http.HttpHeaders(),
             ByteArray(0),
-            null
+            null,
         )
         val exception = KeycloakAdminClientException("user exists", conflict)
 
@@ -767,7 +767,7 @@ class InvitePublicControllerTest {
         given(keycloakAdminClient.userExists("master", invite.email)).willReturn(false)
         given(keycloakAdminClient.createUser("master", invite.email, invite.email)).willReturn("user-id")
         willThrow(
-            KeycloakAdminClientException("role is not found", org.springframework.http.HttpStatus.NOT_FOUND)
+            KeycloakAdminClientException("role is not found", org.springframework.http.HttpStatus.NOT_FOUND),
         )
             .given(keycloakAdminClient)
             .assignRealmRoles("master", "user-id", invite.roles)
@@ -788,10 +788,7 @@ class InvitePublicControllerTest {
         then(inviteService).should(never()).useOnce(invite.id!!)
     }
 
-    private fun openConfirmPage(
-        path: String = "/invite/master/token",
-        session: MockHttpSession? = null
-    ): ConfirmPage {
+    private fun openConfirmPage(path: String = "/invite/master/token", session: MockHttpSession? = null): ConfirmPage {
         val result = if (session == null) {
             mockMvc.get(path).andReturn()
         } else {
@@ -804,21 +801,18 @@ class InvitePublicControllerTest {
         return ConfirmPage(resolvedSession, challenge)
     }
 
-    private fun redeemInvite(
-        path: String = "/invite/master/token",
-        session: MockHttpSession,
-        challenge: String?
-    ) = mockMvc.post(path) {
-        this.session = session
-        if (challenge != null) {
-            param("challenge", challenge)
+    private fun redeemInvite(path: String = "/invite/master/token", session: MockHttpSession, challenge: String?) =
+        mockMvc.post(path) {
+            this.session = session
+            if (challenge != null) {
+                param("challenge", challenge)
+            }
         }
-    }
 
     private fun createInvite(
         realm: String = "master",
         email: String = "user@example.com",
-        roles: Set<String> = setOf("realmRole")
+        roles: Set<String> = setOf("realmRole"),
     ): InviteEntity {
         val now = Instant.parse("2025-01-01T00:00:00Z")
         val expiresAt = now.plusSeconds(3600)
@@ -833,14 +827,11 @@ class InvitePublicControllerTest {
             createdAt = now,
             expiresAt = expiresAt,
             maxUses = 1,
-            roles = roles
+            roles = roles,
         )
     }
 
-    private data class ConfirmPage(
-        val session: MockHttpSession,
-        val challenge: String
-    )
+    private data class ConfirmPage(val session: MockHttpSession, val challenge: String)
 
     private class MutableClock(initial: Instant) : Clock() {
         private var current: Instant = initial

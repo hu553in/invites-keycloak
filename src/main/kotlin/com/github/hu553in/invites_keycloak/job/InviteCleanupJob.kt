@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 class InviteCleanupJob(
     private val inviteRepository: InviteRepository,
     private val clock: Clock,
-    private val inviteProps: InviteProps
+    private val inviteProps: InviteProps,
 ) {
 
     private val log by logger()
@@ -48,7 +48,7 @@ class InviteCleanupJob(
                 }
             } catch (
                 @Suppress("TooGenericExceptionCaught")
-                e: Exception
+                e: Exception,
             ) {
                 log.atError()
                     .addKeyValue(RETENTION_DAYS_KEY) { retention.toDays() }

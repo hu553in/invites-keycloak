@@ -32,14 +32,14 @@ import org.springframework.web.bind.annotation.RestController
 
 @WebMvcTest(
     controllers = [AccessLoggingFilterTest.TestLoggingController::class],
-    properties = ["access-logging.enabled=true"]
+    properties = ["access-logging.enabled=true"],
 )
 @AutoConfigureMockMvc
 @Import(
     AccessLoggingFilter::class,
     ControllerExceptionHandler::class,
     TestClientRegistrationRepositoryConfig::class,
-    AccessLoggingFilterTest.TestLoggingController::class
+    AccessLoggingFilterTest.TestLoggingController::class,
 )
 @ActiveProfiles("test")
 class AccessLoggingFilterTest {
@@ -180,9 +180,7 @@ class AccessLoggingFilterTest {
     @RestController
     class TestLoggingController {
         @GetMapping("/access-log/{realm}/{token}")
-        fun accessLog(@PathVariable realm: String, @PathVariable token: String): String {
-            return "ok-$realm-$token"
-        }
+        fun accessLog(@PathVariable realm: String, @PathVariable token: String): String = "ok-$realm-$token"
 
         @GetMapping("/access-log/fail")
         fun fail(): String {

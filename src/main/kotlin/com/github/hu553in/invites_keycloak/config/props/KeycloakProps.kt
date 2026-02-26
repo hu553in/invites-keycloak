@@ -34,5 +34,5 @@ data class KeycloakProps(
     val connectTimeout: Duration,
     @field:NotNull
     @field:DurationMin(seconds = 1)
-    val responseTimeout: Duration
+    val responseTimeout: Duration,
 )

@@ -77,7 +77,7 @@ class InviteEntity(
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(nullable = false, updatable = false, columnDefinition = "text[]")
-    var roles: Set<@NotBlank String> = emptySet()
+    var roles: Set<@NotBlank String> = emptySet(),
 ) {
     fun incrementUses() {
         if (uses + 1 > maxUses) {

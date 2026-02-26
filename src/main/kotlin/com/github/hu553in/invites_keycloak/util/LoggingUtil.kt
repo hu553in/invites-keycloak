@@ -78,9 +78,7 @@ const val MAIL_STATUS_KEY = "mail.status"
 private const val ANONYMOUS_USER_ID = "anonymousUser"
 const val SYSTEM_USER_ID = "system"
 
-fun <R : Any> R.logger(): Lazy<Logger> {
-    return lazy { LoggerFactory.getLogger(this.javaClass) }
-}
+fun <R : Any> R.logger(): Lazy<Logger> = lazy { LoggerFactory.getLogger(this.javaClass) }
 
 fun Authentication?.userIdOrSystem(): String {
     val userId = (this?.name ?: "").trim()
@@ -90,13 +88,11 @@ fun Authentication?.userIdOrSystem(): String {
     return SYSTEM_USER_ID
 }
 
-fun Authentication?.subjectOrNull(): String? {
-    return when (val principal = this?.principal) {
-        is OidcUser -> principal.subject
-        is Jwt -> principal.subject
-        is OAuth2AuthenticatedPrincipal -> principal.getAttribute("sub")
-        else -> null
-    }
+fun Authentication?.subjectOrNull(): String? = when (val principal = this?.principal) {
+    is OidcUser -> principal.subject
+    is Jwt -> principal.subject
+    is OAuth2AuthenticatedPrincipal -> principal.getAttribute("sub")
+    else -> null
 }
 
 /**
@@ -132,32 +128,26 @@ fun <T> withMdc(vararg entries: Pair<String, String?>, block: () -> T): T {
     }
 }
 
-fun <T> withAuthDataInMdc(id: String, sub: String? = null, block: () -> T): T {
-    return withMdc(
-        CURRENT_USER_ID_KEY to id,
-        CURRENT_USER_SUBJECT_KEY to sub
-    ) {
-        block()
-    }
+fun <T> withAuthDataInMdc(id: String, sub: String? = null, block: () -> T): T = withMdc(
+    CURRENT_USER_ID_KEY to id,
+    CURRENT_USER_SUBJECT_KEY to sub,
+) {
+    block()
 }
 
-fun <T> withInviteContextInMdc(inviteId: UUID?, realm: String?, email: String?, block: () -> T): T {
-    return withMdc(
-        INVITE_ID_KEY to inviteId?.toString(),
-        KEYCLOAK_REALM_KEY to realm,
-        INVITE_EMAIL_KEY to email?.let { maskSensitive(it) }
-    ) {
-        block()
-    }
+fun <T> withInviteContextInMdc(inviteId: UUID?, realm: String?, email: String?, block: () -> T): T = withMdc(
+    INVITE_ID_KEY to inviteId?.toString(),
+    KEYCLOAK_REALM_KEY to realm,
+    INVITE_EMAIL_KEY to email?.let { maskSensitive(it) },
+) {
+    block()
 }
 
-fun Throwable.isClientSideAppFailure(): Boolean {
-    return this is IllegalArgumentException ||
-        this is IllegalStateException ||
-        this is ActiveInviteExistsException ||
-        this is InviteNotFoundException ||
-        this is InvalidInviteException
-}
+fun Throwable.isClientSideAppFailure(): Boolean = this is IllegalArgumentException ||
+    this is IllegalStateException ||
+    this is ActiveInviteExistsException ||
+    this is InviteNotFoundException ||
+    this is InvalidInviteException
 
 /**
  * Standardized log level chooser for application errors.
@@ -167,7 +157,7 @@ fun Throwable.isClientSideAppFailure(): Boolean {
 fun Logger.eventForAppError(
     error: Throwable,
     keycloakStatus: HttpStatusCode? = null,
-    deduplicateKeycloak: Boolean = false
+    deduplicateKeycloak: Boolean = false,
 ): LoggingEventBuilder {
     if (deduplicateKeycloak && extractKeycloakException(error) != null) {
         return this.atDebug()
@@ -185,9 +175,5 @@ fun Logger.eventForAppError(
  * Convenience wrapper to avoid duplicate warn/error logs when a Keycloak call already logged the failure.
  * Use this in controller layers and other outer layers when handling KeycloakAdminClientException.
  */
-fun Logger.dedupedEventForAppError(
-    error: Throwable,
-    keycloakStatus: HttpStatusCode? = null
-): LoggingEventBuilder {
-    return this.eventForAppError(error, keycloakStatus = keycloakStatus, deduplicateKeycloak = true)
-}
+fun Logger.dedupedEventForAppError(error: Throwable, keycloakStatus: HttpStatusCode? = null): LoggingEventBuilder =
+    this.eventForAppError(error, keycloakStatus = keycloakStatus, deduplicateKeycloak = true)

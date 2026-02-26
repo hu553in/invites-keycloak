@@ -38,7 +38,7 @@ class InviteCleanupJobTest {
             expiry = mock(),
             realms = mock(),
             token = mock(),
-            cleanup = InviteProps.CleanupProps(retention = Duration.ofDays(30))
+            cleanup = InviteProps.CleanupProps(retention = Duration.ofDays(30)),
         )
         job = InviteCleanupJob(inviteRepository, clock, inviteProps)
     }

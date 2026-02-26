@@ -39,6 +39,10 @@ run_local:
 check:
 	./gradlew check
 
+.PHONY: check_fix
+check_fix:
+	./gradlew check -PdetektAutoCorrect
+
 .PHONY: test
 test:
 	./gradlew test

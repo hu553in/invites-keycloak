@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.GetMapping
 @AutoConfigureMockMvc
 @Import(
     ControllerExceptionHandler::class,
-    TestClientRegistrationRepositoryConfig::class
+    TestClientRegistrationRepositoryConfig::class,
 )
 @ActiveProfiles("test")
 class ControllerExceptionHandlerTest {
@@ -224,29 +224,20 @@ class ControllerExceptionHandlerTest {
 @Controller
 class TestThrowingController {
     @GetMapping("/handler/keycloak-4xx")
-    fun throwKeycloakClientError(): String {
-        throw KeycloakAdminClientException("bad request", HttpStatus.BAD_REQUEST)
-    }
+    fun throwKeycloakClientError(): String = throw KeycloakAdminClientException("bad request", HttpStatus.BAD_REQUEST)
 
     @GetMapping("/handler/keycloak-5xx")
-    fun throwKeycloakServerError(): String {
+    fun throwKeycloakServerError(): String =
         throw KeycloakAdminClientException("server error", HttpStatus.INTERNAL_SERVER_ERROR)
-    }
 
     @GetMapping("/handler/invalid-invite")
-    fun throwInvalidInvite(): String {
-        throw InvalidInviteException(reason = InvalidInviteReason.EXPIRED)
-    }
+    fun throwInvalidInvite(): String = throw InvalidInviteException(reason = InvalidInviteReason.EXPIRED)
 
     @GetMapping("/handler/invalid-invite-malformed")
-    fun throwMalformedInvalidInvite(): String {
-        throw InvalidInviteException(reason = InvalidInviteReason.MALFORMED)
-    }
+    fun throwMalformedInvalidInvite(): String = throw InvalidInviteException(reason = InvalidInviteReason.MALFORMED)
 
     @GetMapping("/handler/invite-not-found")
-    fun throwInviteNotFound(): String {
-        throw InviteNotFoundException()
-    }
+    fun throwInviteNotFound(): String = throw InviteNotFoundException()
 
     @GetMapping("/handler/unknown")
     fun throwUnknown(): String {
@@ -254,7 +245,5 @@ class TestThrowingController {
     }
 }
 
-private fun ILoggingEvent.keyValues(): Map<String, String> {
-    return (this.keyValuePairs ?: emptyList())
-        .associate { it.key to (it.value?.toString() ?: "null") }
-}
+private fun ILoggingEvent.keyValues(): Map<String, String> = (this.keyValuePairs ?: emptyList())
+    .associate { it.key to (it.value?.toString() ?: "null") }

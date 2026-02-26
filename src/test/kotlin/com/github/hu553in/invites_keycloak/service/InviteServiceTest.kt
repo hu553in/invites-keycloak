@@ -36,7 +36,7 @@ class InviteServiceTest(
     private val inviteRepository: InviteRepository,
     private val inviteProps: InviteProps,
     private val clock: Clock,
-    private val jdbcClient: JdbcClient
+    private val jdbcClient: JdbcClient,
 ) {
 
     @AfterEach
@@ -56,7 +56,7 @@ class InviteServiceTest(
             expiresAt = expiresAt,
             maxUses = 2,
             roles = emptySet(),
-            createdBy = "creator"
+            createdBy = "creator",
         )
 
         val validated = inviteService.validateToken("master", rawToken)
@@ -66,7 +66,7 @@ class InviteServiceTest(
         assertThat(validated.id).isEqualTo(saved.id)
         assertThat(validated.email).isEqualTo("user@example.com")
         assertThat(validated.roles).containsExactlyInAnyOrderElementsOf(
-            inviteProps.realms.getValue("master").roles
+            inviteProps.realms.getValue("master").roles,
         )
         assertThat(validated.uses).isZero()
         assertThat(rawToken).contains(".")
@@ -85,7 +85,7 @@ class InviteServiceTest(
             expiresAt = expiresAt,
             maxUses = 2,
             roles = emptySet(),
-            createdBy = "creator"
+            createdBy = "creator",
         )
 
         val validated = inviteService.validateToken("no-roles", rawToken)
@@ -104,7 +104,7 @@ class InviteServiceTest(
             email = "user@example.com",
             expiresAt = expiresAt,
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         )
 
         val pastExpiresAt = clock.instant().minus(Duration.ofMinutes(20))
@@ -132,7 +132,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         )
         val invite = inviteService.validateToken("master", rawToken)
         inviteService.revoke(invite.id!!)
@@ -154,7 +154,7 @@ class InviteServiceTest(
             email = "user@example.com",
             roles = setOf("user"),
             createdBy = "creator",
-            maxUses = 1
+            maxUses = 1,
         )
         inviteService.useOnce(created.invite.id!!)
 
@@ -174,7 +174,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         )
         val missingRawToken = created.rawToken.replaceFirstChar {
             if (it == 'A') {
@@ -197,7 +197,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         )
 
         // act
@@ -248,7 +248,7 @@ class InviteServiceTest(
             email = "user@example.com",
             expiresAt = expiresAt,
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
 
         val executor = Executors.newFixedThreadPool(2)
@@ -295,7 +295,7 @@ class InviteServiceTest(
             email = "user@example.com",
             roles = setOf("user"),
             createdBy = "creator",
-            maxUses = 1
+            maxUses = 1,
         ).invite
         inviteService.useOnce(invite.id!!)
 
@@ -323,7 +323,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
         inviteService.revoke(invite.id!!)
 
@@ -344,7 +344,7 @@ class InviteServiceTest(
             email = "user@example.com",
             roles = setOf("user"),
             createdBy = "creator",
-            expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
+            expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10)),
         ).invite
         val expiredAt = clock.instant().minus(Duration.ofMinutes(1))
         jdbcClient
@@ -371,7 +371,7 @@ class InviteServiceTest(
             email = "user@example.com",
             expiresAt = expiresAt,
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
 
         val pastExpiresAt = clock.instant().minus(Duration.ofMinutes(5))
@@ -388,7 +388,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
 
         // assert
@@ -406,7 +406,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
         val newExpiry = clock.instant().plus(Duration.ofHours(6))
         val before = clock.instant()
@@ -415,7 +415,7 @@ class InviteServiceTest(
         val resent = inviteService.resendInvite(
             inviteId = original.id!!,
             expiresAt = newExpiry,
-            createdBy = "resender"
+            createdBy = "resender",
         )
 
         // assert
@@ -438,7 +438,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
         inviteService.revoke(original.id!!)
         val newExpiry = clock.instant().plus(Duration.ofHours(12))
@@ -447,7 +447,7 @@ class InviteServiceTest(
         val resent = inviteService.resendInvite(
             inviteId = original.id!!,
             expiresAt = newExpiry,
-            createdBy = "resender"
+            createdBy = "resender",
         )
 
         // assert
@@ -466,7 +466,7 @@ class InviteServiceTest(
             email = "user@example.com",
             roles = setOf("user"),
             createdBy = "creator",
-            maxUses = 1
+            maxUses = 1,
         ).invite
 
         inviteService.useOnce(initial.id!!)
@@ -476,7 +476,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
 
         // assert
@@ -495,7 +495,7 @@ class InviteServiceTest(
             email = "user@example.com",
             roles = setOf("user"),
             createdBy = "creator",
-            maxUses = 1
+            maxUses = 1,
         ).invite
         inviteService.useOnce(invite.id!!)
 
@@ -514,7 +514,7 @@ class InviteServiceTest(
             email = "user@example.com",
             roles = setOf("user"),
             createdBy = "creator",
-            expiresAt = expiresAt
+            expiresAt = expiresAt,
         ).invite
 
         val pastExpiresAt = clock.instant().minus(Duration.ofMinutes(5))
@@ -539,7 +539,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
         val before = clock.instant()
 
@@ -562,7 +562,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
         inviteService.revoke(invite.id!!)
 
@@ -581,7 +581,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         ).invite
 
         // act
@@ -598,7 +598,7 @@ class InviteServiceTest(
             realm = "master",
             email = "user@example.com",
             roles = setOf("user"),
-            createdBy = "creator"
+            createdBy = "creator",
         )
 
         // act
@@ -607,18 +607,16 @@ class InviteServiceTest(
                 realm = "master",
                 email = "user@example.com",
                 roles = setOf("user"),
-                createdBy = "another"
+                createdBy = "another",
             )
         }
             // assert
             .isInstanceOf(ActiveInviteExistsException::class.java)
     }
 
-    private fun futureExpiresAt(minBuffer: Duration): Instant {
-        return clock.instant()
-            .plus(inviteProps.expiry.min)
-            .plus(minBuffer)
-    }
+    private fun futureExpiresAt(minBuffer: Duration): Instant = clock.instant()
+        .plus(inviteProps.expiry.min)
+        .plus(minBuffer)
 
     private fun Instant.toSqlTimestamp(): Timestamp = Timestamp.from(this)
 }

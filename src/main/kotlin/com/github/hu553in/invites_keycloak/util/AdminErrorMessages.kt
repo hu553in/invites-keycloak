@@ -27,11 +27,9 @@ object AdminErrorMessages {
     const val MAIL_NOT_SENT_SMTP_NOT_CONFIGURED = "Invite email not sent: SMTP is not configured."
     const val MAIL_NOT_SENT_CHECK_LOGS = "Invite email could not be sent. Please check the mail logs."
 
-    fun activeInviteAlreadyExists(email: String, realm: String): String {
-        return "Active invite already exists for ${maskSensitive(email)} in realm $realm."
-    }
+    fun activeInviteAlreadyExists(email: String, realm: String): String =
+        "Active invite already exists for ${maskSensitive(email)} in realm $realm."
 
-    fun expiryRangeInvalid(minMinutes: Long, maxMinutes: Long): String {
-        return "Expiry must be between $minMinutes and $maxMinutes minutes."
-    }
+    fun expiryRangeInvalid(minMinutes: Long, maxMinutes: Long): String =
+        "Expiry must be between $minMinutes and $maxMinutes minutes."
 }

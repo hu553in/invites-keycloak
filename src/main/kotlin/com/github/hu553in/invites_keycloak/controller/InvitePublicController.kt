@@ -54,7 +54,7 @@ private const val INVITE_REDEEM_CHALLENGE_MAX_PER_SESSION = 32
 class InvitePublicController(
     private val inviteService: InviteService,
     private val keycloakAdminClient: KeycloakAdminClient,
-    private val clock: Clock
+    private val clock: Clock,
 ) {
 
     private val log by logger()
@@ -71,7 +71,7 @@ class InvitePublicController(
         @PathVariable @NotBlank token: String,
         model: Model,
         resp: HttpServletResponse,
-        session: HttpSession
+        session: HttpSession,
     ): String {
         val normalizedRealm = realm.trim()
         val normalizedToken = token.trim()
@@ -102,7 +102,7 @@ class InvitePublicController(
         @RequestParam(name = "challenge", required = false) challenge: String?,
         model: Model,
         resp: HttpServletResponse,
-        session: HttpSession
+        session: HttpSession,
     ): String {
         val normalizedRealm = realm.trim()
         val normalizedToken = token.trim()
@@ -113,7 +113,7 @@ class InvitePublicController(
                 normalizedRealm,
                 "Invite redeem request is missing confirmation challenge",
                 model,
-                resp
+                resp,
             )
         }
 
@@ -123,7 +123,7 @@ class InvitePublicController(
             normalizedChallenge = normalizedChallenge,
             model = model,
             resp = resp,
-            session = session
+            session = session,
         )
     }
 
@@ -133,14 +133,14 @@ class InvitePublicController(
         normalizedChallenge: String,
         model: Model,
         resp: HttpServletResponse,
-        session: HttpSession
+        session: HttpSession,
     ): String {
         val challengeInviteId = consumeChallengeAndMarkInFlight(session, normalizedChallenge, normalizedRealm)
             ?: return handleInvalidChallenge(
                 normalizedRealm,
                 "Invite redeem confirmation challenge is invalid or already used",
                 model,
-                resp
+                resp,
             )
 
         return try {
@@ -149,7 +149,7 @@ class InvitePublicController(
                 normalizedToken = normalizedToken,
                 challengeInviteId = challengeInviteId,
                 model = model,
-                resp = resp
+                resp = resp,
             )
         } finally {
             releaseRedeemInFlight(session, challengeInviteId, normalizedRealm)
@@ -161,7 +161,7 @@ class InvitePublicController(
         normalizedToken: String,
         challengeInviteId: UUID,
         model: Model,
-        resp: HttpServletResponse
+        resp: HttpServletResponse,
     ): String {
         val invite = inviteService.validateToken(normalizedRealm, normalizedToken)
         val inviteId = checkNotNull(invite.id) { "Null invite id is received from db for realm $normalizedRealm" }
@@ -171,7 +171,7 @@ class InvitePublicController(
                 normalizedRealm,
                 "Invite redeem confirmation challenge does not match invite",
                 model,
-                resp
+                resp,
             )
         }
 
@@ -187,17 +187,13 @@ class InvitePublicController(
         }
     }
 
-    private fun handleExistingUser(
-        inviteId: UUID,
-        model: Model,
-        resp: HttpServletResponse
-    ): String {
+    private fun handleExistingUser(inviteId: UUID, model: Model, resp: HttpServletResponse): String {
         log.atWarn()
             .log { "Invite target user already exists; revoking invite" }
 
         val revokeError = revokeInviteAndLogFailure(
             inviteId = inviteId,
-            failureMessage = "Failed to revoke invite after detecting existing user"
+            failureMessage = "Failed to revoke invite after detecting existing user",
         )
 
         if (revokeError != null) {
@@ -219,7 +215,7 @@ class InvitePublicController(
         email: String,
         roles: Set<String>,
         model: Model,
-        resp: HttpServletResponse
+        resp: HttpServletResponse,
     ): String {
         var createdUserId: String? = null
 
@@ -257,12 +253,12 @@ class InvitePublicController(
         inviteId: UUID,
         keycloakStatus: HttpStatusCode?,
         model: Model,
-        resp: HttpServletResponse
+        resp: HttpServletResponse,
     ): String {
         if (shouldRevoke) {
             revokeInviteAndLogFailure(
                 inviteId = inviteId,
-                failureMessage = "Failed to revoke invite after invite flow error"
+                failureMessage = "Failed to revoke invite after invite flow error",
             )
             model.addAttribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID)
             model.addAttribute("error_details", ErrorMessages.INVITE_NO_LONGER_VALID_DETAILS)
@@ -299,15 +295,14 @@ class InvitePublicController(
         }
     }
 
-    private fun revokeInviteAndLogFailure(inviteId: UUID, failureMessage: String): Throwable? {
-        return runCatching { inviteService.revoke(inviteId, SYSTEM_USER_ID) }
+    private fun revokeInviteAndLogFailure(inviteId: UUID, failureMessage: String): Throwable? =
+        runCatching { inviteService.revoke(inviteId, SYSTEM_USER_ID) }
             .onFailure { revokeError ->
                 log.atError()
                     .setCause(revokeError)
                     .log { failureMessage }
             }
             .exceptionOrNull()
-    }
 
     private fun shouldRevokeInvite(error: Throwable): Boolean {
         val status = keycloakStatusFrom(error)
@@ -316,7 +311,9 @@ class InvitePublicController(
 
         return when {
             status?.is4xxClientError == true -> true
+
             status != null -> false
+
             root is InvalidInviteException ||
                 root is InviteNotFoundException ||
                 root is IllegalArgumentException ||
@@ -330,7 +327,7 @@ class InvitePublicController(
         realm: String,
         logMessage: String,
         model: Model,
-        resp: HttpServletResponse
+        resp: HttpServletResponse,
     ): String {
         log.atWarn()
             .addKeyValue(KEYCLOAK_REALM_KEY) { realm }
@@ -344,11 +341,7 @@ class InvitePublicController(
         return "generic_error"
     }
 
-    private fun handleConfirmationInProgress(
-        realm: String,
-        model: Model,
-        resp: HttpServletResponse
-    ): String {
+    private fun handleConfirmationInProgress(realm: String, model: Model, resp: HttpServletResponse): String {
         log.atWarn()
             .addKeyValue(KEYCLOAK_REALM_KEY) { realm }
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.CONFLICT.value() }
@@ -374,7 +367,7 @@ class InvitePublicController(
             challenges[challenge] = InviteRedeemChallenge(
                 inviteId = inviteId,
                 realm = realm,
-                expiresAt = now.plus(INVITE_REDEEM_CHALLENGE_TTL)
+                expiresAt = now.plus(INVITE_REDEEM_CHALLENGE_TTL),
             )
             challenge
         }
@@ -389,8 +382,11 @@ class InvitePublicController(
             val data = challenges.remove(challenge)
             when {
                 data == null -> null
+
                 data.expiresAt.isBefore(now) -> null
+
                 data.realm != realm -> null
+
                 else -> {
                     if (!inFlight.add(InviteRedeemInFlight(data.inviteId, data.realm))) {
                         return@redeemStateSync null
@@ -412,7 +408,7 @@ class InvitePublicController(
     private fun removeChallengesForInvite(
         challenges: MutableMap<String, InviteRedeemChallenge>,
         inviteId: UUID,
-        realm: String
+        realm: String,
     ) {
         challenges.entries.removeIf { (_, challenge) -> challenge.inviteId == inviteId && challenge.realm == realm }
     }
@@ -429,7 +425,7 @@ class InvitePublicController(
     }
 
     private fun <T> HttpSession.redeemStateSync(
-        mutate: (MutableMap<String, InviteRedeemChallenge>, MutableSet<InviteRedeemInFlight>, Instant) -> T
+        mutate: (MutableMap<String, InviteRedeemChallenge>, MutableSet<InviteRedeemInFlight>, Instant) -> T,
     ): T = synchronized(this) {
         val now = clock.instant()
 
@@ -457,20 +453,14 @@ class InvitePublicController(
         result
     }
 
-    private data class InviteRedeemChallenge(
-        val inviteId: UUID,
-        val realm: String,
-        val expiresAt: Instant
-    ) : Serializable {
+    private data class InviteRedeemChallenge(val inviteId: UUID, val realm: String, val expiresAt: Instant) :
+        Serializable {
         private companion object {
             private const val serialVersionUID = 1L
         }
     }
 
-    private data class InviteRedeemInFlight(
-        val inviteId: UUID,
-        val realm: String
-    ) : Serializable {
+    private data class InviteRedeemInFlight(val inviteId: UUID, val realm: String) : Serializable {
         private companion object {
             private const val serialVersionUID = 1L
         }

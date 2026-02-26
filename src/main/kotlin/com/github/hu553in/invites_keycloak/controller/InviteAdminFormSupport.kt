@@ -10,11 +10,7 @@ import org.springframework.validation.BindingResult
 import java.time.Duration
 
 object InviteAdminFormSupport {
-    data class RoleFetchResult(
-        val roles: List<String>,
-        val errorMessage: String?,
-        val available: Boolean
-    )
+    data class RoleFetchResult(val roles: List<String>, val errorMessage: String?, val available: Boolean)
 
     fun addExpiryMetadata(model: Model, inviteProps: InviteProps) {
         model.addAttribute("expiryDefaultMinutes", inviteProps.expiry.default.toMinutes())
@@ -27,7 +23,7 @@ object InviteAdminFormSupport {
         realm: String,
         inviteProps: InviteProps,
         rolesAvailable: Boolean = true,
-        allowedRoles: Set<String>? = null
+        allowedRoles: Set<String>? = null,
     ) {
         val configuredRoles = filteredConfiguredRoles(realm, inviteProps, allowedRoles)
 
@@ -62,7 +58,7 @@ object InviteAdminFormSupport {
         roleFetch: RoleFetchResult,
         roleOptions: List<String>,
         rolesVisible: Boolean,
-        rolesAvailable: Boolean
+        rolesAvailable: Boolean,
     ) {
         val availableRealms = inviteProps.realms.keys.toList()
 
@@ -75,7 +71,7 @@ object InviteAdminFormSupport {
                 roleFetch.errorMessage
             } else {
                 null
-            }
+            },
         )
         model.addAttribute("rolesAvailable", rolesAvailable)
         model.addAttribute("rolesVisible", rolesVisible)
@@ -89,7 +85,7 @@ object InviteAdminFormSupport {
                 bindingResult.rejectValue(
                     "realm",
                     ErrorCodes.ADMIN_REALM_EMPTY,
-                    AdminErrorMessages.REALM_REQUIRED
+                    AdminErrorMessages.REALM_REQUIRED,
                 )
                 null
             }
@@ -98,7 +94,7 @@ object InviteAdminFormSupport {
                 bindingResult.rejectValue(
                     "realm",
                     ErrorCodes.ADMIN_REALM_INVALID,
-                    AdminErrorMessages.REALM_NOT_ALLOWED
+                    AdminErrorMessages.REALM_NOT_ALLOWED,
                 )
                 null
             }
@@ -110,7 +106,7 @@ object InviteAdminFormSupport {
     fun validateExpiryMinutes(
         expiryMinutes: Long?,
         inviteProps: InviteProps,
-        bindingResult: BindingResult? = null
+        bindingResult: BindingResult? = null,
     ): Duration? {
         val minMinutes = inviteProps.expiry.min.toMinutes()
         val maxMinutes = inviteProps.expiry.max.toMinutes()
@@ -123,7 +119,7 @@ object InviteAdminFormSupport {
             bindingResult.rejectValue(
                 "expiryMinutes",
                 ErrorCodes.ADMIN_EXPIRY_INVALID,
-                AdminErrorMessages.expiryRangeInvalid(minMinutes, maxMinutes)
+                AdminErrorMessages.expiryRangeInvalid(minMinutes, maxMinutes),
             )
         }
         return duration
@@ -144,7 +140,7 @@ object InviteAdminFormSupport {
         realm: String,
         inviteProps: InviteProps,
         rolesAvailable: Boolean = true,
-        configuredOverride: Set<String>? = null
+        configuredOverride: Set<String>? = null,
     ): InviteAdminController.InviteForm {
         val configured = if (rolesAvailable) {
             configuredOverride ?: configuredRoles(realm, inviteProps)
@@ -156,18 +152,16 @@ object InviteAdminFormSupport {
             email = "",
             expiryMinutes = inviteProps.expiry.default.toMinutes(),
             maxUses = 1,
-            roles = LinkedHashSet(configured)
+            roles = LinkedHashSet(configured),
         )
     }
 
-    fun configuredRoles(realm: String, inviteProps: InviteProps): Set<String> {
-        return inviteProps.realms[realm]
-            ?.roles
-            .orEmpty()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .toCollection(LinkedHashSet())
-    }
+    fun configuredRoles(realm: String, inviteProps: InviteProps): Set<String> = inviteProps.realms[realm]
+        ?.roles
+        .orEmpty()
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .toCollection(LinkedHashSet())
 
     fun rolesForView(realm: String, inviteProps: InviteProps, roleFetch: RoleFetchResult): List<String> {
         if (!roleFetch.available) {
@@ -182,7 +176,7 @@ object InviteAdminFormSupport {
     private fun filteredConfiguredRoles(
         realm: String,
         inviteProps: InviteProps,
-        allowedRoles: Set<String>?
+        allowedRoles: Set<String>?,
     ): Set<String> {
         val configuredRoles = configuredRoles(realm, inviteProps)
         return if (allowedRoles != null) {
@@ -192,7 +186,5 @@ object InviteAdminFormSupport {
         }
     }
 
-    fun Authentication?.nameOrSystem(): String {
-        return this.userIdOrSystem()
-    }
+    fun Authentication?.nameOrSystem(): String = this.userIdOrSystem()
 }

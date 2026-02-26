@@ -4,10 +4,8 @@ enum class InvalidInviteReason(val key: String) {
     MALFORMED("malformed"),
     REVOKED("revoked"),
     EXPIRED("expired"),
-    OVERUSED("overused")
+    OVERUSED("overused"),
 }
 
-class InvalidInviteException(
-    cause: Throwable? = null,
-    val reason: InvalidInviteReason
-) : RuntimeException("Invite is invalid: ${reason.key}", cause)
+class InvalidInviteException(cause: Throwable? = null, val reason: InvalidInviteReason) :
+    RuntimeException("Invite is invalid: ${reason.key}", cause)

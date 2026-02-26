@@ -32,7 +32,7 @@ class ControllerExceptionHandler {
         e: InvalidInviteException,
         model: Model,
         req: HttpServletRequest,
-        resp: HttpServletResponse
+        resp: HttpServletResponse,
     ): String {
         log.eventForAppError(e)
             .setCause(e)
@@ -51,7 +51,7 @@ class ControllerExceptionHandler {
         e: KeycloakAdminClientException,
         model: Model,
         req: HttpServletRequest,
-        resp: HttpServletResponse
+        resp: HttpServletResponse,
     ): String {
         val status = e.statusCode
         val responseStatus = if (status?.is4xxClientError == true) {
@@ -83,7 +83,7 @@ class ControllerExceptionHandler {
         e: InviteNotFoundException,
         model: Model,
         req: HttpServletRequest,
-        resp: HttpServletResponse
+        resp: HttpServletResponse,
     ): String {
         log.eventForAppError(e)
             .setCause(e)
@@ -117,13 +117,10 @@ private fun Model.addAttributeIfAbsent(name: String, value: Any) {
     }
 }
 
-private fun HttpServletRequest.routePatternOrUnknown(): String {
-    return this.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) as? String ?: "unknown"
-}
+private fun HttpServletRequest.routePatternOrUnknown(): String =
+    this.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) as? String ?: "unknown"
 
-private fun LoggingEventBuilder.addRequestContext(req: HttpServletRequest): LoggingEventBuilder {
-    return this
-        .addKeyValue(REQUEST_METHOD_KEY) { req.method }
-        .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
-        .addKeyValue(REQUEST_URI_KEY) { req.requestURI }
-}
+private fun LoggingEventBuilder.addRequestContext(req: HttpServletRequest): LoggingEventBuilder = this
+    .addKeyValue(REQUEST_METHOD_KEY) { req.method }
+    .addKeyValue(REQUEST_ROUTE_KEY) { req.routePatternOrUnknown() }
+    .addKeyValue(REQUEST_URI_KEY) { req.requestURI }

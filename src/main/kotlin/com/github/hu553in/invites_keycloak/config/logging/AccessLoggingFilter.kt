@@ -27,7 +27,7 @@ private const val MAX_5XX_HTTP_STATUS = 599
     prefix = "access-logging",
     name = ["enabled"],
     havingValue = "true",
-    matchIfMissing = false
+    matchIfMissing = false,
 )
 @Order(ACCESS_LOG_FILTER_ORDER)
 class AccessLoggingFilter : OncePerRequestFilter() {
@@ -37,7 +37,7 @@ class AccessLoggingFilter : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        filterChain: FilterChain
+        filterChain: FilterChain,
     ) {
         val start = System.nanoTime()
         var failure: Throwable? = null
@@ -45,7 +45,7 @@ class AccessLoggingFilter : OncePerRequestFilter() {
             filterChain.doFilter(request, response)
         } catch (
             @Suppress("TooGenericExceptionCaught")
-            e: Throwable
+            e: Throwable,
         ) {
             failure = e
             throw e
@@ -86,12 +86,10 @@ class AccessLoggingFilter : OncePerRequestFilter() {
         }
     }
 
-    private fun accessMessage(status: Int, failure: Throwable?): String {
-        return when {
-            failure != null -> "HTTP request failed"
-            status >= HttpStatus.INTERNAL_SERVER_ERROR.value() -> "HTTP request completed with server error"
-            status >= HttpStatus.BAD_REQUEST.value() -> "HTTP request completed with client error"
-            else -> "HTTP request completed"
-        }
+    private fun accessMessage(status: Int, failure: Throwable?): String = when {
+        failure != null -> "HTTP request failed"
+        status >= HttpStatus.INTERNAL_SERVER_ERROR.value() -> "HTTP request completed with server error"
+        status >= HttpStatus.BAD_REQUEST.value() -> "HTTP request completed with client error"
+        else -> "HTTP request completed"
     }
 }

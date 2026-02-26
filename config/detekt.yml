@@ -4,9 +4,8 @@ processors:
 config:
   validation: true
 
-formatting:
+ktlint:
   active: true
-  android: false
   PackageName:
     active: false
 

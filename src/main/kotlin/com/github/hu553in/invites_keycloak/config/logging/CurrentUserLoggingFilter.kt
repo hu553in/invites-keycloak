@@ -24,7 +24,7 @@ class CurrentUserLoggingFilter : OncePerRequestFilter() {
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        filterChain: FilterChain
+        filterChain: FilterChain,
     ) {
         val authentication = SecurityContextHolder.getContext().authentication
         val id = authentication.userIdOrSystem()

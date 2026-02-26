@@ -41,7 +41,7 @@ import java.util.*
 @AutoConfigureMockMvc(addFilters = false)
 @Import(
     InviteAdminControllerTest.TestConfig::class,
-    TestClientRegistrationRepositoryConfig::class
+    TestClientRegistrationRepositoryConfig::class,
 )
 @EnableConfigurationProperties(InviteProps::class)
 @TestPropertySource(
@@ -64,8 +64,8 @@ import java.util.*
         "keycloak.client-secret=test-secret",
         "keycloak.required-role=invite-admin",
         "keycloak.max-attempts=1",
-        "keycloak.min-backoff=PT1S"
-    ]
+        "keycloak.min-backoff=PT1S",
+    ],
 )
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 class InviteAdminControllerTest(
@@ -74,7 +74,7 @@ class InviteAdminControllerTest(
     private val clock: Clock,
     private val inviteService: InviteService,
     private val mailService: MailService,
-    private val keycloakAdminClient: KeycloakAdminClient
+    private val keycloakAdminClient: KeycloakAdminClient,
 ) {
 
     @BeforeEach
@@ -232,7 +232,7 @@ class InviteAdminControllerTest(
             realm = createdInvite.invite.realm,
             email = createdInvite.invite.email,
             link = "https://app.example.com/invite/${createdInvite.invite.realm}/${createdInvite.rawToken}",
-            expiresAt = createdInvite.invite.expiresAt
+            expiresAt = createdInvite.invite.expiresAt,
         )
         given(
             inviteService.createInvite(
@@ -241,8 +241,8 @@ class InviteAdminControllerTest(
                 expiresAt = expectedExpiry,
                 maxUses = 1,
                 roles = setOf("default-admin"),
-                createdBy = "system"
-            )
+                createdBy = "system",
+            ),
         ).willReturn(createdInvite)
         given(mailService.sendInviteEmail(expectedMailData)).willReturn(MailService.MailSendStatus.OK)
         given(keycloakAdminClient.listRealmRoles("master")).willReturn(listOf("default-admin"))
@@ -278,16 +278,16 @@ class InviteAdminControllerTest(
             sampleInviteEntity(
                 realm = "no-roles",
                 email = "no-roles@example.com",
-                roles = emptySet()
+                roles = emptySet(),
             ),
-            "raw.token.no-roles"
+            "raw.token.no-roles",
         )
         val expectedMailData = MailService.InviteMailData(
             inviteId = createdInvite.invite.id,
             realm = createdInvite.invite.realm,
             email = createdInvite.invite.email,
             link = "https://app.example.com/invite/${createdInvite.invite.realm}/${createdInvite.rawToken}",
-            expiresAt = createdInvite.invite.expiresAt
+            expiresAt = createdInvite.invite.expiresAt,
         )
         given(
             inviteService.createInvite(
@@ -296,8 +296,8 @@ class InviteAdminControllerTest(
                 expiresAt = expectedExpiry,
                 maxUses = 1,
                 roles = emptySet(),
-                createdBy = "system"
-            )
+                createdBy = "system",
+            ),
         ).willReturn(createdInvite)
         given(mailService.sendInviteEmail(expectedMailData)).willReturn(MailService.MailSendStatus.OK)
 
@@ -335,8 +335,8 @@ class InviteAdminControllerTest(
                 BDDMockito.any(Instant::class.java),
                 BDDMockito.anyInt(),
                 BDDMockito.anySet(),
-                BDDMockito.anyString()
-            )
+                BDDMockito.anyString(),
+            ),
         ).thenThrow(ActiveInviteExistsException("master", "admin@example.com"))
 
         // act
@@ -437,14 +437,14 @@ class InviteAdminControllerTest(
         val existing = sampleInviteEntity(id = inviteId, realm = "other", email = "user@example.com")
         val created = InviteService.CreatedInvite(
             sampleInviteEntity(realm = "other", email = "user@example.com"),
-            "token.resend"
+            "token.resend",
         )
         val expectedMailData = MailService.InviteMailData(
             inviteId = created.invite.id,
             realm = created.invite.realm,
             email = created.invite.email,
             link = "https://app.example.com/invite/${created.invite.realm}/${created.rawToken}",
-            expiresAt = created.invite.expiresAt
+            expiresAt = created.invite.expiresAt,
         )
         val expectedExpiry = clock.instant().plus(Duration.ofMinutes(1440))
         given(inviteService.get(inviteId)).willReturn(existing)
@@ -479,14 +479,14 @@ class InviteAdminControllerTest(
         }
         val created = InviteService.CreatedInvite(
             sampleInviteEntity(realm = "other", email = "user@example.com"),
-            "token.resend.revoked"
+            "token.resend.revoked",
         )
         val expectedMailData = MailService.InviteMailData(
             inviteId = created.invite.id,
             realm = created.invite.realm,
             email = created.invite.email,
             link = "https://app.example.com/invite/${created.invite.realm}/${created.rawToken}",
-            expiresAt = created.invite.expiresAt
+            expiresAt = created.invite.expiresAt,
         )
         val expectedExpiry = clock.instant().plus(Duration.ofMinutes(1440))
         given(inviteService.get(inviteId)).willReturn(existing)
@@ -579,7 +579,7 @@ class InviteAdminControllerTest(
         // arrange
         val inviteId = UUID.randomUUID()
         given(inviteService.delete(inviteId)).willThrow(
-            IllegalStateException("Invite $inviteId is active; revoke it before deleting.")
+            IllegalStateException("Invite $inviteId is active; revoke it before deleting."),
         )
 
         // act
@@ -598,19 +598,17 @@ class InviteAdminControllerTest(
         id: UUID = UUID.randomUUID(),
         realm: String = "master",
         email: String = "admin@example.com",
-        roles: Set<String> = setOf("default-admin")
-    ): InviteEntity {
-        return InviteEntity(
-            id = id,
-            realm = realm,
-            tokenHash = "hash",
-            salt = "salt",
-            email = email,
-            createdBy = "creator",
-            createdAt = clock.instant(),
-            expiresAt = clock.instant().plus(inviteProps.expiry.default),
-            maxUses = 1,
-            roles = roles
-        )
-    }
+        roles: Set<String> = setOf("default-admin"),
+    ): InviteEntity = InviteEntity(
+        id = id,
+        realm = realm,
+        tokenHash = "hash",
+        salt = "salt",
+        email = email,
+        createdBy = "creator",
+        createdAt = clock.instant(),
+        expiresAt = clock.instant().plus(inviteProps.expiry.default),
+        maxUses = 1,
+        roles = roles,
+    )
 }

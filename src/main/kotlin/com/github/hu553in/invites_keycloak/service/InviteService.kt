@@ -42,7 +42,7 @@ class InviteService(
     private val inviteRepository: InviteRepository,
     private val tokenService: TokenService,
     private val inviteProps: InviteProps,
-    private val clock: Clock
+    private val clock: Clock,
 ) {
 
     private val log by logger()
@@ -63,7 +63,7 @@ class InviteService(
         expiresAt: Instant? = null,
         maxUses: Int = 1,
         roles: Set<String>,
-        createdBy: String
+        createdBy: String,
     ): CreatedInvite {
         require(maxUses >= 1) { "maxUses must be >= 1" }
 
@@ -104,7 +104,7 @@ class InviteService(
             val normalizedRoles = normalizeStrings(
                 strings = roles,
                 default = realmConfig.roles,
-                required = false
+                required = false,
             )
 
             val invite = InviteEntity(
@@ -116,7 +116,7 @@ class InviteService(
                 createdAt = now,
                 expiresAt = targetExpiresAt,
                 maxUses = maxUses,
-                roles = normalizedRoles
+                roles = normalizedRoles,
             )
 
             val saved = inviteRepository.save(invite)
@@ -133,30 +133,28 @@ class InviteService(
     }
 
     @Transactional(readOnly = true)
-    fun validateToken(realm: String, rawToken: String): InviteEntity {
-        return withMdc(KEYCLOAK_REALM_KEY to realm) {
-            try {
-                val now = clock.instant()
-                val (token, salt) = parseRawToken(rawToken)
-                val tokenHash = tokenService.hashToken(token, salt)
+    fun validateToken(realm: String, rawToken: String): InviteEntity = withMdc(KEYCLOAK_REALM_KEY to realm) {
+        try {
+            val now = clock.instant()
+            val (token, salt) = parseRawToken(rawToken)
+            val tokenHash = tokenService.hashToken(token, salt)
 
-                val invite = inviteRepository.findByRealmAndTokenHash(realm, tokenHash)
-                    .orElseThrow(::InviteNotFoundException)
+            val invite = inviteRepository.findByRealmAndTokenHash(realm, tokenHash)
+                .orElseThrow(::InviteNotFoundException)
 
-                throwIfInviteUnavailable(invite, now)
+            throwIfInviteUnavailable(invite, now)
 
-                log.atDebug()
-                    .addKeyValue(INVITE_ID_KEY) { invite.id }
-                    .log { "Validated invite token" }
+            log.atDebug()
+                .addKeyValue(INVITE_ID_KEY) { invite.id }
+                .log { "Validated invite token" }
 
-                invite
-            } catch (e: IllegalArgumentException) {
-                log.atDebug()
-                    .addKeyValue(INVITE_TOKEN_LENGTH_KEY) { rawToken.length }
-                    .setCause(e)
-                    .log { "Invite token parsing failed" }
-                throw InvalidInviteException(cause = e, reason = InvalidInviteReason.MALFORMED)
-            }
+            invite
+        } catch (e: IllegalArgumentException) {
+            log.atDebug()
+                .addKeyValue(INVITE_TOKEN_LENGTH_KEY) { rawToken.length }
+                .setCause(e)
+                .log { "Invite token parsing failed" }
+            throw InvalidInviteException(cause = e, reason = InvalidInviteReason.MALFORMED)
         }
     }
 
@@ -220,7 +218,7 @@ class InviteService(
             expiresAt = expiresAt,
             maxUses = current.maxUses,
             roles = current.roles,
-            createdBy = normalizedCreatedBy
+            createdBy = normalizedCreatedBy,
         )
         log.atInfo()
             .addKeyValue(INVITE_PREVIOUS_ID_KEY) { inviteId }
@@ -232,21 +230,17 @@ class InviteService(
     }
 
     @Transactional(readOnly = true)
-    fun get(inviteId: UUID): InviteEntity {
-        return inviteRepository.findById(inviteId)
-            .map {
-                log.atDebug()
-                    .addKeyValue(INVITE_ID_KEY) { inviteId }
-                    .addKeyValue(KEYCLOAK_REALM_KEY) { it.realm }
-                    .log { "Fetched invite" }
-                it
-            }
-            .orElseThrow { InviteNotFoundException(inviteId) }
-    }
+    fun get(inviteId: UUID): InviteEntity = inviteRepository.findById(inviteId)
+        .map {
+            log.atDebug()
+                .addKeyValue(INVITE_ID_KEY) { inviteId }
+                .addKeyValue(KEYCLOAK_REALM_KEY) { it.realm }
+                .log { "Fetched invite" }
+            it
+        }
+        .orElseThrow { InviteNotFoundException(inviteId) }
 
-    private fun InviteEntity.isActive(now: Instant): Boolean {
-        return !revoked && !expiresAt.isBefore(now) && uses < maxUses
-    }
+    private fun InviteEntity.isActive(now: Instant): Boolean = !revoked && !expiresAt.isBefore(now) && uses < maxUses
 
     private fun InviteEntity.markRevoked(revokedBy: String, now: Instant) {
         val normalizedRevokedBy = normalizeString(revokedBy, "revokedBy must not be blank")

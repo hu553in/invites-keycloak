@@ -259,7 +259,7 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
 
 ### Prerequisites
 
-- Java 21
+- Java 25
 - Docker
 - Docker Compose plugin
 - [pre-commit](https://pre-commit.com)
@@ -337,7 +337,7 @@ Deployment steps:
 
 See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-compose.yml`.
 
-- Java 21, Kotlin 2, Gradle 9, Spring Boot 4
+- Java 25, Kotlin 2, Gradle 9, Spring Boot 4
 - PostgreSQL 17, Flyway, Spring Data JPA
 - Spring Security OAuth2 Client, Thymeleaf
 - WebClient (reactive) for Keycloak admin API

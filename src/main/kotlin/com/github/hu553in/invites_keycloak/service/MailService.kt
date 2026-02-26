@@ -20,13 +20,13 @@ import java.util.*
 class MailService(
     private val senderProvider: ObjectProvider<JavaMailSender>,
     private val templateEngine: SpringTemplateEngine,
-    private val mailProps: MailProps
+    private val mailProps: MailProps,
 ) {
 
     private val log by logger()
 
-    fun sendInviteEmail(data: InviteMailData): MailSendStatus {
-        return withInviteContextInMdc(data.inviteId, data.realm, data.email) {
+    fun sendInviteEmail(data: InviteMailData): MailSendStatus =
+        withInviteContextInMdc(data.inviteId, data.realm, data.email) {
             val sender = senderProvider.ifAvailable
             if (sender == null) {
                 MailSendStatus.NOT_CONFIGURED.also {
@@ -70,41 +70,37 @@ class MailService(
                 }
             }
         }
-    }
 
-    private fun resolveSubject(realm: String): String {
-        return runCatching { mailProps.subjectTemplate.format(realm) }
-            .getOrElse {
-                log.atWarn()
-                    .setCause(it)
-                    .log { "Falling back to default invite email subject template" }
-                MailMessages.defaultInviteSubject(realm)
-            }
-    }
+    private fun resolveSubject(realm: String): String = runCatching { mailProps.subjectTemplate.format(realm) }
+        .getOrElse {
+            log.atWarn()
+                .setCause(it)
+                .log { "Falling back to default invite email subject template" }
+            MailMessages.defaultInviteSubject(realm)
+        }
 
-    private fun renderBody(data: InviteMailData): String {
-        return templateEngine.process(
-            "mail/invite",
-            Context().apply {
-                setVariable("link", data.link)
-                setVariable("target", data.realm)
-                setVariable("expiresAt", data.expiresAt)
-            }
-        )
-    }
+    private fun renderBody(data: InviteMailData): String = templateEngine.process(
+        "mail/invite",
+        Context().apply {
+            setVariable("link", data.link)
+            setVariable("target", data.realm)
+            setVariable("expiresAt", data.expiresAt)
+        },
+    )
 
     data class InviteMailData(
         val inviteId: UUID?,
         val realm: String,
         val email: String,
         val link: String,
-        val expiresAt: Instant
+        val expiresAt: Instant,
     )
 
     enum class MailSendStatus {
         NOT_CONFIGURED,
         OK,
-        FAIL;
+        FAIL,
+        ;
 
         fun logValue(): String = name.lowercase()
     }

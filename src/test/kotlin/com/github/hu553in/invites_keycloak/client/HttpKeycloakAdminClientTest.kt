@@ -83,10 +83,10 @@ class HttpKeycloakAdminClientTest {
                 maxAttempts = 3,
                 minBackoff = Duration.ofMillis(10),
                 connectTimeout = Duration.ofSeconds(1),
-                responseTimeout = Duration.ofSeconds(2)
+                responseTimeout = Duration.ofSeconds(2),
             ),
             clock = clock,
-            webClientBuilder = WebClient.builder()
+            webClientBuilder = WebClient.builder(),
         )
 
         logger = LoggerFactory.getLogger(HttpKeycloakAdminClient::class.java) as Logger
@@ -112,7 +112,7 @@ class HttpKeycloakAdminClientTest {
                 .withQueryParam("max", equalTo("1"))
                 .withQueryParam("briefRepresentation", equalTo("true"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(okJson("""[{"id":"user-id","email":"user@example.com"}]"""))
+                .willReturn(okJson("""[{"id":"user-id","email":"user@example.com"}]""")),
         )
 
         // act
@@ -126,7 +126,7 @@ class HttpKeycloakAdminClientTest {
                 .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
                 .withRequestBody(containing("grant_type=client_credentials"))
                 .withRequestBody(containing("client_id=admin-cli"))
-                .withRequestBody(containing("client_secret=s3cr3t"))
+                .withRequestBody(containing("client_secret=s3cr3t")),
         )
     }
 
@@ -140,7 +140,7 @@ class HttpKeycloakAdminClientTest {
                 .withQueryParam("max", equalTo("1"))
                 .withQueryParam("briefRepresentation", equalTo("true"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(okJson("[]"))
+                .willReturn(okJson("[]")),
         )
 
         // act
@@ -165,9 +165,9 @@ class HttpKeycloakAdminClientTest {
                         .withStatus(201)
                         .withHeader(
                             "Location",
-                            "${server.baseUrl()}/admin/realms/invite-realm/users/9c4ed0cb-b68c-4f83-8f06-3a9aa94b8b1a"
-                        )
-                )
+                            "${server.baseUrl()}/admin/realms/invite-realm/users/9c4ed0cb-b68c-4f83-8f06-3a9aa94b8b1a",
+                        ),
+                ),
         )
 
         // act
@@ -184,7 +184,7 @@ class HttpKeycloakAdminClientTest {
             post(urlEqualTo("/admin/realms/invite-realm/users"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
                 .withHeader("Content-Type", containing("application/json"))
-                .willReturn(aResponse().withStatus(409))
+                .willReturn(aResponse().withStatus(409)),
         )
 
         // act
@@ -204,7 +204,7 @@ class HttpKeycloakAdminClientTest {
                 .withQueryParam("max", equalTo("1"))
                 .withQueryParam("briefRepresentation", equalTo("true"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(aResponse().withStatus(429).withStatusMessage("Too Many Requests"))
+                .willReturn(aResponse().withStatus(429).withStatusMessage("Too Many Requests")),
         )
 
         // act
@@ -226,7 +226,7 @@ class HttpKeycloakAdminClientTest {
                 .withQueryParam("max", equalTo("1"))
                 .withQueryParam("briefRepresentation", equalTo("true"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER))
+                .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)),
         )
 
         // act
@@ -244,12 +244,12 @@ class HttpKeycloakAdminClientTest {
         server.stubFor(
             get(urlEqualTo("/admin/realms/invite-realm/roles/invite-manager"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(okJson("""{"id":"role-id-1","name":"invite-manager"}"""))
+                .willReturn(okJson("""{"id":"role-id-1","name":"invite-manager"}""")),
         )
         server.stubFor(
             get(urlEqualTo("/admin/realms/invite-realm/roles/reviewer"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(okJson("""{"id":"role-id-2","name":"reviewer"}"""))
+                .willReturn(okJson("""{"id":"role-id-2","name":"reviewer"}""")),
         )
         server.stubFor(
             post(urlEqualTo("/admin/realms/invite-realm/users/user-id/role-mappings/realm"))
@@ -257,14 +257,14 @@ class HttpKeycloakAdminClientTest {
                 .withHeader("Content-Type", containing("application/json"))
                 .withRequestBody(containing("\"name\":\"invite-manager\""))
                 .withRequestBody(containing("\"name\":\"reviewer\""))
-                .willReturn(aResponse().withStatus(204))
+                .willReturn(aResponse().withStatus(204)),
         )
 
         // act
         client.assignRealmRoles(
             realm = "invite-realm",
             userId = "user-id",
-            roles = setOf("invite-manager", "reviewer", "invite-manager") // duplicate filtered by Set on caller side
+            roles = setOf("invite-manager", "reviewer", "invite-manager"), // duplicate filtered by Set on caller side
         )
 
         // assert
@@ -277,14 +277,14 @@ class HttpKeycloakAdminClientTest {
         client.assignRealmRoles(
             realm = "invite-realm",
             userId = "user-id",
-            roles = emptySet()
+            roles = emptySet(),
         )
 
         // assert
         server.verify(0, postRequestedFor(urlEqualTo("/realms/master/protocol/openid-connect/token")))
         server.verify(
             0,
-            postRequestedFor(urlEqualTo("/admin/realms/invite-realm/users/user-id/role-mappings/realm"))
+            postRequestedFor(urlEqualTo("/admin/realms/invite-realm/users/user-id/role-mappings/realm")),
         )
     }
 
@@ -294,7 +294,7 @@ class HttpKeycloakAdminClientTest {
         server.stubFor(
             get(urlEqualTo("/admin/realms/invite-realm/roles/missing-role"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(aResponse().withStatus(404))
+                .willReturn(aResponse().withStatus(404)),
         )
 
         // act
@@ -310,7 +310,7 @@ class HttpKeycloakAdminClientTest {
         server.stubFor(
             get(urlEqualTo("/admin/realms/invite-realm/roles/broken-role"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(okJson("""{"id":"","name":"broken-role"}"""))
+                .willReturn(okJson("""{"id":"","name":"broken-role"}""")),
         )
 
         // act
@@ -331,7 +331,7 @@ class HttpKeycloakAdminClientTest {
                 .withHeader("Content-Type", containing("application/json"))
                 .withRequestBody(containing("UPDATE_PASSWORD"))
                 .withRequestBody(containing("VERIFY_EMAIL"))
-                .willReturn(aResponse().withStatus(204))
+                .willReturn(aResponse().withStatus(204)),
         )
 
         // act
@@ -357,9 +357,9 @@ class HttpKeycloakAdminClientTest {
                             {"id":"2", "name":"admin"},
                             {"id":"3", "name":"viewer"}
                         ]
-                        """.trimIndent()
-                    )
-                )
+                        """.trimIndent(),
+                    ),
+                ),
         )
 
         // act
@@ -377,14 +377,14 @@ class HttpKeycloakAdminClientTest {
                 .withQueryParam("first", equalTo("0"))
                 .withQueryParam("max", equalTo("1000"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(okJson(roleArrayJson(1000, "role")))
+                .willReturn(okJson(roleArrayJson(1000, "role"))),
         )
         server.stubFor(
             get(urlPathEqualTo("/admin/realms/huge-realm/roles"))
                 .withQueryParam("first", equalTo("1000"))
                 .withQueryParam("max", equalTo("1000"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(okJson("""[{"id":"x","name":"extra-role"}]"""))
+                .willReturn(okJson("""[{"id":"x","name":"extra-role"}]""")),
         )
 
         // act
@@ -402,7 +402,7 @@ class HttpKeycloakAdminClientTest {
         server.stubFor(
             delete(urlEqualTo("/admin/realms/master/users/uid"))
                 .withHeader("Authorization", equalTo("Bearer admin-token"))
-                .willReturn(noContent())
+                .willReturn(noContent()),
         )
 
         // act
@@ -433,7 +433,7 @@ class HttpKeycloakAdminClientTest {
         stubTokenScenario(
             firstToken = "t-refresh",
             firstExpiresIn = 30,
-            secondStatus = 500
+            secondStatus = 500,
         )
         stubUserExists(realm = "skew-realm", token = "t-refresh")
 
@@ -456,7 +456,7 @@ class HttpKeycloakAdminClientTest {
         stubTokenScenario(
             firstToken = "t-warn",
             firstExpiresIn = 30,
-            secondStatus = 500
+            secondStatus = 500,
         )
         stubUserExists(realm = "skew-warn-realm", token = "t-warn")
 
@@ -481,7 +481,7 @@ class HttpKeycloakAdminClientTest {
             firstToken = "t-lock",
             firstExpiresIn = 30,
             secondStatus = 200,
-            secondToken = "unused"
+            secondToken = "unused",
         )
         stubUserExists(realm = "lock-realm", token = "t-lock")
         client.userExists("lock-realm", "user@example.com")
@@ -533,7 +533,7 @@ class HttpKeycloakAdminClientTest {
             firstToken = "t-old",
             firstExpiresIn = 10,
             secondToken = "t-new",
-            secondStatus = 200
+            secondStatus = 200,
         )
         stubUserExists(realm = "exp-realm", token = "t-old")
         stubUserExists(realm = "exp-realm", token = "t-new")
@@ -548,7 +548,7 @@ class HttpKeycloakAdminClientTest {
         server.verify(
             1,
             getRequestedFor(urlPathEqualTo("/admin/realms/exp-realm/users"))
-                .withHeader("Authorization", equalTo("Bearer t-new"))
+                .withHeader("Authorization", equalTo("Bearer t-new")),
         )
     }
 
@@ -558,7 +558,7 @@ class HttpKeycloakAdminClientTest {
         server.resetAll()
         server.stubFor(
             post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
-                .willReturn(aResponse().withStatus(500))
+                .willReturn(aResponse().withStatus(500)),
         )
 
         // act
@@ -576,7 +576,7 @@ class HttpKeycloakAdminClientTest {
         stubTokenScenario(
             firstToken = "t-exp",
             firstExpiresIn = 10,
-            secondStatus = 500
+            secondStatus = 500,
         )
         stubUserExists(realm = "expired-refresh-realm", token = "t-exp")
         client.userExists("expired-refresh-realm", "user@example.com")
@@ -598,7 +598,7 @@ class HttpKeycloakAdminClientTest {
         server.stubFor(
             post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
                 .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
-                .willReturn(okJson("""{"access_token":"","expires_in":300}"""))
+                .willReturn(okJson("""{"access_token":"","expires_in":300}""")),
         )
 
         // act
@@ -617,7 +617,7 @@ class HttpKeycloakAdminClientTest {
                 .withRequestBody(containing("grant_type=client_credentials"))
                 .withRequestBody(containing("client_id=admin-cli"))
                 .withRequestBody(containing("client_secret=s3cr3t"))
-                .willReturn(okJson("""{"access_token":"$token","expires_in":300}"""))
+                .willReturn(okJson("""{"access_token":"$token","expires_in":300}""")),
         )
     }
 
@@ -628,7 +628,7 @@ class HttpKeycloakAdminClientTest {
                 .withRequestBody(containing("grant_type=client_credentials"))
                 .withRequestBody(containing("client_id=admin-cli"))
                 .withRequestBody(containing("client_secret=s3cr3t"))
-                .willReturn(okJson("""{"access_token":"$token","expires_in":$expiresIn}"""))
+                .willReturn(okJson("""{"access_token":"$token","expires_in":$expiresIn}""")),
         )
     }
 
@@ -636,7 +636,7 @@ class HttpKeycloakAdminClientTest {
         firstToken: String,
         firstExpiresIn: Long,
         secondStatus: Int,
-        secondToken: String = "second-token"
+        secondToken: String = "second-token",
     ) {
         val scenario = "token-refresh-$firstToken"
         server.stubFor(
@@ -645,7 +645,7 @@ class HttpKeycloakAdminClientTest {
                 .whenScenarioStateIs(STARTED)
                 .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
                 .willReturn(okJson("""{"access_token":"$firstToken","expires_in":$firstExpiresIn}"""))
-                .willSetStateTo("REFRESH")
+                .willSetStateTo("REFRESH"),
         )
         val secondResponse = if (secondStatus == 200) {
             okJson("""{"access_token":"$secondToken","expires_in":300}""")
@@ -657,7 +657,7 @@ class HttpKeycloakAdminClientTest {
                 .inScenario(scenario)
                 .whenScenarioStateIs("REFRESH")
                 .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
-                .willReturn(secondResponse)
+                .willReturn(secondResponse),
         )
     }
 
@@ -676,7 +676,7 @@ class HttpKeycloakAdminClientTest {
                 .withQueryParam("max", equalTo("1"))
                 .withQueryParam("briefRepresentation", equalTo("true"))
                 .withHeader("Authorization", equalTo("Bearer $token"))
-                .willReturn(okJson("""[{"id":"user-id","email":"user@example.com"}]"""))
+                .willReturn(okJson("""[{"id":"user-id","email":"user@example.com"}]""")),
         )
     }
 

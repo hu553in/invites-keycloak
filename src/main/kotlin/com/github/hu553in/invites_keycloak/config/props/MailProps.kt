@@ -10,5 +10,5 @@ import org.springframework.validation.annotation.Validated
 data class MailProps(
     val from: String? = null,
     @field:NotBlank
-    val subjectTemplate: String = MailMessages.DEFAULT_INVITE_SUBJECT_TEMPLATE
+    val subjectTemplate: String = MailMessages.DEFAULT_INVITE_SUBJECT_TEMPLATE,
 )

@@ -20,9 +20,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 @Service
-class TokenService(
-    private val inviteProps: InviteProps
-) {
+class TokenService(private val inviteProps: InviteProps) {
 
     private val log by logger()
 
@@ -34,7 +32,7 @@ class TokenService(
                 .addKeyValue(REQUIRED_MIN_BYTES_KEY) { MIN_TOKEN_SECRET_BYTES }
                 .log { "Invite token secret is too short; failing startup" }
             throw IllegalArgumentException(
-                "invite.token.secret size must be greater than or equal to $MIN_TOKEN_SECRET_BYTES bytes"
+                "invite.token.secret size must be greater than or equal to $MIN_TOKEN_SECRET_BYTES bytes",
             )
         }
 
@@ -69,7 +67,7 @@ class TokenService(
 
     private val secretKeySpec = SecretKeySpec(
         inviteProps.token.secret.toByteArray(Charsets.UTF_8),
-        inviteProps.token.macAlgorithm
+        inviteProps.token.macAlgorithm,
     )
 
     fun generateToken(): String {
@@ -106,7 +104,7 @@ class TokenService(
                 arg.isNotBlank() &&
                     base64Decoder.decode(arg).size == bytes &&
                     !arg.contains("=") &&
-                    arg.matches(alphabetRegex)
+                    arg.matches(alphabetRegex),
             ) { "$argName is invalid" }
         } catch (e: IllegalArgumentException) {
             log.atDebug()

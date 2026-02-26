@@ -30,7 +30,7 @@ data class InviteProps(
     val token: TokenProps,
     @field:Valid
     @field:NotNull
-    val cleanup: CleanupProps
+    val cleanup: CleanupProps,
 ) {
     @get:AssertTrue(message = "invite.expiry must satisfy min <= default <= max")
     val isExpiryRangeValid: Boolean
@@ -39,7 +39,7 @@ data class InviteProps(
     @Validated
     data class RealmProps(
         @field:NotNull
-        val roles: Set<@NotBlank String> = emptySet()
+        val roles: Set<@NotBlank String> = emptySet(),
     )
 
     @Validated
@@ -52,7 +52,7 @@ data class InviteProps(
         val min: Duration,
         @field:NotNull
         @field:DurationMin(minutes = 5)
-        val max: Duration
+        val max: Duration,
     )
 
     @Validated
@@ -68,13 +68,13 @@ data class InviteProps(
         @field:NotNull
         val saltBytes: Int,
         @field:NotBlank
-        val macAlgorithm: String
+        val macAlgorithm: String,
     )
 
     @Validated
     data class CleanupProps(
         @field:NotNull
         @field:DurationMin(days = 1)
-        val retention: Duration
+        val retention: Duration,
     )
 }

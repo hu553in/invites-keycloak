@@ -25,7 +25,7 @@ object InviteAdminMappings {
         val active: Boolean,
         val roles: Set<String>,
         val statusClass: String,
-        val statusLabel: String
+        val statusLabel: String,
     )
 
     fun InviteEntity.toView(now: Instant): InviteView {
@@ -56,7 +56,7 @@ object InviteAdminMappings {
             active = active,
             roles = roles,
             statusClass = statusClass,
-            statusLabel = statusLabel
+            statusLabel = statusLabel,
         )
     }
 

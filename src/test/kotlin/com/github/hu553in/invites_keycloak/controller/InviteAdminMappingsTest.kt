@@ -28,7 +28,7 @@ class InviteAdminMappingsTest {
             expiresAt = now.plusSeconds(3600),
             maxUses = 2,
             uses = 1,
-            roles = setOf("role")
+            roles = setOf("role"),
         ).toView(now)
 
         // assert
@@ -57,7 +57,7 @@ class InviteAdminMappingsTest {
             expiresAt = now.plusSeconds(3600),
             maxUses = 1,
             uses = 1,
-            roles = setOf("role")
+            roles = setOf("role"),
         ).toView(now)
 
         // assert
@@ -88,7 +88,7 @@ class InviteAdminMappingsTest {
             expiresAt = now.minusSeconds(10),
             maxUses = 1,
             uses = 0,
-            roles = setOf("role")
+            roles = setOf("role"),
         ).toView(now)
 
         // assert
@@ -122,7 +122,7 @@ class InviteAdminMappingsTest {
             revoked = true,
             revokedAt = revokedAt,
             revokedBy = "revoker",
-            roles = setOf("role")
+            roles = setOf("role"),
         ).toView(now)
 
         // assert
@@ -153,7 +153,7 @@ class InviteAdminMappingsTest {
             revoked = true,
             revokedAt = now.minusSeconds(30),
             revokedBy = "revoker",
-            roles = setOf("role")
+            roles = setOf("role"),
         ).toView(now)
 
         // assert

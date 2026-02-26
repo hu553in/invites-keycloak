@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController
 @Import(
     CurrentUserLoggingFilter::class,
     TestClientRegistrationRepositoryConfig::class,
-    CurrentUserLoggingFilterTest.TestLoggingController::class
+    CurrentUserLoggingFilterTest.TestLoggingController::class,
 )
 @ActiveProfiles("test")
 class CurrentUserLoggingFilterTest {
@@ -85,7 +85,7 @@ class CurrentUserLoggingFilterTest {
             "token",
             java.time.Instant.now(),
             java.time.Instant.now().plusSeconds(60),
-            mapOf("sub" to "user-subject-123", "preferred_username" to "alice")
+            mapOf("sub" to "user-subject-123", "preferred_username" to "alice"),
         )
         val authorities = listOf(SimpleGrantedAuthority("ROLE_USER"))
         val oidcUser = DefaultOidcUser(authorities, idToken, "preferred_username")

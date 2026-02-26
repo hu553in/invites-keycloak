@@ -51,16 +51,13 @@ import com.github.tomakehurst.wiremock.client.WireMock.get as wireMockGet
 import com.github.tomakehurst.wiremock.client.WireMock.post as wireMockPost
 
 @SpringBootTest(
-    classes = [InvitesKeycloakApplication::class, SecurityConfigTest.TestAdminController::class]
+    classes = [InvitesKeycloakApplication::class, SecurityConfigTest.TestAdminController::class],
 )
 @AutoConfigureMockMvc
 @Import(TestcontainersConfig::class)
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class SecurityConfigTest(
-    private val mockMvc: MockMvc,
-    private val clock: Clock
-) {
+class SecurityConfigTest(private val mockMvc: MockMvc, private val clock: Clock) {
 
     companion object {
         private const val REQUIRED_ROLE = "invite-admin"
@@ -116,7 +113,7 @@ class SecurityConfigTest(
 
         server.stubFor(
             wireMockGet(urlEqualTo(jwkSetPath))
-                .willReturn(okJson(jwkSet.toString()))
+                .willReturn(okJson(jwkSet.toString())),
         )
     }
 
@@ -159,7 +156,7 @@ class SecurityConfigTest(
                 .session(ctx.session)
                 .withCookiesIfPresent(ctx.cookies)
                 .param("code", "test-code")
-                .param("state", ctx.state)
+                .param("state", ctx.state),
         )
             // assert
             .andExpect(status().is3xxRedirection)
@@ -172,7 +169,7 @@ class SecurityConfigTest(
         mockMvc.perform(
             get("/admin/test")
                 .session(authenticatedSession)
-                .withCookiesIfPresent(authenticatedCookies)
+                .withCookiesIfPresent(authenticatedCookies),
         )
             // assert
             .andExpect(status().isForbidden)
@@ -192,7 +189,7 @@ class SecurityConfigTest(
                 .session(ctx.session)
                 .withCookiesIfPresent(ctx.cookies)
                 .param("code", "test-code")
-                .param("state", ctx.state)
+                .param("state", ctx.state),
         )
             // assert
             .andExpect(status().is3xxRedirection)
@@ -205,7 +202,7 @@ class SecurityConfigTest(
         mockMvc.perform(
             get("/admin/test")
                 .session(authenticatedSession)
-                .withCookiesIfPresent(authenticatedCookies)
+                .withCookiesIfPresent(authenticatedCookies),
         )
             // assert
             .andExpect(status().isOk)
@@ -221,7 +218,7 @@ class SecurityConfigTest(
             post("/logout")
                 .session(authenticated.session)
                 .withCookiesIfPresent(authenticated.cookies)
-                .with(csrf())
+                .with(csrf()),
         )
             // assert
             .andExpect(status().is3xxRedirection)
@@ -251,7 +248,7 @@ class SecurityConfigTest(
         // act
         mockMvc.perform(
             post("/invite/master/token")
-                .param("challenge", "test-challenge")
+                .param("challenge", "test-challenge"),
         )
             // assert
             .andExpect(status().isForbidden)
@@ -263,7 +260,7 @@ class SecurityConfigTest(
         mockMvc.perform(
             post("/invite/master/token")
                 .param("challenge", "test-challenge")
-                .with(csrf())
+                .with(csrf()),
         )
             // assert
             .andExpect(status().isUnauthorized)
@@ -318,7 +315,7 @@ class SecurityConfigTest(
         mockMvc.perform(
             get("/actuator/env")
                 .session(noRole.session)
-                .withCookiesIfPresent(noRole.cookies)
+                .withCookiesIfPresent(noRole.cookies),
         )
             // assert
             .andExpect(status().isForbidden)
@@ -330,7 +327,7 @@ class SecurityConfigTest(
         mockMvc.perform(
             get("/actuator/env")
                 .session(admin.session)
-                .withCookiesIfPresent(admin.cookies)
+                .withCookiesIfPresent(admin.cookies),
         )
             // assert
             .andExpect(status().isOk)
@@ -376,7 +373,7 @@ class SecurityConfigTest(
                 .session(ctx.session)
                 .withCookiesIfPresent(ctx.cookies)
                 .param("code", "test-code")
-                .param("state", ctx.state)
+                .param("state", ctx.state),
         )
             // assert
             .andExpect(status().is3xxRedirection)
@@ -408,9 +405,9 @@ class SecurityConfigTest(
                               "expires_in": 60,
                               "id_token": "$idToken"
                             }
-                            """.trimIndent()
-                        )
-                )
+                            """.trimIndent(),
+                        ),
+                ),
         )
         return subject
     }
@@ -432,8 +429,8 @@ class SecurityConfigTest(
                 .willReturn(
                     aResponse()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(response)
-                )
+                        .withBody(response),
+                ),
         )
     }
 
@@ -451,7 +448,7 @@ class SecurityConfigTest(
             .build()
         val signed = SignedJWT(
             JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJwk.keyID).build(),
-            claims
+            claims,
         )
         signed.sign(RSASSASigner(rsaJwk.toPrivateKey()))
         return signed.serialize()
@@ -461,13 +458,10 @@ class SecurityConfigTest(
         val session: MockHttpSession,
         val state: String,
         val nonce: String,
-        val cookies: List<Cookie>
+        val cookies: List<Cookie>,
     )
 
-    private data class AuthenticatedContext(
-        val session: MockHttpSession,
-        val cookies: List<Cookie>
-    )
+    private data class AuthenticatedContext(val session: MockHttpSession, val cookies: List<Cookie>)
 
     @RestController
     @RequestMapping("/admin/test")
@@ -477,20 +471,16 @@ class SecurityConfigTest(
     }
 }
 
-private fun MockHttpServletRequestBuilder.withCookiesIfPresent(cookies: List<Cookie>): MockHttpServletRequestBuilder {
-    return if (cookies.isEmpty()) {
+private fun MockHttpServletRequestBuilder.withCookiesIfPresent(cookies: List<Cookie>): MockHttpServletRequestBuilder =
+    if (cookies.isEmpty()) {
         this
     } else {
         this.cookie(*cookies.toTypedArray())
     }
-}
 
 private fun String.decode(): String = URLDecoder.decode(this, StandardCharsets.UTF_8)
 
-private fun mergeCookies(
-    initial: List<Cookie>,
-    additional: List<Cookie>?
-): List<Cookie> {
+private fun mergeCookies(initial: List<Cookie>, additional: List<Cookie>?): List<Cookie> {
     if (additional?.isEmpty() ?: true) {
         return initial
     }

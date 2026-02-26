@@ -63,11 +63,7 @@ interface KeycloakAdminClient {
 
     fun assignRealmRoles(realm: String, userId: String, roles: Set<String>)
 
-    fun executeActionsEmail(
-        realm: String,
-        userId: String,
-        actions: Set<String> = defaultActions
-    )
+    fun executeActionsEmail(realm: String, userId: String, actions: Set<String> = defaultActions)
 
     fun deleteUser(realm: String, userId: String)
 
@@ -78,7 +74,7 @@ interface KeycloakAdminClient {
 class HttpKeycloakAdminClient(
     private val keycloakProps: KeycloakProps,
     private val clock: Clock,
-    webClientBuilder: WebClient.Builder
+    webClientBuilder: WebClient.Builder,
 ) : KeycloakAdminClient {
 
     companion object {
@@ -122,7 +118,7 @@ class HttpKeycloakAdminClient(
         return withMdc(
             KEYCLOAK_OPERATION_KEY to "user_exists",
             KEYCLOAK_REALM_KEY to normalizedRealm,
-            INVITE_EMAIL_KEY to maskSensitive(normalizedEmail)
+            INVITE_EMAIL_KEY to maskSensitive(normalizedEmail),
         ) {
             val accessToken = obtainAccessToken()
 
@@ -149,7 +145,7 @@ class HttpKeycloakAdminClient(
                         .bodyToMono(userListType)
                         .retryWhen(retrySpec)
                         .block()
-                }
+                },
             ).isNullOrEmpty()
 
             log.atDebug()
@@ -168,7 +164,7 @@ class HttpKeycloakAdminClient(
             KEYCLOAK_OPERATION_KEY to "create_user",
             KEYCLOAK_REALM_KEY to normalizedRealm,
             INVITE_EMAIL_KEY to maskSensitive(normalizedEmail),
-            USERNAME_KEY to normalizedUsername
+            USERNAME_KEY to normalizedUsername,
         ) {
             val accessToken = obtainAccessToken()
 
@@ -184,8 +180,8 @@ class HttpKeycloakAdminClient(
                             CreateUserRequest(
                                 username = normalizedUsername,
                                 email = normalizedEmail,
-                                enabled = enabled
-                            )
+                                enabled = enabled,
+                            ),
                         )
                         .retrieve()
                         .onStatus({ it.isSameCodeAs(HttpStatus.CONFLICT) }) {
@@ -194,15 +190,15 @@ class HttpKeycloakAdminClient(
                             Mono.error(
                                 KeycloakAdminClientException(
                                     message = "User already exists on realm $normalizedRealm",
-                                    status = HttpStatus.CONFLICT
-                                )
+                                    status = HttpStatus.CONFLICT,
+                                ),
                             )
                         }
                         .onStatus({ it.is5xxServerError }) { Mono.error(RetryableException()) }
                         .toBodilessEntity()
                         .retryWhen(retrySpec)
                         .block()
-                }
+                },
             )
 
             val userId = extractUserId(response?.headers?.location)
@@ -221,7 +217,7 @@ class HttpKeycloakAdminClient(
             KEYCLOAK_OPERATION_KEY to "assign_realm_roles",
             KEYCLOAK_REALM_KEY to normalizedRealm,
             USER_ID_KEY to normalizedUserId,
-            INVITE_ROLES_KEY to normalizedRoles.joinToString(",")
+            INVITE_ROLES_KEY to normalizedRoles.joinToString(","),
         ) {
             if (normalizedRoles.isEmpty()) {
                 log.atInfo()
@@ -240,7 +236,7 @@ class HttpKeycloakAdminClient(
                             .uri(
                                 "/admin/realms/{realm}/users/{userId}/role-mappings/realm",
                                 normalizedRealm,
-                                normalizedUserId
+                                normalizedUserId,
                             )
                             .headers { headers -> headers.setBearerAuth(accessToken) }
                             .contentType(APPLICATION_JSON)
@@ -251,7 +247,7 @@ class HttpKeycloakAdminClient(
                             .toBodilessEntity()
                             .retryWhen(retrySpec)
                             .block()
-                    }
+                    },
                 )
 
                 log.atInfo()
@@ -260,49 +256,47 @@ class HttpKeycloakAdminClient(
         }
     }
 
-    private fun fetchRoleRepresentation(realm: String, role: String, accessToken: String): RoleRepresentation {
-        return withMdc(
-            KEYCLOAK_OPERATION_KEY to "fetch_role_representation",
-            ROLE_KEY to role
-        ) {
-            val representation = executeRequest(
-                message = "Failed to resolve role $role in realm $realm",
-                block = { retrySpec ->
-                    webClient.get()
-                        .uri("/admin/realms/{realm}/roles/{role}", realm, role)
-                        .headers { headers -> headers.setBearerAuth(accessToken) }
-                        .accept(APPLICATION_JSON)
-                        .exchangeToMono { resp ->
-                            when {
-                                resp.statusCode().is2xxSuccessful -> resp.bodyToMono(RoleRepresentation::class.java)
-                                resp.statusCode().isSameCodeAs(HttpStatus.NOT_FOUND) -> Mono.empty()
-                                resp.statusCode().is5xxServerError -> Mono.error(RetryableException())
-                                else -> resp.createException().flatMap { Mono.error(it) }
-                            }
+    private fun fetchRoleRepresentation(realm: String, role: String, accessToken: String): RoleRepresentation = withMdc(
+        KEYCLOAK_OPERATION_KEY to "fetch_role_representation",
+        ROLE_KEY to role,
+    ) {
+        val representation = executeRequest(
+            message = "Failed to resolve role $role in realm $realm",
+            block = { retrySpec ->
+                webClient.get()
+                    .uri("/admin/realms/{realm}/roles/{role}", realm, role)
+                    .headers { headers -> headers.setBearerAuth(accessToken) }
+                    .accept(APPLICATION_JSON)
+                    .exchangeToMono { resp ->
+                        when {
+                            resp.statusCode().is2xxSuccessful -> resp.bodyToMono(RoleRepresentation::class.java)
+                            resp.statusCode().isSameCodeAs(HttpStatus.NOT_FOUND) -> Mono.empty()
+                            resp.statusCode().is5xxServerError -> Mono.error(RetryableException())
+                            else -> resp.createException().flatMap { Mono.error(it) }
                         }
-                        .retryWhen(retrySpec)
-                        .block()
-                }
-            ) ?: run {
-                log.atError()
-                    .log { "Role is missing in Keycloak; treating as misconfiguration" }
-                throw KeycloakAdminClientException(
-                    message = "Role $role is not found in realm $realm",
-                    status = HttpStatus.NOT_FOUND
-                )
-            }
-
-            if (representation.id.isNullOrBlank() || representation.name.isNullOrBlank()) {
-                log.atError()
-                    .log { "Role representation from Keycloak is incomplete" }
-                throw KeycloakAdminClientException(
-                    message = "Role $role has incomplete representation in realm $realm",
-                    status = HttpStatus.BAD_REQUEST
-                )
-            }
-
-            representation
+                    }
+                    .retryWhen(retrySpec)
+                    .block()
+            },
+        ) ?: run {
+            log.atError()
+                .log { "Role is missing in Keycloak; treating as misconfiguration" }
+            throw KeycloakAdminClientException(
+                message = "Role $role is not found in realm $realm",
+                status = HttpStatus.NOT_FOUND,
+            )
         }
+
+        if (representation.id.isNullOrBlank() || representation.name.isNullOrBlank()) {
+            log.atError()
+                .log { "Role representation from Keycloak is incomplete" }
+            throw KeycloakAdminClientException(
+                message = "Role $role has incomplete representation in realm $realm",
+                status = HttpStatus.BAD_REQUEST,
+            )
+        }
+
+        representation
     }
 
     override fun executeActionsEmail(realm: String, userId: String, actions: Set<String>) {
@@ -313,7 +307,7 @@ class HttpKeycloakAdminClient(
             KEYCLOAK_OPERATION_KEY to "execute_actions_email",
             KEYCLOAK_REALM_KEY to normalizedRealm,
             USER_ID_KEY to normalizedUserId,
-            ACTIONS_KEY to normalizedActions.joinToString(",")
+            ACTIONS_KEY to normalizedActions.joinToString(","),
         ) {
             val accessToken = obtainAccessToken()
 
@@ -325,7 +319,7 @@ class HttpKeycloakAdminClient(
                         .uri(
                             "/admin/realms/{realm}/users/{userId}/execute-actions-email",
                             normalizedRealm,
-                            normalizedUserId
+                            normalizedUserId,
                         )
                         .headers { headers -> headers.setBearerAuth(accessToken) }
                         .contentType(APPLICATION_JSON)
@@ -336,7 +330,7 @@ class HttpKeycloakAdminClient(
                         .toBodilessEntity()
                         .retryWhen(retrySpec)
                         .block()
-                }
+                },
             )
 
             log.atInfo()
@@ -350,7 +344,7 @@ class HttpKeycloakAdminClient(
         withMdc(
             KEYCLOAK_OPERATION_KEY to "delete_user",
             KEYCLOAK_REALM_KEY to normalizedRealm,
-            USER_ID_KEY to normalizedUserId
+            USER_ID_KEY to normalizedUserId,
         ) {
             val accessToken = obtainAccessToken()
 
@@ -365,7 +359,7 @@ class HttpKeycloakAdminClient(
                         .toBodilessEntity()
                         .retryWhen(retrySpec)
                         .block()
-                }
+                },
             )
 
             log.atInfo()
@@ -378,7 +372,7 @@ class HttpKeycloakAdminClient(
         val accessToken = obtainAccessToken()
         return withMdc(
             KEYCLOAK_OPERATION_KEY to "list_realm_roles",
-            KEYCLOAK_REALM_KEY to normalizedRealm
+            KEYCLOAK_REALM_KEY to normalizedRealm,
         ) {
             val allRoles = mutableListOf<RoleRepresentation>()
             var first = 0
@@ -402,7 +396,7 @@ class HttpKeycloakAdminClient(
                             .bodyToMono(roleListType)
                             .retryWhen(retrySpec)
                             .block()
-                    }
+                    },
                 ).orEmpty()
 
                 allRoles += page
@@ -423,34 +417,29 @@ class HttpKeycloakAdminClient(
         }
     }
 
-    private fun retrySpec(message: String): RetryBackoffSpec {
-        return Retry
-            .backoff(keycloakProps.maxAttempts, keycloakProps.minBackoff)
-            .filter { e -> e is RetryableException }
-            .doBeforeRetry { signal ->
-                log.atDebug()
-                    .addKeyValue(RETRY_ATTEMPT_KEY) { signal.totalRetries() + 1 }
-                    .setCause(signal.failure())
-                    .log { "Retrying Keycloak request after failure" }
-            }
-            .onRetryExhaustedThrow { _, signal ->
-                val failure = signal.failure() ?: RetryableException()
-                log.eventForAppError(failure)
-                    .addKeyValue(RETRY_MAX_ATTEMPTS_KEY) { keycloakProps.maxAttempts }
-                    .setCause(failure)
-                    .log { "$message; Keycloak is unavailable after max retries" }
-                throw KeycloakAdminClientException(
-                    "$message; Keycloak is unavailable after max retries",
-                    HttpStatus.SERVICE_UNAVAILABLE,
-                    failure
-                )
-            }
-    }
+    private fun retrySpec(message: String): RetryBackoffSpec = Retry
+        .backoff(keycloakProps.maxAttempts, keycloakProps.minBackoff)
+        .filter { e -> e is RetryableException }
+        .doBeforeRetry { signal ->
+            log.atDebug()
+                .addKeyValue(RETRY_ATTEMPT_KEY) { signal.totalRetries() + 1 }
+                .setCause(signal.failure())
+                .log { "Retrying Keycloak request after failure" }
+        }
+        .onRetryExhaustedThrow { _, signal ->
+            val failure = signal.failure() ?: RetryableException()
+            log.eventForAppError(failure)
+                .addKeyValue(RETRY_MAX_ATTEMPTS_KEY) { keycloakProps.maxAttempts }
+                .setCause(failure)
+                .log { "$message; Keycloak is unavailable after max retries" }
+            throw KeycloakAdminClientException(
+                "$message; Keycloak is unavailable after max retries",
+                HttpStatus.SERVICE_UNAVAILABLE,
+                failure,
+            )
+        }
 
-    private fun <T> executeRequest(
-        message: String,
-        block: (RetryBackoffSpec) -> T
-    ): T {
+    private fun <T> executeRequest(message: String, block: (RetryBackoffSpec) -> T): T {
         val start = System.nanoTime()
         return try {
             val result = block(retrySpec(message))
@@ -476,21 +465,19 @@ class HttpKeycloakAdminClient(
         }
     }
 
-    private fun obtainAccessToken(): String {
-        return withMdc(
-            KEYCLOAK_OPERATION_KEY to "obtain_access_token",
-            KEYCLOAK_REALM_KEY to keycloakProps.realm
-        ) {
-            readCachedToken(allowWithinSkew = false)?.value?.also {
-                log.atDebug()
-                    .log { "Using cached Keycloak access token" }
-            } ?: run {
-                val cachedWithinSkew = readCachedToken(allowWithinSkew = true)
-                if (cachedWithinSkew != null) {
-                    refreshIfPossible(cachedWithinSkew)
-                } else {
-                    refreshWithLock()
-                }
+    private fun obtainAccessToken(): String = withMdc(
+        KEYCLOAK_OPERATION_KEY to "obtain_access_token",
+        KEYCLOAK_REALM_KEY to keycloakProps.realm,
+    ) {
+        readCachedToken(allowWithinSkew = false)?.value?.also {
+            log.atDebug()
+                .log { "Using cached Keycloak access token" }
+        } ?: run {
+            val cachedWithinSkew = readCachedToken(allowWithinSkew = true)
+            if (cachedWithinSkew != null) {
+                refreshIfPossible(cachedWithinSkew)
+            } else {
+                refreshWithLock()
             }
         }
     }
@@ -506,7 +493,7 @@ class HttpKeycloakAdminClient(
             readCachedToken(allowWithinSkew = false)?.value ?: fetchAndCacheAccessToken()
         } catch (
             @Suppress("TooGenericExceptionCaught")
-            e: Exception
+            e: Exception,
         ) {
             if (isTokenUsable(cachedWithinSkew, allowWithinSkew = true)) {
                 log.atWarn()
@@ -532,7 +519,7 @@ class HttpKeycloakAdminClient(
             readCachedToken(allowWithinSkew = false)?.value ?: fetchAndCacheAccessToken()
         } catch (
             @Suppress("TooGenericExceptionCaught")
-            e: Exception
+            e: Exception,
         ) {
             cachedAccessToken = null
             throw e
@@ -561,7 +548,7 @@ class HttpKeycloakAdminClient(
                     .bodyToMono(TokenResponse::class.java)
                     .retryWhen(retrySpec)
                     .block()
-            }
+            },
         )
 
         val accessToken = response?.accessToken
@@ -569,7 +556,7 @@ class HttpKeycloakAdminClient(
             log.atError()
                 .log { "Keycloak returned an empty access token" }
             throw KeycloakAdminClientException(
-                "Keycloak returned an empty access token for realm ${keycloakProps.realm}"
+                "Keycloak returned an empty access token for realm ${keycloakProps.realm}",
             )
         }
 
@@ -607,25 +594,14 @@ class HttpKeycloakAdminClient(
         @field:JsonProperty("access_token")
         val accessToken: String?,
         @field:JsonProperty("expires_in")
-        val expiresIn: Long? = null
+        val expiresIn: Long? = null,
     )
 
-    private data class CreateUserRequest(
-        val username: String,
-        val email: String,
-        val enabled: Boolean
-    )
+    private data class CreateUserRequest(val username: String, val email: String, val enabled: Boolean)
 
-    private data class RoleRepresentation(
-        val id: String?,
-        val name: String?
-    )
+    private data class RoleRepresentation(val id: String?, val name: String?)
 
-    private data class UserRepresentation(
-        val id: String?,
-        val email: String?,
-        val username: String?
-    )
+    private data class UserRepresentation(val id: String?, val email: String?, val username: String?)
 
     private data class CachedAccessToken(val value: String, val expiresAtEpochSec: Long?)
 
@@ -634,23 +610,19 @@ class HttpKeycloakAdminClient(
 
 private fun LoggingEventBuilder.addHttpResponseErrorContext(
     e: WebClientResponseException,
-    durationMs: Long
-): LoggingEventBuilder {
-    return this
-        .addKeyValue(REQUEST_STATUS_KEY) { e.statusCode.value() }
-        .addKeyValue(REQUEST_REASON_KEY) { e.statusText }
-        .addKeyValue(REQUEST_DURATION_MS_KEY) { durationMs }
-}
+    durationMs: Long,
+): LoggingEventBuilder = this
+    .addKeyValue(REQUEST_STATUS_KEY) { e.statusCode.value() }
+    .addKeyValue(REQUEST_REASON_KEY) { e.statusText }
+    .addKeyValue(REQUEST_DURATION_MS_KEY) { durationMs }
 
 private fun LoggingEventBuilder.addHttpRequestErrorContext(
     e: WebClientRequestException,
-    durationMs: Long
-): LoggingEventBuilder {
-    return this
-        .addKeyValue(REQUEST_URI_KEY) { e.uri }
-        .addKeyValue(REQUEST_METHOD_KEY) { e.method }
-        .addKeyValue(REQUEST_DURATION_MS_KEY) { durationMs }
-}
+    durationMs: Long,
+): LoggingEventBuilder = this
+    .addKeyValue(REQUEST_URI_KEY) { e.uri }
+    .addKeyValue(REQUEST_METHOD_KEY) { e.method }
+    .addKeyValue(REQUEST_DURATION_MS_KEY) { durationMs }
 
 private fun extractUserId(location: URI?): String {
     val userId = location?.path?.substringAfterLast('/')?.trim()
@@ -660,6 +632,4 @@ private fun extractUserId(location: URI?): String {
     return userId
 }
 
-private fun Long.toPositiveIntWithinIntMax(): Int {
-    return coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
-}
+private fun Long.toPositiveIntWithinIntMax(): Int = coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()

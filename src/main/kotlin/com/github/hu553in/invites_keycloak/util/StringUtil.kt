@@ -6,7 +6,7 @@ fun normalizeString(
     string: String,
     message: String = "must not be empty",
     lowercase: Boolean = false,
-    required: Boolean = true
+    required: Boolean = true,
 ): String {
     var normalized = string.trim()
     if (lowercase) {
@@ -22,7 +22,7 @@ fun normalizeStrings(
     strings: Set<String>,
     message: String = "must not be empty",
     default: Set<String> = emptySet(),
-    required: Boolean = true
+    required: Boolean = true,
 ): Set<String> {
     var normalized = strings
         .map { it.trim() }

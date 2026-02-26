@@ -39,7 +39,7 @@ class TestClientRegistrationRepositoryConfig(private val environment: Environmen
             .userNameAttributeName("preferred_username")
             .issuerUri(realmUrl)
             .providerConfigurationMetadata(
-                mapOf("end_session_endpoint" to "$realmUrl/protocol/openid-connect/logout")
+                mapOf("end_session_endpoint" to "$realmUrl/protocol/openid-connect/logout"),
             )
             .build()
 

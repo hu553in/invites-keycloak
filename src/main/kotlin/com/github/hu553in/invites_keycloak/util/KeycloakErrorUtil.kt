@@ -6,9 +6,8 @@ import org.springframework.http.HttpStatusCode
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import java.util.*
 
-fun extractKeycloakException(error: Throwable): KeycloakAdminClientException? {
-    return error.causeSequence().filterIsInstance<KeycloakAdminClientException>().firstOrNull()
-}
+fun extractKeycloakException(error: Throwable): KeycloakAdminClientException? =
+    error.causeSequence().filterIsInstance<KeycloakAdminClientException>().firstOrNull()
 
 fun keycloakStatusFrom(error: Throwable): HttpStatusCode? {
     val keycloakEx = extractKeycloakException(error)
@@ -23,15 +22,13 @@ fun keycloakStatusFrom(error: Throwable): HttpStatusCode? {
     return status ?: rootStatus
 }
 
-fun isKeycloakMisconfiguration(statusCode: HttpStatusCode?): Boolean {
-    return statusCode?.let { status ->
-        status.isSameCodeAs(HttpStatus.BAD_REQUEST) ||
-            status.isSameCodeAs(HttpStatus.NOT_FOUND) ||
-            status.isSameCodeAs(HttpStatus.UNPROCESSABLE_ENTITY) ||
-            status.isSameCodeAs(HttpStatus.UNAUTHORIZED) ||
-            status.isSameCodeAs(HttpStatus.FORBIDDEN)
-    } ?: false
-}
+fun isKeycloakMisconfiguration(statusCode: HttpStatusCode?): Boolean = statusCode?.let { status ->
+    status.isSameCodeAs(HttpStatus.BAD_REQUEST) ||
+        status.isSameCodeAs(HttpStatus.NOT_FOUND) ||
+        status.isSameCodeAs(HttpStatus.UNPROCESSABLE_ENTITY) ||
+        status.isSameCodeAs(HttpStatus.UNAUTHORIZED) ||
+        status.isSameCodeAs(HttpStatus.FORBIDDEN)
+} ?: false
 
 private fun Throwable.causeSequence(): Sequence<Throwable> = sequence {
     val visited = Collections.newSetFromMap(IdentityHashMap<Throwable, Boolean>())

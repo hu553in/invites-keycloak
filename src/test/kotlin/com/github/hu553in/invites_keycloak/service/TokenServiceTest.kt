@@ -25,9 +25,9 @@ class TokenServiceTest {
             secret = "test-secret-value",
             bytes = 32,
             saltBytes = 16,
-            macAlgorithm = "HmacSHA256"
+            macAlgorithm = "HmacSHA256",
         ),
-        cleanup = mock()
+        cleanup = mock(),
     )
 
     private val tokenService = TokenService(inviteProps)

@@ -50,7 +50,7 @@ class InviteEntityTest {
             expiresAt = now.plusSeconds(3600),
             maxUses = maxUses,
             uses = uses,
-            roles = setOf("user")
+            roles = setOf("user"),
         )
     }
 }
