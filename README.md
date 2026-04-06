@@ -6,8 +6,6 @@
 - [How to contribute](./CONTRIBUTING.md)
 - [Code of conduct](./CODE_OF_CONDUCT.md)
 
----
-
 A Spring Boot service for issuing and consuming **invitation links for Keycloak**.
 
 Administrators generate invitation links with a limited lifetime and usage count.
@@ -16,8 +14,6 @@ predefined realm roles.
 
 The service focuses on **safety, failure resilience, and operational clarity** when automating
 user onboarding in Keycloak.
-
----
 
 ## What the service does
 
@@ -66,8 +62,6 @@ The redeem flow (`POST`) uses **compensating actions** to stay failure-safe:
 
 - Expired invites beyond the configured retention period are removed by a daily scheduled cleanup job.
 
----
-
 ## Architecture at a glance
 
 - Spring Boot MVC with Thymeleaf for server-rendered admin and public views.
@@ -80,8 +74,6 @@ The redeem flow (`POST`) uses **compensating actions** to stay failure-safe:
 - A servlet filter enriches MDC with:
   - `current_user.id` (username or `system`)
   - `current_user.sub` (OIDC subject when available)
-
----
 
 ## Configuration and environment
 
@@ -186,8 +178,6 @@ Override using:
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
 
----
-
 ## Keycloak setup (all environments)
 
 ### Realm
@@ -228,8 +218,6 @@ Override using:
 
 Missing roles will result in 403 errors when listing roles or creating users.
 
----
-
 ## Reverse proxy and HTTPS termination
 
 - The application respects forwarded headers.
@@ -252,8 +240,6 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 ```
 
 Without correct forwarding, OAuth redirects may downgrade to HTTP.
-
----
 
 ## Local development
 
@@ -286,8 +272,6 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
   - unit and integration tests: `make test`
   - full linting and coverage: `make check`
 
----
-
 ## Routes and UI
 
 - `/`<br>
@@ -307,8 +291,6 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
   Public success page used as the redirect target after successful invite redemption.
 
 Admin pages include a logout action that signs out of Keycloak and returns to the start page.
-
----
 
 ## Deploying to a VPS with Docker
 
@@ -331,8 +313,6 @@ Deployment steps:
    ```
 4. Verify service health at the configured health endpoint (default: `/actuator/health`).
 
----
-
 ## Tech stack
 
 See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-compose.yml`.
@@ -344,8 +324,6 @@ See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-
 - Micrometer with Prometheus registry
 - Micrometer tracing (OTLP exporter optional)
 - Detekt, Kover, Testcontainers, WireMock
-
----
 
 ## Observability
 

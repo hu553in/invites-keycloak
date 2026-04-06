@@ -4,9 +4,7 @@ Right now it's just me here — but you could be next! 🚀<br>
 Found a bug? Fixed a typo? Added something cool?<br>
 Congrats, you're officially a contributor.
 
----
-
-## How to Contribute
+## How to contribute
 
 Super simple:
 
@@ -20,13 +18,9 @@ Super simple:
 Nothing special here.<br>
 If the change makes the project better, it's welcome.
 
----
-
-## Need Help?
+## Need help?
 
 Open an issue and say hi 👋
-
----
 
 ## Thanks!
 

@@ -1,4 +1,4 @@
-# Code of Conduct - invites-keycloak
+# Code of Conduct — invites-keycloak
 
 ## Our Pledge
 
