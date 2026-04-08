@@ -1,0 +1,196 @@
+version: 2
+
+registries:
+  ghcr:
+    type: docker-registry
+    url: https://ghcr.io
+    username: "${{github.repository_owner}}"
+    password: "${{secrets.GITHUB_TOKEN}}"
+
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: "deps(dependabot):"
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+
+  - package-ecosystem: docker
+    directories:
+      - "/"
+      - "/src/tizen_tool/resources"
+      - "/ansible/playbooks/roles/file_deployment/files/3x_ui"
+      - "/ansible/playbooks/roles/file_deployment/files/general"
+      - "/ansible/playbooks/roles/file_deployment/files/grooming"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: "deps(dependabot):"
+    registries:
+      - ghcr
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+
+  - package-ecosystem: gomod
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: "deps(dependabot):"
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+
+  - package-ecosystem: gradle
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: "deps(dependabot):"
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: "deps(dependabot):"
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+
+  - package-ecosystem: uv
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: "deps(dependabot):"
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+
+  - package-ecosystem: swift
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: "deps(dependabot):"
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+
+  - package-ecosystem: bundler
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: "deps(dependabot):"
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+
+  - package-ecosystem: gitsubmodule
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: "deps(dependabot):"
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
