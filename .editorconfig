@@ -5,14 +5,16 @@ end_of_line = lf
 trim_trailing_whitespace = true
 insert_final_newline = true
 charset = utf-8
+indent_size = 2
 indent_style = space
+
+[*.{java,kt,py}]
 indent_size = 4
 
-[Makefile]
+[{Makefile,*.go}]
+indent_size = 4
+tab_width = 4
 indent_style = tab
 
-[gradlew.bat]
+[*.{bat,cmd,ps1}]
 end_of_line = crlf
-
-[{*.y*ml,*.json,*.toml,*.xml,*.md}]
-indent_size = 2
