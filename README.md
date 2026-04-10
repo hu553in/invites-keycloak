@@ -3,7 +3,7 @@
 [![CI](https://github.com/hu553in/invites-keycloak/actions/workflows/ci.yml/badge.svg)](https://github.com/hu553in/invites-keycloak/actions/workflows/ci.yml)
 
 - [License](./LICENSE)
-- [How to contribute](./CONTRIBUTING.md)
+- [Contributing](./CONTRIBUTING.md)
 - [Code of conduct](./CODE_OF_CONDUCT.md)
 
 A Spring Boot service for issuing and consuming **invitation links for Keycloak**.
