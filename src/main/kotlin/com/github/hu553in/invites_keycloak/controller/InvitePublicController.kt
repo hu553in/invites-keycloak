@@ -4,12 +4,12 @@ import com.github.hu553in.invites_keycloak.client.KeycloakAdminClient
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.service.InviteService
-import com.github.hu553in.invites_keycloak.util.ErrorMessages
 import com.github.hu553in.invites_keycloak.util.INVITE_FLOW_SHOULD_REVOKE_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_INVALID_REASON_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_ROLES_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_TOKEN_LENGTH_KEY
 import com.github.hu553in.invites_keycloak.util.KEYCLOAK_REALM_KEY
+import com.github.hu553in.invites_keycloak.util.MessageCodes
 import com.github.hu553in.invites_keycloak.util.REQUEST_STATUS_KEY
 import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
 import com.github.hu553in.invites_keycloak.util.USER_ID_KEY
@@ -18,12 +18,14 @@ import com.github.hu553in.invites_keycloak.util.eventForAppError
 import com.github.hu553in.invites_keycloak.util.extractKeycloakException
 import com.github.hu553in.invites_keycloak.util.keycloakStatusFrom
 import com.github.hu553in.invites_keycloak.util.logger
+import com.github.hu553in.invites_keycloak.util.msg
 import com.github.hu553in.invites_keycloak.util.withInviteContextInMdc
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.HttpSession
 import jakarta.validation.constraints.NotBlank
+import org.springframework.context.MessageSource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatusCode
@@ -55,6 +57,7 @@ class InvitePublicController(
     private val inviteService: InviteService,
     private val keycloakAdminClient: KeycloakAdminClient,
     private val clock: Clock,
+    private val messageSource: MessageSource,
 ) {
 
     private val log by logger()
@@ -72,6 +75,7 @@ class InvitePublicController(
         model: Model,
         resp: HttpServletResponse,
         session: HttpSession,
+        locale: Locale,
     ): String {
         val normalizedRealm = realm.trim()
         val normalizedToken = token.trim()
@@ -82,7 +86,7 @@ class InvitePublicController(
         val invite = inviteService.validateToken(normalizedRealm, normalizedToken)
         val inviteId = checkNotNull(invite.id) { "Null invite id is received from db for realm $realm" }
         val challenge = issueChallenge(session, inviteId, normalizedRealm)
-            ?: return handleConfirmationInProgress(normalizedRealm, model, resp)
+            ?: return handleConfirmationInProgress(normalizedRealm, model, resp, locale)
 
         resp.setHeader(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, max-age=0")
         resp.setHeader(HttpHeaders.PRAGMA, "no-cache")
@@ -103,6 +107,7 @@ class InvitePublicController(
         model: Model,
         resp: HttpServletResponse,
         session: HttpSession,
+        locale: Locale,
     ): String {
         val normalizedRealm = realm.trim()
         val normalizedToken = token.trim()
@@ -114,6 +119,7 @@ class InvitePublicController(
                 "Invite redeem request is missing confirmation challenge",
                 model,
                 resp,
+                locale,
             )
         }
 
@@ -124,6 +130,7 @@ class InvitePublicController(
             model = model,
             resp = resp,
             session = session,
+            locale = locale,
         )
     }
 
@@ -134,6 +141,7 @@ class InvitePublicController(
         model: Model,
         resp: HttpServletResponse,
         session: HttpSession,
+        locale: Locale,
     ): String {
         val challengeInviteId = consumeChallengeAndMarkInFlight(session, normalizedChallenge, normalizedRealm)
             ?: return handleInvalidChallenge(
@@ -141,6 +149,7 @@ class InvitePublicController(
                 "Invite redeem confirmation challenge is invalid or already used",
                 model,
                 resp,
+                locale,
             )
 
         return try {
@@ -150,6 +159,7 @@ class InvitePublicController(
                 challengeInviteId = challengeInviteId,
                 model = model,
                 resp = resp,
+                locale = locale,
             )
         } finally {
             releaseRedeemInFlight(session, challengeInviteId, normalizedRealm)
@@ -162,6 +172,7 @@ class InvitePublicController(
         challengeInviteId: UUID,
         model: Model,
         resp: HttpServletResponse,
+        locale: Locale,
     ): String {
         val invite = inviteService.validateToken(normalizedRealm, normalizedToken)
         val inviteId = checkNotNull(invite.id) { "Null invite id is received from db for realm $normalizedRealm" }
@@ -172,6 +183,7 @@ class InvitePublicController(
                 "Invite redeem confirmation challenge does not match invite",
                 model,
                 resp,
+                locale,
             )
         }
 
@@ -180,14 +192,14 @@ class InvitePublicController(
             val userExists = keycloakAdminClient.userExists(normalizedRealm, email)
 
             if (userExists) {
-                handleExistingUser(inviteId, model, resp)
+                handleExistingUser(inviteId, model, resp, locale)
             } else {
-                redeemInvite(normalizedRealm, inviteId, email, invite.roles, model, resp)
+                redeemInvite(normalizedRealm, inviteId, email, invite.roles, model, resp, locale)
             }
         }
     }
 
-    private fun handleExistingUser(inviteId: UUID, model: Model, resp: HttpServletResponse): String {
+    private fun handleExistingUser(inviteId: UUID, model: Model, resp: HttpServletResponse, locale: Locale): String {
         log.atWarn()
             .log { "Invite target user already exists; revoking invite" }
 
@@ -197,14 +209,26 @@ class InvitePublicController(
         )
 
         if (revokeError != null) {
-            model.addAttribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
-            model.addAttribute("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
+            model.addAttribute(
+                "error_message",
+                messageSource.msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE, locale),
+            )
+            model.addAttribute(
+                "error_details",
+                messageSource.msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE_DETAILS, locale),
+            )
             resp.status = HttpStatus.SERVICE_UNAVAILABLE.value()
             return "generic_error"
         }
 
-        model.addAttribute("error_message", ErrorMessages.ACCOUNT_ALREADY_EXISTS)
-        model.addAttribute("error_details", ErrorMessages.ACCOUNT_ALREADY_EXISTS_DETAILS)
+        model.addAttribute(
+            "error_message",
+            messageSource.msg(MessageCodes.Error.ACCOUNT_ALREADY_EXISTS, locale),
+        )
+        model.addAttribute(
+            "error_details",
+            messageSource.msg(MessageCodes.Error.ACCOUNT_ALREADY_EXISTS_DETAILS, locale),
+        )
         resp.status = HttpStatus.CONFLICT.value()
         return "generic_error"
     }
@@ -216,6 +240,7 @@ class InvitePublicController(
         roles: Set<String>,
         model: Model,
         resp: HttpServletResponse,
+        locale: Locale,
     ): String {
         var createdUserId: String? = null
 
@@ -236,7 +261,7 @@ class InvitePublicController(
             rollbackUser(realm, createdUserId)
             val keycloakStatus = keycloakStatusFrom(e)
             val shouldRevoke = shouldRevokeInvite(e)
-            val view = buildFailureView(shouldRevoke, inviteId, keycloakStatus, model, resp)
+            val view = buildFailureView(shouldRevoke, inviteId, keycloakStatus, model, resp, locale)
 
             log.dedupedEventForAppError(e, keycloakStatus = keycloakStatus)
                 .addKeyValue(INVITE_FLOW_SHOULD_REVOKE_KEY) { shouldRevoke }
@@ -254,14 +279,21 @@ class InvitePublicController(
         keycloakStatus: HttpStatusCode?,
         model: Model,
         resp: HttpServletResponse,
+        locale: Locale,
     ): String {
         if (shouldRevoke) {
             revokeInviteAndLogFailure(
                 inviteId = inviteId,
                 failureMessage = "Failed to revoke invite after invite flow error",
             )
-            model.addAttribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID)
-            model.addAttribute("error_details", ErrorMessages.INVITE_NO_LONGER_VALID_DETAILS)
+            model.addAttribute(
+                "error_message",
+                messageSource.msg(MessageCodes.Error.INVITE_NO_LONGER_VALID, locale),
+            )
+            model.addAttribute(
+                "error_details",
+                messageSource.msg(MessageCodes.Error.INVITE_NO_LONGER_VALID_DETAILS, locale),
+            )
             resp.status = HttpStatus.GONE.value()
             return "generic_error"
         }
@@ -272,11 +304,23 @@ class InvitePublicController(
         }
 
         if (keycloakStatus?.is4xxClientError == true) {
-            model.addAttribute("error_message", ErrorMessages.INVITE_CANNOT_BE_REDEEMED)
-            model.addAttribute("error_details", ErrorMessages.INVITE_CANNOT_BE_REDEEMED_DETAILS)
+            model.addAttribute(
+                "error_message",
+                messageSource.msg(MessageCodes.Error.INVITE_CANNOT_BE_REDEEMED, locale),
+            )
+            model.addAttribute(
+                "error_details",
+                messageSource.msg(MessageCodes.Error.INVITE_CANNOT_BE_REDEEMED_DETAILS, locale),
+            )
         } else {
-            model.addAttribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
-            model.addAttribute("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
+            model.addAttribute(
+                "error_message",
+                messageSource.msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE, locale),
+            )
+            model.addAttribute(
+                "error_details",
+                messageSource.msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE_DETAILS, locale),
+            )
         }
         resp.status = responseStatus.value()
         return "generic_error"
@@ -328,6 +372,7 @@ class InvitePublicController(
         logMessage: String,
         model: Model,
         resp: HttpServletResponse,
+        locale: Locale,
     ): String {
         log.atWarn()
             .addKeyValue(KEYCLOAK_REALM_KEY) { realm }
@@ -335,21 +380,38 @@ class InvitePublicController(
             .addKeyValue(INVITE_INVALID_REASON_KEY) { "confirmation_invalid" }
             .log { logMessage }
 
-        model.addAttribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-        model.addAttribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+        model.addAttribute(
+            "error_message",
+            messageSource.msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID, locale),
+        )
+        model.addAttribute(
+            "error_details",
+            messageSource.msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS, locale),
+        )
         resp.status = HttpStatus.UNAUTHORIZED.value()
         return "generic_error"
     }
 
-    private fun handleConfirmationInProgress(realm: String, model: Model, resp: HttpServletResponse): String {
+    private fun handleConfirmationInProgress(
+        realm: String,
+        model: Model,
+        resp: HttpServletResponse,
+        locale: Locale,
+    ): String {
         log.atWarn()
             .addKeyValue(KEYCLOAK_REALM_KEY) { realm }
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.CONFLICT.value() }
             .addKeyValue(INVITE_INVALID_REASON_KEY) { "confirmation_in_progress" }
             .log { "Invite confirmation page requested while redeem is already in-flight for this invite in session" }
 
-        model.addAttribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-        model.addAttribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+        model.addAttribute(
+            "error_message",
+            messageSource.msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID, locale),
+        )
+        model.addAttribute(
+            "error_details",
+            messageSource.msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS, locale),
+        )
         resp.status = HttpStatus.CONFLICT.value()
         return "generic_error"
     }

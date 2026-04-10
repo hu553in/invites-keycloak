@@ -3,8 +3,8 @@ package com.github.hu553in.invites_keycloak.exception.handler
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
-import com.github.hu553in.invites_keycloak.util.ErrorMessages
 import com.github.hu553in.invites_keycloak.util.INVITE_INVALID_REASON_KEY
+import com.github.hu553in.invites_keycloak.util.MessageCodes
 import com.github.hu553in.invites_keycloak.util.REQUEST_METHOD_KEY
 import com.github.hu553in.invites_keycloak.util.REQUEST_ROUTE_KEY
 import com.github.hu553in.invites_keycloak.util.REQUEST_STATUS_KEY
@@ -12,18 +12,21 @@ import com.github.hu553in.invites_keycloak.util.REQUEST_URI_KEY
 import com.github.hu553in.invites_keycloak.util.dedupedEventForAppError
 import com.github.hu553in.invites_keycloak.util.eventForAppError
 import com.github.hu553in.invites_keycloak.util.logger
+import com.github.hu553in.invites_keycloak.util.msg
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.spi.LoggingEventBuilder
+import org.springframework.context.MessageSource
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.servlet.HandlerMapping
+import java.util.*
 
 @ControllerAdvice(annotations = [Controller::class])
-class ControllerExceptionHandler {
+class ControllerExceptionHandler(private val messageSource: MessageSource) {
 
     private val log by logger()
 
@@ -33,6 +36,7 @@ class ControllerExceptionHandler {
         model: Model,
         req: HttpServletRequest,
         resp: HttpServletResponse,
+        locale: Locale,
     ): String {
         log.eventForAppError(e)
             .setCause(e)
@@ -40,8 +44,14 @@ class ControllerExceptionHandler {
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.UNAUTHORIZED.value() }
             .addKeyValue(INVITE_INVALID_REASON_KEY) { e.reason.key }
             .log { "${InvalidInviteException::class.simpleName} exception occurred" }
-        model.addAttributeIfAbsent("error_message", ErrorMessages.INVITE_INVALID)
-        model.addAttributeIfAbsent("error_details", ErrorMessages.INVITE_INVALID_DETAILS)
+        model.addAttributeIfAbsent(
+            "error_message",
+            messageSource.msg(MessageCodes.Error.INVITE_INVALID, locale),
+        )
+        model.addAttributeIfAbsent(
+            "error_details",
+            messageSource.msg(MessageCodes.Error.INVITE_INVALID_DETAILS, locale),
+        )
         resp.status = HttpStatus.UNAUTHORIZED.value()
         return "generic_error"
     }
@@ -52,6 +62,7 @@ class ControllerExceptionHandler {
         model: Model,
         req: HttpServletRequest,
         resp: HttpServletResponse,
+        locale: Locale,
     ): String {
         val status = e.statusCode
         val responseStatus = if (status?.is4xxClientError == true) {
@@ -67,11 +78,23 @@ class ControllerExceptionHandler {
             .log { "Keycloak admin client exception handled at controller layer" }
 
         if (responseStatus.is4xxClientError) {
-            model.addAttributeIfAbsent("error_message", ErrorMessages.INVITE_CANNOT_BE_REDEEMED)
-            model.addAttributeIfAbsent("error_details", ErrorMessages.INVITE_CANNOT_BE_REDEEMED_DETAILS)
+            model.addAttributeIfAbsent(
+                "error_message",
+                messageSource.msg(MessageCodes.Error.INVITE_CANNOT_BE_REDEEMED, locale),
+            )
+            model.addAttributeIfAbsent(
+                "error_details",
+                messageSource.msg(MessageCodes.Error.INVITE_CANNOT_BE_REDEEMED_DETAILS, locale),
+            )
         } else {
-            model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
-            model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
+            model.addAttributeIfAbsent(
+                "error_message",
+                messageSource.msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE, locale),
+            )
+            model.addAttributeIfAbsent(
+                "error_details",
+                messageSource.msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE_DETAILS, locale),
+            )
         }
 
         resp.status = responseStatus.value()
@@ -84,6 +107,7 @@ class ControllerExceptionHandler {
         model: Model,
         req: HttpServletRequest,
         resp: HttpServletResponse,
+        locale: Locale,
     ): String {
         log.eventForAppError(e)
             .setCause(e)
@@ -91,21 +115,39 @@ class ControllerExceptionHandler {
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.NOT_FOUND.value() }
             .addKeyValue(INVITE_INVALID_REASON_KEY) { "not_found" }
             .log { "${InviteNotFoundException::class.simpleName} exception occurred" }
-        model.addAttributeIfAbsent("error_message", ErrorMessages.INVITE_NOT_FOUND)
-        model.addAttributeIfAbsent("error_details", ErrorMessages.INVITE_NOT_FOUND_DETAILS)
+        model.addAttributeIfAbsent(
+            "error_message",
+            messageSource.msg(MessageCodes.Error.INVITE_NOT_FOUND, locale),
+        )
+        model.addAttributeIfAbsent(
+            "error_details",
+            messageSource.msg(MessageCodes.Error.INVITE_NOT_FOUND_DETAILS, locale),
+        )
         resp.status = HttpStatus.NOT_FOUND.value()
         return "generic_error"
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleUnknown(e: Exception, model: Model, req: HttpServletRequest, resp: HttpServletResponse): String {
+    fun handleUnknown(
+        e: Exception,
+        model: Model,
+        req: HttpServletRequest,
+        resp: HttpServletResponse,
+        locale: Locale,
+    ): String {
         log.eventForAppError(e)
             .setCause(e)
             .addRequestContext(req)
             .addKeyValue(REQUEST_STATUS_KEY) { HttpStatus.SERVICE_UNAVAILABLE.value() }
             .log { "Unknown exception handled at controller layer" }
-        model.addAttributeIfAbsent("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
-        model.addAttributeIfAbsent("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
+        model.addAttributeIfAbsent(
+            "error_message",
+            messageSource.msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE, locale),
+        )
+        model.addAttributeIfAbsent(
+            "error_details",
+            messageSource.msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE_DETAILS, locale),
+        )
         resp.status = HttpStatus.SERVICE_UNAVAILABLE.value()
         return "generic_error"
     }

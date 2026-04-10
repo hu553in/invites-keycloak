@@ -3,7 +3,7 @@ package com.github.hu553in.invites_keycloak.controller
 import com.github.hu553in.invites_keycloak.config.props.InviteProps
 import com.github.hu553in.invites_keycloak.entity.InviteEntity
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteReason
-import com.github.hu553in.invites_keycloak.util.UiInviteStatuses
+import com.github.hu553in.invites_keycloak.util.MessageCodes
 import java.time.Instant
 import java.util.*
 
@@ -25,18 +25,18 @@ object InviteAdminMappings {
         val active: Boolean,
         val roles: Set<String>,
         val statusClass: String,
-        val statusLabel: String,
+        val statusMessageKey: String,
     )
 
     fun InviteEntity.toView(now: Instant): InviteView {
         val expired = expiresAt.isBefore(now)
         val overused = uses >= maxUses
         val active = !revoked && !expired && !overused
-        val (statusLabel, statusClass) = when {
-            revoked -> UiInviteStatuses.REVOKED to InvalidInviteReason.REVOKED.key
-            expired -> UiInviteStatuses.EXPIRED to InvalidInviteReason.EXPIRED.key
-            overused -> UiInviteStatuses.OVERUSED to InvalidInviteReason.OVERUSED.key
-            else -> UiInviteStatuses.ACTIVE to "active"
+        val (statusMessageKey, statusClass) = when {
+            revoked -> MessageCodes.InviteStatus.REVOKED to InvalidInviteReason.REVOKED.key
+            expired -> MessageCodes.InviteStatus.EXPIRED to InvalidInviteReason.EXPIRED.key
+            overused -> MessageCodes.InviteStatus.OVERUSED to InvalidInviteReason.OVERUSED.key
+            else -> MessageCodes.InviteStatus.ACTIVE to "active"
         }
 
         return InviteView(
@@ -56,7 +56,7 @@ object InviteAdminMappings {
             active = active,
             roles = roles,
             statusClass = statusClass,
-            statusLabel = statusLabel,
+            statusMessageKey = statusMessageKey,
         )
     }
 

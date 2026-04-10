@@ -7,7 +7,7 @@ import com.github.hu553in.invites_keycloak.entity.InviteEntity
 import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
 import com.github.hu553in.invites_keycloak.service.InviteService
 import com.github.hu553in.invites_keycloak.service.MailService
-import com.github.hu553in.invites_keycloak.util.SuccessMessages
+import com.github.hu553in.invites_keycloak.util.MessageCodes
 import com.github.hu553in.invites_keycloak.util.UiMessageLevels
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -23,6 +23,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.context.MessageSource
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
@@ -75,6 +76,7 @@ class InviteAdminControllerTest(
     private val inviteService: InviteService,
     private val mailService: MailService,
     private val keycloakAdminClient: KeycloakAdminClient,
+    private val messageSource: MessageSource,
 ) {
 
     @BeforeEach
@@ -244,7 +246,7 @@ class InviteAdminControllerTest(
                 createdBy = "system",
             ),
         ).willReturn(createdInvite)
-        given(mailService.sendInviteEmail(expectedMailData)).willReturn(MailService.MailSendStatus.OK)
+        given(mailService.sendInviteEmail(expectedMailData, Locale.ENGLISH)).willReturn(MailService.MailSendStatus.OK)
         given(keycloakAdminClient.listRealmRoles("master")).willReturn(listOf("default-admin"))
 
         // act
@@ -261,13 +263,13 @@ class InviteAdminControllerTest(
             status { is3xxRedirection() }
             redirectedUrl("/admin/invite")
             flash {
-                attribute("successMessage", SuccessMessages.adminInviteCreated("admin@example.com"))
+                attribute("successMessage", msg(MessageCodes.Success.ADMIN_INVITE_CREATED, "admin@example.com"))
                 attributeExists("inviteLink")
                 attribute("mailStatusLevel", UiMessageLevels.INFO)
             }
         }
 
-        then(mailService).should().sendInviteEmail(expectedMailData)
+        then(mailService).should().sendInviteEmail(expectedMailData, Locale.ENGLISH)
     }
 
     @Test
@@ -299,7 +301,7 @@ class InviteAdminControllerTest(
                 createdBy = "system",
             ),
         ).willReturn(createdInvite)
-        given(mailService.sendInviteEmail(expectedMailData)).willReturn(MailService.MailSendStatus.OK)
+        given(mailService.sendInviteEmail(expectedMailData, Locale.ENGLISH)).willReturn(MailService.MailSendStatus.OK)
 
         // act
         val result = mockMvc.post("/admin/invite") {
@@ -314,14 +316,14 @@ class InviteAdminControllerTest(
             status { is3xxRedirection() }
             redirectedUrl("/admin/invite")
             flash {
-                attribute("successMessage", SuccessMessages.adminInviteCreated("no-roles@example.com"))
+                attribute("successMessage", msg(MessageCodes.Success.ADMIN_INVITE_CREATED, "no-roles@example.com"))
                 attributeExists("inviteLink")
                 attribute("mailStatusLevel", UiMessageLevels.INFO)
             }
         }
 
         verifyNoInteractions(keycloakAdminClient)
-        then(mailService).should().sendInviteEmail(expectedMailData)
+        then(mailService).should().sendInviteEmail(expectedMailData, Locale.ENGLISH)
     }
 
     @Test
@@ -448,7 +450,9 @@ class InviteAdminControllerTest(
         )
         val expectedExpiry = clock.instant().plus(Duration.ofMinutes(1440))
         given(inviteService.get(inviteId)).willReturn(existing)
-        given(mailService.sendInviteEmail(expectedMailData)).willReturn(MailService.MailSendStatus.NOT_CONFIGURED)
+        given(
+            mailService.sendInviteEmail(expectedMailData, Locale.ENGLISH),
+        ).willReturn(MailService.MailSendStatus.NOT_CONFIGURED)
         given(inviteService.resendInvite(inviteId, expectedExpiry, "system")).willReturn(created)
         given(keycloakAdminClient.listRealmRoles("other")).willReturn(existing.roles.toList())
 
@@ -467,7 +471,7 @@ class InviteAdminControllerTest(
             }
         }
         then(inviteService).should().resendInvite(inviteId, expectedExpiry, "system")
-        then(mailService).should().sendInviteEmail(expectedMailData)
+        then(mailService).should().sendInviteEmail(expectedMailData, Locale.ENGLISH)
     }
 
     @Test
@@ -492,7 +496,7 @@ class InviteAdminControllerTest(
         given(inviteService.get(inviteId)).willReturn(existing)
         given(keycloakAdminClient.listRealmRoles("other")).willReturn(existing.roles.toList())
         given(inviteService.resendInvite(inviteId, expectedExpiry, "system")).willReturn(created)
-        given(mailService.sendInviteEmail(expectedMailData)).willReturn(MailService.MailSendStatus.OK)
+        given(mailService.sendInviteEmail(expectedMailData, Locale.ENGLISH)).willReturn(MailService.MailSendStatus.OK)
 
         // act
         val result = mockMvc.post("/admin/invite/$inviteId/resend") {
@@ -509,7 +513,7 @@ class InviteAdminControllerTest(
             }
         }
         then(inviteService).should().resendInvite(inviteId, expectedExpiry, "system")
-        then(mailService).should().sendInviteEmail(expectedMailData)
+        then(mailService).should().sendInviteEmail(expectedMailData, Locale.ENGLISH)
     }
 
     @Test
@@ -569,7 +573,7 @@ class InviteAdminControllerTest(
         result.andExpect {
             status { is3xxRedirection() }
             redirectedUrl("/admin/invite")
-            flash { attribute("successMessage", SuccessMessages.adminInviteDeleted("user@example.com")) }
+            flash { attribute("successMessage", msg(MessageCodes.Success.ADMIN_INVITE_DELETED, "user@example.com")) }
         }
         then(inviteService).should().delete(inviteId)
     }
@@ -611,4 +615,6 @@ class InviteAdminControllerTest(
         maxUses = 1,
         roles = roles,
     )
+
+    private fun msg(code: String, vararg args: Any): String = messageSource.getMessage(code, args, Locale.ENGLISH)
 }

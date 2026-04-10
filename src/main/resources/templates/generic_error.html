@@ -1,22 +1,26 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.toLanguageTag()}">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title th:text="|${error_message ?: 'Unknown error'} - Invites for your Keycloak 💌 🗝|">
-        Unknown error - Invites for your Keycloak 💌 🗝
-    </title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title th:text="|${error_message ?: #messages.msg('page.error.heading')} - ${#messages.msg('app.name')}|">
+    Unknown error - Invites for your Keycloak 💌 🗝
+  </title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="flex min-h-screen items-center justify-center
-             bg-gradient-to-b from-rose-50 via-white to-white text-rose-950 antialiased">
-<main class="mx-4 w-full max-w-xl rounded-2xl border border-rose-200/70 bg-white/90
-             p-6 text-center shadow-2xl shadow-rose-100 backdrop-blur sm:p-8 sm:text-left">
-    <h1 class="text-2xl font-semibold" th:text="${error_message ?: 'Unknown error'}">Unknown error</h1>
-    <p class="mt-2 text-base leading-relaxed text-rose-800"
-       th:text="${error_details ?: 'Please contact your administrator.'}">
-        Please contact your administrator.
-    </p>
+<body
+  class="flex min-h-screen items-center justify-center bg-gradient-to-b from-rose-50 via-white to-white text-rose-950 antialiased"
+>
+<main
+  class="mx-4 w-full max-w-xl rounded-2xl border border-rose-200/70 bg-white/90 p-6 text-center shadow-2xl shadow-rose-100 backdrop-blur sm:p-8 sm:text-left"
+>
+  <h1 class="text-2xl font-semibold" th:text="${error_message ?: #messages.msg('page.error.heading')}">
+    Unknown error
+  </h1>
+  <p class="mt-2 text-base leading-relaxed text-rose-800"
+     th:text="${error_details ?: #messages.msg('page.error.details')}">
+    Please contact your administrator.
+  </p>
 </main>
 </body>
 </html>

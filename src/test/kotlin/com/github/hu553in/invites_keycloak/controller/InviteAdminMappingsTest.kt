@@ -3,7 +3,7 @@ package com.github.hu553in.invites_keycloak.controller
 import com.github.hu553in.invites_keycloak.controller.InviteAdminMappings.toView
 import com.github.hu553in.invites_keycloak.entity.InviteEntity
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteReason
-import com.github.hu553in.invites_keycloak.util.UiInviteStatuses
+import com.github.hu553in.invites_keycloak.util.MessageCodes
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -33,7 +33,7 @@ class InviteAdminMappingsTest {
 
         // assert
         assertThat(view.statusClass).isEqualTo("active")
-        assertThat(view.statusLabel).isEqualTo(UiInviteStatuses.ACTIVE)
+        assertThat(view.statusMessageKey).isEqualTo(MessageCodes.InviteStatus.ACTIVE)
         assertThat(view.active).isTrue()
         assertThat(view.overused).isFalse()
         assertThat(view.expired).isFalse()
@@ -62,7 +62,7 @@ class InviteAdminMappingsTest {
 
         // assert
         assertThat(view.statusClass).isEqualTo(InvalidInviteReason.OVERUSED.key)
-        assertThat(view.statusLabel).isEqualTo(UiInviteStatuses.OVERUSED)
+        assertThat(view.statusMessageKey).isEqualTo(MessageCodes.InviteStatus.OVERUSED)
         assertThat(view.createdBy).isEqualTo("creator")
         assertThat(view.overused).isTrue()
         assertThat(view.active).isFalse()
@@ -93,7 +93,7 @@ class InviteAdminMappingsTest {
 
         // assert
         assertThat(view.statusClass).isEqualTo(InvalidInviteReason.EXPIRED.key)
-        assertThat(view.statusLabel).isEqualTo(UiInviteStatuses.EXPIRED)
+        assertThat(view.statusMessageKey).isEqualTo(MessageCodes.InviteStatus.EXPIRED)
         assertThat(view.createdBy).isEqualTo("creator")
         assertThat(view.expired).isTrue()
         assertThat(view.active).isFalse()
@@ -127,7 +127,7 @@ class InviteAdminMappingsTest {
 
         // assert
         assertThat(view.statusClass).isEqualTo(InvalidInviteReason.REVOKED.key)
-        assertThat(view.statusLabel).isEqualTo(UiInviteStatuses.REVOKED)
+        assertThat(view.statusMessageKey).isEqualTo(MessageCodes.InviteStatus.REVOKED)
         assertThat(view.revokedAt).isEqualTo(revokedAt)
         assertThat(view.revokedBy).isEqualTo("revoker")
         assertThat(view.active).isFalse()
@@ -158,7 +158,7 @@ class InviteAdminMappingsTest {
 
         // assert
         assertThat(view.statusClass).isEqualTo(InvalidInviteReason.REVOKED.key)
-        assertThat(view.statusLabel).isEqualTo(UiInviteStatuses.REVOKED)
+        assertThat(view.statusMessageKey).isEqualTo(MessageCodes.InviteStatus.REVOKED)
         assertThat(view.revoked).isTrue()
         assertThat(view.expired).isTrue()
         assertThat(view.overused).isTrue()

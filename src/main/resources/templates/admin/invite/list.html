@@ -1,332 +1,371 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.toLanguageTag()}">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Invite administration - Invites for your Keycloak 💌 🗝</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title th:text="|${#messages.msg('page.admin.invite_list.heading')} - ${#messages.msg('app.name')}|">
+    Invite administration - Invites for your Keycloak 💌 🗝
+  </title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
 <header class="bg-slate-900 text-white shadow-lg shadow-slate-900/20">
-    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
-        <a th:href="@{/}">
-            <p class="text-sm text-slate-300">Invites for your Keycloak 💌 🗝</p>
-            <h1 class="text-2xl font-semibold leading-tight">Invite administration</h1>
-        </a>
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-            <form th:action="@{/logout}" method="post" class="inline-flex">
-                <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
-                       th:value="${_csrf.token}"/>
-                <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-800
-                               px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/30 transition
-                               hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2
-                               focus-visible:outline-offset-2 focus-visible:outline-white">
-                    Logout
-                </button>
-            </form>
-            <a th:href="@{/admin/invite/new}"
-               class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600
-                      px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition
-                      hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2
-                      focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
-                New invite
-            </a>
-        </div>
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+    <a th:href="@{/}">
+      <p class="text-sm text-slate-300" th:text="#{app.name}">Invites for your Keycloak 💌 🗝</p>
+      <h1 class="text-2xl font-semibold leading-tight" th:text="#{page.admin.invite_list.heading}">
+        Invite administration
+      </h1>
+    </a>
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+      <form th:action="@{/logout}" method="post" class="inline-flex">
+        <input
+          type="hidden"
+          th:if="${_csrf != null}"
+          th:name="${_csrf.parameterName}"
+          th:value="${_csrf.token}"
+        />
+        <button
+          type="submit"
+          class="inline-flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-800 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/30 transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          th:text="#{common.logout}"
+        >
+          Logout
+        </button>
+      </form>
+      <a
+        th:href="@{/admin/invite/new}"
+        class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+        th:text="#{page.admin.invite_list.new_invite}"
+      >
+        New invite
+      </a>
     </div>
+  </div>
 </header>
 
 <main class="mx-auto max-w-6xl space-y-6 px-4 pb-12 pt-8 sm:px-6">
-    <div th:if="${successMessage}"
-         class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3
-                text-sm text-emerald-900 shadow-sm shadow-emerald-100">
-        <p class="font-semibold" th:text="${successMessage}">Success</p>
-    </div>
-    <div th:if="${errorMessage}"
-         class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3
-                text-sm text-rose-900 shadow-sm shadow-rose-100">
-        <p class="font-semibold" th:text="${errorMessage}">Error</p>
-    </div>
-    <div th:if="${mailStatusMessage}"
-         th:class="|rounded-lg border text-sm shadow-sm px-4 py-3
-                   ${mailStatusLevel} == 'error'
-                       ? 'border-rose-200 bg-rose-50 text-rose-900 shadow-rose-100'
-                       : (${mailStatusLevel} == 'warning'
-                           ? 'border-amber-200 bg-amber-50 text-amber-900 shadow-amber-100'
-                           : (${mailStatusLevel} == 'success'
-                               ? 'border-emerald-200 bg-emerald-50 text-emerald-900 shadow-emerald-100'
-                               : 'border-sky-200 bg-sky-50 text-sky-900 shadow-sky-100'))|"
-         th:text="${mailStatusMessage}">
-        Email status
-    </div>
+  <div
+    th:if="${successMessage}"
+    class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-sm shadow-emerald-100"
+  >
+    <p class="font-semibold" th:text="${successMessage}">Success</p>
+  </div>
+  <div
+    th:if="${errorMessage}"
+    class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 shadow-sm shadow-rose-100"
+  >
+    <p class="font-semibold" th:text="${errorMessage}">Error</p>
+  </div>
+  <div
+    th:if="${mailStatusMessage}"
+    th:class="|rounded-lg border px-4 py-3 text-sm shadow-sm ${mailStatusLevel} == 'error' ? 'border-rose-200 bg-rose-50 text-rose-900 shadow-rose-100' : (${mailStatusLevel} == 'warning' ? 'border-amber-200 bg-amber-50 text-amber-900 shadow-amber-100' : 'border-emerald-200 bg-emerald-50 text-emerald-900 shadow-emerald-100')}|"
+    th:text="${mailStatusMessage}"
+  >
+    Email status
+  </div>
 
-    <div class="rounded-xl border border-slate-200 bg-white/80 p-4 shadow-sm shadow-slate-200/60 backdrop-blur">
-        <p class="text-sm font-semibold text-slate-800">Status legend</p>
-        <dl class="mt-2 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-            <div class="flex items-center gap-2">
-                <span class="inline-flex items-center min-w-[4.8rem] justify-center rounded-full bg-emerald-50
-                             px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
-                    Active
-                </span>
-                <dd class="text-slate-600">Invite is usable</dd>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <span class="inline-flex items-center min-w-[4.8rem] justify-center rounded-full bg-slate-100
-                             px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-600/20">
-                    Overused
-                </span>
-                <dd class="text-slate-600">Maximum uses reached (issue a new invite)</dd>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <span class="inline-flex items-center min-w-[4.8rem] justify-center rounded-full bg-amber-50
-                             px-2 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-600/20">
-                    Expired
-                </span>
-                <dd class="text-slate-600">Invite expired (issue a new invite)</dd>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <span class="inline-flex items-center min-w-[4.8rem] justify-center rounded-full bg-rose-50
-                             px-2 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-600/20">
-                    Revoked
-                </span>
-                <dd class="text-slate-600">Manually revoked or a non-recoverable error</dd>
-            </div>
-        </dl>
-    </div>
-
-    <div th:if="${inviteLink}"
-         class="flex flex-col gap-3 rounded-xl border border-lime-200 bg-lime-50 px-4 py-3
-                text-lime-900 shadow-sm shadow-lime-100 sm:flex-row sm:items-start">
-        <div class="flex w-full flex-col gap-2 sm:flex-1">
-            <div class="flex-1">
-                <p class="text-sm font-semibold">Invite link</p>
-                <code id="inviteLinkValue"
-                      class="mt-1 block max-w-full overflow-x-auto rounded-lg bg-slate-900
-                             px-3 py-2 text-xs text-lime-100 text-ellipsis"
-                      th:text="${inviteLink}">https://example.org/invite/realm/token</code>
-            </div>
-            <button type="button"
-                    data-copy-target="inviteLinkValue"
-                    class="inline-flex items-center justify-center self-start rounded-lg bg-indigo-600 px-3 py-2
-                           text-xs font-semibold text-white shadow-sm shadow-indigo-200 transition
-                           hover:-translate-y-0.5 hover:bg-indigo-700
-                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-                           focus-visible:outline-indigo-500">
-                Copy
-            </button>
-        </div>
-    </div>
-
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <span class="text-sm text-slate-600">
-            Manage and resend invitations for your realms.
+  <div class="rounded-xl border border-slate-200 bg-white/80 p-4 shadow-sm shadow-slate-200/60 backdrop-blur">
+    <p class="text-sm font-semibold text-slate-800" th:text="#{page.admin.invite_list.status_legend}">
+      Status legend
+    </p>
+    <dl class="mt-2 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+      <div class="flex items-center gap-2">
+        <span
+          class="inline-flex min-w-[4.8rem] items-center justify-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20"
+          th:text="#{invite.status.active}"
+        >
+          Active
         </span>
-        <a th:href="@{/admin/invite/new}"
-           class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm
-                  font-semibold text-indigo-700 transition hover:-translate-y-0.5 hover:bg-white hover:shadow
-                  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-                  focus-visible:outline-indigo-500">
-            Create invite
-        </a>
-    </div>
+        <dd class="text-slate-600" th:text="#{page.admin.invite_list.status.active_hint}">Invite is usable</dd>
+      </div>
+      <div class="flex items-center gap-2">
+        <span
+          class="inline-flex min-w-[4.8rem] items-center justify-center rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-600/20"
+          th:text="#{invite.status.overused}"
+        >
+          Overused
+        </span>
+        <dd class="text-slate-600" th:text="#{page.admin.invite_list.status.overused_hint}">
+          Maximum uses reached
+        </dd>
+      </div>
+      <div class="flex items-center gap-2">
+        <span
+          class="inline-flex min-w-[4.8rem] items-center justify-center rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-600/20"
+          th:text="#{invite.status.expired}"
+        >
+          Expired
+        </span>
+        <dd class="text-slate-600" th:text="#{page.admin.invite_list.status.expired_hint}">
+          Invite expired
+        </dd>
+      </div>
+      <div class="flex items-center gap-2">
+        <span
+          class="inline-flex min-w-[4.8rem] items-center justify-center rounded-full bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-600/20"
+          th:text="#{invite.status.revoked}"
+        >
+          Revoked
+        </span>
+        <dd class="text-slate-600" th:text="#{page.admin.invite_list.status.revoked_hint}">
+          Manually revoked
+        </dd>
+      </div>
+    </dl>
+  </div>
 
-    <div th:if="${#lists.isEmpty(invites)}"
-         class="rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-8 text-center text-slate-600
-                shadow-inner shadow-slate-200/60">
-        <p class="text-base font-semibold text-slate-700">No invites yet</p>
-        <p class="mt-2 text-sm">Create your first invite to get started.</p>
+  <div
+    th:if="${inviteLink}"
+    class="flex flex-col gap-3 rounded-xl border border-lime-200 bg-lime-50 px-4 py-3 text-lime-900 shadow-sm shadow-lime-100 sm:flex-row sm:items-start"
+  >
+    <div class="flex w-full flex-col gap-2 sm:flex-1">
+      <div class="flex-1">
+        <p class="text-sm font-semibold" th:text="#{page.admin.invite_list.invite_link}">Invite link</p>
+        <code
+          id="inviteLinkValue"
+          class="mt-1 block max-w-full overflow-x-auto rounded-lg bg-slate-900 px-3 py-2 text-xs text-lime-100 text-ellipsis"
+          th:text="${inviteLink}"
+        >https://example.org/invite/realm/token</code>
+      </div>
+      <button
+        type="button"
+        data-copy-target="inviteLinkValue"
+        class="inline-flex items-center justify-center self-start rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+        th:text="#{common.copy}"
+      >
+        Copy
+      </button>
     </div>
+  </div>
 
-    <div th:if="${!#lists.isEmpty(invites)}"
-         class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow shadow-slate-200/80">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-            <thead class="bg-slate-50 text-slate-700">
-            <tr>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">ID</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Created</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Creator</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Email</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Realm</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Expires</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Uses</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Status</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Revoked</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Revoker</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Roles</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Actions</th>
-            </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 bg-white">
-            <tr th:each="invite : ${invites}" class="hover:bg-slate-50/70">
-                <td class="px-4 py-3 text-slate-800">
-                    <code class="inline-flex max-w-[8ch] items-center rounded bg-slate-100 px-2 py-1
-                                 font-mono text-xs text-slate-800"
-                          th:title="${invite.id}"
-                          th:attr="aria-label=${invite.id}">
-                        <span class="block truncate" th:text="${invite.id}" th:title="${invite.id}">
-                            8a0331ea-9ee5-41d9-944c-917137786725
-                        </span>
-                    </code>
-                </td>
-                <td class="whitespace-nowrap px-4 py-3 text-slate-700">
-                    <time th:data-local-datetime="${invite.createdAt}"
-                          th:title="${#temporals.format(invite.createdAt, 'yyyy-MM-dd HH:mm:ss z')}"
-                          th:text="${#temporals.format(invite.createdAt, 'yyyy-MM-dd HH:mm:ss z')}">
-                        2025-01-01 12:00:00 UTC
-                    </time>
-                </td>
-                <td class="px-4 py-3 text-slate-700" th:text="${invite.createdBy}">creator</td>
-                <td class="px-4 py-3 text-slate-800 break-all sm:break-normal" th:text="${invite.email}">
-                    user@example.com
-                </td>
-                <td class="px-4 py-3 text-slate-700" th:text="${invite.realm}">master</td>
-                <td class="whitespace-nowrap px-4 py-3 text-slate-700">
-                    <time th:data-local-datetime="${invite.expiresAt}"
-                          th:title="${#temporals.format(invite.expiresAt, 'yyyy-MM-dd HH:mm:ss z')}"
-                          th:text="${#temporals.format(invite.expiresAt, 'yyyy-MM-dd HH:mm:ss z')}">
-                        2025-01-01 12:00:00 UTC
-                    </time>
-                </td>
-                <td class="whitespace-nowrap px-4 py-3 text-slate-700" th:text="|${invite.uses} / ${invite.maxUses}|">
-                    0 / 1
-                </td>
-                <td class="px-4 py-3">
-                    <span th:text="${invite.statusLabel}"
-                          th:class="|inline-flex items-center whitespace-nowrap rounded-full px-3 py-1
-                                    text-xs font-semibold ring-1
-                                    ${invite.statusClass == 'active'
-                                        ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
-                                        : (invite.statusClass == 'revoked'
-                                            ? 'bg-rose-50 text-rose-700 ring-rose-600/20'
-                                            : (invite.statusClass == 'expired'
-                                                ? 'bg-amber-50 text-amber-700 ring-amber-600/20'
-                                                : 'bg-slate-100 text-slate-700 ring-slate-600/20'))}|">
-                        Active
-                    </span>
-                </td>
-                <td class="whitespace-nowrap px-4 py-3 text-slate-700">
-                    <span th:if="${invite.revokedAt == null}">-</span>
-                    <time th:if="${invite.revokedAt != null}"
-                          th:data-local-datetime="${invite.revokedAt}"
-                          th:title="${#temporals.format(invite.revokedAt, 'yyyy-MM-dd HH:mm:ss z')}"
-                          th:text="${#temporals.format(invite.revokedAt, 'yyyy-MM-dd HH:mm:ss z')}">
-                        2025-01-01 12:00:00 UTC
-                    </time>
-                </td>
-                <td class="px-4 py-3 text-slate-700" th:text="${invite.revokedBy ?: '-'}">revoker</td>
-                <td class="px-4 py-3 text-slate-700 break-all sm:break-normal"
-                    th:text="${#lists.isEmpty(invite.roles) ? '-' : #strings.listJoin(invite.roles, ', ')}">
-                    admin
-                </td>
-                <td class="px-4 py-3">
-                    <div class="flex flex-wrap items-center gap-3">
-                        <form th:action="@{|/admin/invite/${invite.id}/revoke|}" method="post"
-                              class="inline-flex">
-                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
-                                   th:value="${_csrf.token}"/>
-                            <button type="submit"
-                                    class="inline-flex items-center gap-1 rounded-lg border border-slate-200
-                                           bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm transition
-                                           hover:-translate-y-0.5 hover:shadow focus-visible:outline
-                                           focus-visible:outline-2 focus-visible:outline-offset-2
-                                           focus-visible:outline-slate-500 disabled:cursor-not-allowed
-                                           disabled:bg-slate-100 disabled:text-slate-400"
-                                    th:disabled="${invite.revoked or invite.overused or invite.expired}">
-                                Revoke
-                            </button>
-                        </form>
-                        <form th:action="@{|/admin/invite/${invite.id}/resend|}" method="post"
-                              class="flex flex-wrap items-center gap-3">
-                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
-                                   th:value="${_csrf.token}"/>
-                            <label class="flex flex-col text-xs font-semibold text-slate-700">
-                                <span>Expiry (minutes)</span>
-                                <input type="number"
-                                       name="expiryMinutes"
-                                       th:value="${expiryDefaultMinutes}"
-                                       th:attr="min=${expiryMinMinutes},max=${expiryMaxMinutes},step=5"
-                                       class="mt-1 w-24 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs
-                                              font-semibold text-slate-800 shadow-sm focus:border-indigo-500
-                                              focus:ring-2 focus:ring-indigo-200 focus:outline-none
-                                              disabled:cursor-not-allowed disabled:bg-slate-100
-                                              disabled:text-slate-400 sm:w-28"/>
-                            </label>
-                            <button type="submit"
-                                    class="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs
-                                           font-semibold text-white shadow-sm shadow-indigo-200 transition
-                                           hover:-translate-y-0.5 hover:bg-indigo-700 focus-visible:outline
-                                           focus-visible:outline-2 focus-visible:outline-offset-2
-                                           focus-visible:outline-indigo-500">
-                                Resend
-                            </button>
-                        </form>
-                        <form th:action="@{|/admin/invite/${invite.id}/delete|}" method="post" class="inline-flex">
-                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}"
-                                   th:value="${_csrf.token}"/>
-                            <button type="submit"
-                                    class="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50
-                                           px-3 py-2 text-xs font-semibold text-rose-700 shadow-sm shadow-rose-100
-                                           transition hover:-translate-y-0.5 hover:bg-white hover:text-rose-800
-                                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-                                           focus-visible:outline-rose-500 disabled:cursor-not-allowed
-                                           disabled:bg-slate-100 disabled:text-slate-400"
-                                    th:disabled="${invite.active}">
-                                Delete
-                            </button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <span class="text-sm text-slate-600" th:text="#{page.admin.invite_list.description}">
+      Manage and resend invitations for your realms.
+    </span>
+    <a
+      th:href="@{/admin/invite/new}"
+      class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:-translate-y-0.5 hover:bg-white hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+      th:text="#{page.admin.invite_list.create_invite}"
+    >
+      Create invite
+    </a>
+  </div>
+
+  <div
+    th:if="${#lists.isEmpty(invites)}"
+    class="rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-8 text-center text-slate-600 shadow-inner shadow-slate-200/60"
+  >
+    <p class="text-base font-semibold text-slate-700" th:text="#{page.admin.invite_list.empty.heading}">
+      No invites yet
+    </p>
+    <p class="mt-2 text-sm" th:text="#{page.admin.invite_list.empty.body}">
+      Create your first invite to get started.
+    </p>
+  </div>
+
+  <div
+    th:if="${!#lists.isEmpty(invites)}"
+    class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow shadow-slate-200/80"
+  >
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 text-slate-700">
+      <tr>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" th:text="#{table.id}">
+          ID
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{table.created}">
+          Created
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{table.creator}">
+          Creator
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{common.email}">
+          Email
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{common.realm}">
+          Realm
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{table.expires}">
+          Expires
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{table.uses}">
+          Uses
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{table.status}">
+          Status
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{table.revoked}">
+          Revoked
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{table.revoker}">
+          Revoker
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{common.roles}">
+          Roles
+        </th>
+        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+            th:text="#{table.actions}">
+          Actions
+        </th>
+      </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 bg-white">
+      <tr th:each="invite : ${invites}" class="hover:bg-slate-50/70">
+        <td class="px-4 py-3 text-slate-800">
+          <code
+            class="inline-flex max-w-[8ch] items-center rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-800"
+            th:title="${invite.id}"
+            th:attr="aria-label=${invite.id}"
+          >
+            <span class="block truncate" th:text="${invite.id}" th:title="${invite.id}">8a0331ea</span>
+          </code>
+        </td>
+        <td class="whitespace-nowrap px-4 py-3 text-slate-700">
+          <time th:data-local-datetime="${invite.createdAt}"
+                th:title="${#temporals.format(invite.createdAt, 'yyyy-MM-dd HH:mm:ss z')}"
+                th:text="${#temporals.format(invite.createdAt, 'yyyy-MM-dd HH:mm:ss z')}">2025-01-01
+          </time>
+        </td>
+        <td class="px-4 py-3 text-slate-700" th:text="${invite.createdBy}">creator</td>
+        <td class="px-4 py-3 text-slate-800 break-all sm:break-normal" th:text="${invite.email}">user@example.com</td>
+        <td class="px-4 py-3 text-slate-700" th:text="${invite.realm}">master</td>
+        <td class="whitespace-nowrap px-4 py-3 text-slate-700">
+          <time th:data-local-datetime="${invite.expiresAt}"
+                th:title="${#temporals.format(invite.expiresAt, 'yyyy-MM-dd HH:mm:ss z')}"
+                th:text="${#temporals.format(invite.expiresAt, 'yyyy-MM-dd HH:mm:ss z')}">2025-01-01
+          </time>
+        </td>
+        <td class="whitespace-nowrap px-4 py-3 text-slate-700" th:text="|${invite.uses} / ${invite.maxUses}|">0 / 1</td>
+        <td class="px-4 py-3">
+          <span
+            th:text="#{__${invite.statusMessageKey}__}"
+            th:class="|inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ring-1 ${invite.statusClass == 'active' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : (invite.statusClass == 'revoked' ? 'bg-rose-50 text-rose-700 ring-rose-600/20' : (invite.statusClass == 'expired' ? 'bg-amber-50 text-amber-700 ring-amber-600/20' : 'bg-slate-100 text-slate-700 ring-slate-600/20'))}|"
+          >
+            Active
+          </span>
+        </td>
+        <td class="whitespace-nowrap px-4 py-3 text-slate-700">
+          <span th:if="${invite.revokedAt == null}">-</span>
+          <time th:if="${invite.revokedAt != null}"
+                th:data-local-datetime="${invite.revokedAt}"
+                th:title="${#temporals.format(invite.revokedAt, 'yyyy-MM-dd HH:mm:ss z')}"
+                th:text="${#temporals.format(invite.revokedAt, 'yyyy-MM-dd HH:mm:ss z')}">2025-01-01
+          </time>
+        </td>
+        <td class="px-4 py-3 text-slate-700" th:text="${invite.revokedBy ?: '-'}">revoker</td>
+        <td class="px-4 py-3 text-slate-700 break-all sm:break-normal"
+            th:text="${#lists.isEmpty(invite.roles) ? '-' : #strings.listJoin(invite.roles, ', ')}">admin
+        </td>
+        <td class="px-4 py-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <form th:action="@{|/admin/invite/${invite.id}/revoke|}" method="post" class="inline-flex">
+              <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <button
+                type="submit"
+                class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                th:disabled="${invite.revoked or invite.overused or invite.expired}"
+                th:text="#{action.revoke}"
+              >
+                Revoke
+              </button>
+            </form>
+            <form
+              th:action="@{|/admin/invite/${invite.id}/resend|}"
+              method="post"
+              class="flex flex-wrap items-center gap-3"
+            >
+              <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <label class="flex flex-col text-xs font-semibold text-slate-700">
+                <span th:text="#{common.expiry_minutes}">Expiry (minutes)</span>
+                <input
+                  type="number"
+                  name="expiryMinutes"
+                  th:value="${expiryDefaultMinutes}"
+                  th:attr="min=${expiryMinMinutes},max=${expiryMaxMinutes},step=5"
+                  class="mt-1 w-24 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 sm:w-28"
+                />
+              </label>
+              <button
+                type="submit"
+                class="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                th:text="#{action.resend}"
+              >
+                Resend
+              </button>
+            </form>
+            <form th:action="@{|/admin/invite/${invite.id}/delete|}" method="post" class="inline-flex">
+              <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <button
+                type="submit"
+                class="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 shadow-sm shadow-rose-100 transition hover:-translate-y-0.5 hover:bg-white hover:text-rose-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                th:disabled="${invite.active}"
+                th:text="#{action.delete}"
+              >
+                Delete
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
 </main>
 
-<script>
-    const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        timeZoneName: 'short'
-    });
+<script th:inline="javascript">
+  const pageLocale = /*[[${#locale.toLanguageTag()}]]*/ 'en';
+  const dateTimeFormatter = new Intl.DateTimeFormat(pageLocale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short'
+  });
 
-    document.querySelectorAll('[data-local-datetime]').forEach((element) => {
-        const value = element.getAttribute('data-local-datetime');
-        const date = value ? new Date(value) : null;
-        if (!date || Number.isNaN(date.getTime())) {
-            return;
-        }
-        element.textContent = dateTimeFormatter.format(date);
-    });
+  document.querySelectorAll('[data-local-datetime]').forEach((element) => {
+    const value = element.getAttribute('data-local-datetime');
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) {
+      return;
+    }
+    element.textContent = dateTimeFormatter.format(date);
+  });
 
-    document.querySelectorAll('[data-copy-target]').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const targetId = button.getAttribute('data-copy-target');
-            const target = targetId ? document.getElementById(targetId) : null;
-            if (!target) {
-                return;
-            }
+  document.querySelectorAll('[data-copy-target]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const targetId = button.getAttribute('data-copy-target');
+      const target = targetId ? document.getElementById(targetId) : null;
+      if (!target) {
+        return;
+      }
 
-            const value = target.textContent ? target.textContent.trim() : '';
-            try {
-                await navigator.clipboard.writeText(value);
-            } catch {
-                const range = document.createRange();
-                range.selectNodeContents(target);
-                const selection = window.getSelection();
-                selection?.removeAllRanges();
-                selection?.addRange(range);
-                document.execCommand('copy');
-                selection?.removeAllRanges();
-            }
-        });
+      const value = target.textContent ? target.textContent.trim() : '';
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        document.execCommand('copy');
+        selection?.removeAllRanges();
+      }
     });
+  });
 </script>
 </body>
 </html>

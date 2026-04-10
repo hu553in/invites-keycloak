@@ -91,6 +91,18 @@ The bundled `.env.example.local` and `.env.example.docker` files:
 
 Copy one of them to `.env` and adjust it for your setup.
 
+### Localization
+
+- User-facing localization is controlled by a single application-wide locale configured at startup. Use
+  `APP_LOCALE=en` or `APP_LOCALE=ru`; the default is `en`.
+- To add a new locale:
+  - add a new message bundle file, for example `src/main/resources/messages_de.properties`
+  - translate all user-facing message keys
+  - set `APP_LOCALE` to the target locale tag, for example `de`
+  - rebuild and redeploy the application so the new bundle is included in the deployment artifact
+- Contributions for additional locales are welcome. Open a pull request with the new message bundle file and
+  its translations.
+
 ### Spring profiles
 
 - Default profile: `prod`
@@ -148,7 +160,8 @@ Example env overrides:
 
 - Enable mail by setting `SPRING_MAIL_HOST` (and related `SPRING_MAIL_*` variables).
 - `MAIL_FROM` is optional.
-- Default subject template: `Invitation to %s`.
+- `MAIL_SUBJECT_TEMPLATE` is optional.
+- If `MAIL_SUBJECT_TEMPLATE` is blank, the default localized subject from the message bundle is used.
 
 To disable mail entirely, set:
 

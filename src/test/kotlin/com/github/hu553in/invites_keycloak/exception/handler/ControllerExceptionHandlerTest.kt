@@ -9,8 +9,8 @@ import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
 import com.github.hu553in.invites_keycloak.exception.InvalidInviteReason
 import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
-import com.github.hu553in.invites_keycloak.util.ErrorMessages
 import com.github.hu553in.invites_keycloak.util.INVITE_INVALID_REASON_KEY
+import com.github.hu553in.invites_keycloak.util.MessageCodes
 import com.github.hu553in.invites_keycloak.util.REQUEST_METHOD_KEY
 import com.github.hu553in.invites_keycloak.util.REQUEST_ROUTE_KEY
 import com.github.hu553in.invites_keycloak.util.REQUEST_STATUS_KEY
@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.context.MessageSource
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.security.test.context.support.WithMockUser
@@ -31,6 +32,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.web.bind.annotation.GetMapping
+import java.util.*
 
 @WebMvcTest(controllers = [TestThrowingController::class])
 @AutoConfigureMockMvc
@@ -43,6 +45,9 @@ class ControllerExceptionHandlerTest {
 
     @Autowired
     private lateinit var mockMvc: MockMvc
+
+    @Autowired
+    private lateinit var messageSource: MessageSource
 
     private lateinit var listAppender: ListAppender<ILoggingEvent>
     private lateinit var logger: Logger
@@ -75,8 +80,8 @@ class ControllerExceptionHandlerTest {
             status { isBadRequest() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CANNOT_BE_REDEEMED)
-                attribute("error_details", ErrorMessages.INVITE_CANNOT_BE_REDEEMED_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_CANNOT_BE_REDEEMED))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_CANNOT_BE_REDEEMED_DETAILS))
             }
         }
     }
@@ -92,8 +97,8 @@ class ControllerExceptionHandlerTest {
             status { isServiceUnavailable() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
-                attribute("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE))
+                attribute("error_details", msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE_DETAILS))
             }
         }
     }
@@ -109,8 +114,8 @@ class ControllerExceptionHandlerTest {
             status { isUnauthorized() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_INVALID)
-                attribute("error_details", ErrorMessages.INVITE_INVALID_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_INVALID))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_INVALID_DETAILS))
             }
         }
 
@@ -155,8 +160,8 @@ class ControllerExceptionHandlerTest {
             status { isNotFound() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_NOT_FOUND)
-                attribute("error_details", ErrorMessages.INVITE_NOT_FOUND_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_NOT_FOUND))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_NOT_FOUND_DETAILS))
             }
         }
 
@@ -179,8 +184,8 @@ class ControllerExceptionHandlerTest {
             status { isServiceUnavailable() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE)
-                attribute("error_details", ErrorMessages.SERVICE_TEMP_UNAVAILABLE_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE))
+                attribute("error_details", msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE_DETAILS))
             }
         }
 
@@ -219,6 +224,8 @@ class ControllerExceptionHandlerTest {
         assertThat(server5xx.keyValues()).containsEntry(REQUEST_ROUTE_KEY, "/handler/keycloak-5xx")
         assertThat(server5xx.keyValues()).containsEntry(REQUEST_URI_KEY, "/handler/keycloak-5xx")
     }
+
+    private fun msg(code: String): String = messageSource.getMessage(code, null, Locale.ENGLISH)
 }
 
 @Controller

@@ -13,6 +13,9 @@ postgres:
   user: invites-keycloak
   password: invites-keycloak
 
+app:
+  locale: en
+
 spring:
   profiles:
     active: prod
@@ -111,7 +114,7 @@ invite:
 
 mail:
   from: # not required and can't have default value
-  subject-template: Invitation to %s
+  subject-template: # optional override; if blank, localized default subject is used
 
 keycloak:
   url: # required and can't have default value

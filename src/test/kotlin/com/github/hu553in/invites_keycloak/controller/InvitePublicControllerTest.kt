@@ -9,7 +9,7 @@ import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
 import com.github.hu553in.invites_keycloak.exception.KeycloakAdminClientException
 import com.github.hu553in.invites_keycloak.exception.handler.ControllerExceptionHandler
 import com.github.hu553in.invites_keycloak.service.InviteService
-import com.github.hu553in.invites_keycloak.util.ErrorMessages
+import com.github.hu553in.invites_keycloak.util.MessageCodes
 import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.context.MessageSource
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
@@ -64,6 +65,9 @@ class InvitePublicControllerTest {
 
     @Autowired
     private lateinit var clock: Clock
+
+    @Autowired
+    private lateinit var messageSource: MessageSource
 
     @BeforeEach
     fun resetMocks() {
@@ -183,7 +187,7 @@ class InvitePublicControllerTest {
         result.andExpect {
             status { isNotFound() }
             view { name("generic_error") }
-            model { attribute("error_message", ErrorMessages.INVITE_NOT_FOUND) }
+            model { attribute("error_message", msg(MessageCodes.Error.INVITE_NOT_FOUND)) }
         }
         then(inviteService).should().validateToken("master", "token")
         then(keycloakAdminClient).shouldHaveNoInteractions()
@@ -201,7 +205,7 @@ class InvitePublicControllerTest {
         result.andExpect {
             status { isServiceUnavailable() }
             view { name("generic_error") }
-            model { attribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE) }
+            model { attribute("error_message", msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE)) }
         }
         then(inviteService).should().validateToken("master", "token")
         then(inviteService).shouldHaveNoMoreInteractions()
@@ -318,8 +322,8 @@ class InvitePublicControllerTest {
             status { isUnauthorized() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-                attribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS))
             }
         }
         then(inviteService).shouldHaveNoInteractions()
@@ -338,8 +342,8 @@ class InvitePublicControllerTest {
             status { isUnauthorized() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-                attribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS))
             }
         }
         then(inviteService).shouldHaveNoInteractions()
@@ -368,8 +372,8 @@ class InvitePublicControllerTest {
             status { isUnauthorized() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-                attribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS))
             }
         }
         then(inviteService).should(times(2)).validateToken("master", "token")
@@ -396,8 +400,8 @@ class InvitePublicControllerTest {
             status { isUnauthorized() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-                attribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS))
             }
         }
         latestChallengeResult.andExpect {
@@ -440,8 +444,8 @@ class InvitePublicControllerTest {
             status { isConflict() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-                attribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS))
             }
         }
         assertThat(redeemResponse.redirectedUrl).isEqualTo("/invite/success")
@@ -467,8 +471,8 @@ class InvitePublicControllerTest {
             status { isUnauthorized() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-                attribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS))
             }
         }
         then(inviteService).should().validateToken("master", "token-a")
@@ -493,8 +497,8 @@ class InvitePublicControllerTest {
             status { isUnauthorized() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-                attribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS))
             }
         }
         then(inviteService).should().validateToken("master", "token")
@@ -525,8 +529,8 @@ class InvitePublicControllerTest {
             status { isUnauthorized() }
             view { name("generic_error") }
             model {
-                attribute("error_message", ErrorMessages.INVITE_CONFIRMATION_INVALID)
-                attribute("error_details", ErrorMessages.INVITE_CONFIRMATION_INVALID_DETAILS)
+                attribute("error_message", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID))
+                attribute("error_details", msg(MessageCodes.Error.INVITE_CONFIRMATION_INVALID_DETAILS))
             }
         }
         valid.andExpect {
@@ -574,7 +578,7 @@ class InvitePublicControllerTest {
         result.andExpect {
             status { isNotFound() }
             view { name("generic_error") }
-            model { attribute("error_message", ErrorMessages.INVITE_NOT_FOUND) }
+            model { attribute("error_message", msg(MessageCodes.Error.INVITE_NOT_FOUND)) }
         }
         then(inviteService).should(times(2)).validateToken("master", "token")
         then(inviteService).shouldHaveNoMoreInteractions()
@@ -625,7 +629,7 @@ class InvitePublicControllerTest {
         result.andExpect {
             status { isGone() }
             view { name("generic_error") }
-            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
+            model { attribute("error_message", msg(MessageCodes.Error.INVITE_NO_LONGER_VALID)) }
         }
         then(keycloakAdminClient).should().deleteUser("master", "user-id")
         then(inviteService).should(times(2)).validateToken("master", "token")
@@ -652,7 +656,7 @@ class InvitePublicControllerTest {
         result.andExpect {
             status { isGone() }
             view { name("generic_error") }
-            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
+            model { attribute("error_message", msg(MessageCodes.Error.INVITE_NO_LONGER_VALID)) }
         }
         then(keycloakAdminClient).should().deleteUser("master", "user-id")
         then(inviteService).should(times(2)).validateToken("master", "token")
@@ -677,7 +681,7 @@ class InvitePublicControllerTest {
         result.andExpect {
             status { isServiceUnavailable() }
             view { name("generic_error") }
-            model { attribute("error_message", ErrorMessages.SERVICE_TEMP_UNAVAILABLE) }
+            model { attribute("error_message", msg(MessageCodes.Error.SERVICE_TEMP_UNAVAILABLE)) }
         }
         then(inviteService).should(times(2)).validateToken("master", "token")
         then(inviteService).shouldHaveNoMoreInteractions()
@@ -714,7 +718,7 @@ class InvitePublicControllerTest {
         result.andExpect {
             status { isGone() }
             view { name("generic_error") }
-            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
+            model { attribute("error_message", msg(MessageCodes.Error.INVITE_NO_LONGER_VALID)) }
         }
         then(keycloakAdminClient).should().deleteUser("master", "user-id")
         then(inviteService).should(times(2)).validateToken("master", "token")
@@ -749,7 +753,7 @@ class InvitePublicControllerTest {
         result.andExpect {
             status { isGone() }
             view { name("generic_error") }
-            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
+            model { attribute("error_message", msg(MessageCodes.Error.INVITE_NO_LONGER_VALID)) }
         }
         then(inviteService).should(times(2)).validateToken("master", "token")
         then(keycloakAdminClient).should().userExists("master", invite.email)
@@ -780,7 +784,7 @@ class InvitePublicControllerTest {
         result.andExpect {
             status { isGone() }
             view { name("generic_error") }
-            model { attribute("error_message", ErrorMessages.INVITE_NO_LONGER_VALID) }
+            model { attribute("error_message", msg(MessageCodes.Error.INVITE_NO_LONGER_VALID)) }
         }
         then(keycloakAdminClient).should().deleteUser("master", "user-id")
         then(inviteService).should(times(2)).validateToken("master", "token")
@@ -830,6 +834,8 @@ class InvitePublicControllerTest {
             roles = roles,
         )
     }
+
+    private fun msg(code: String): String = messageSource.getMessage(code, null, Locale.ENGLISH)
 
     private data class ConfirmPage(val session: MockHttpSession, val challenge: String)
 

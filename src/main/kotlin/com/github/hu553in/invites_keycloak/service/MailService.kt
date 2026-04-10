@@ -2,11 +2,13 @@ package com.github.hu553in.invites_keycloak.service
 
 import com.github.hu553in.invites_keycloak.config.props.MailProps
 import com.github.hu553in.invites_keycloak.util.MAIL_STATUS_KEY
-import com.github.hu553in.invites_keycloak.util.MailMessages
+import com.github.hu553in.invites_keycloak.util.MessageCodes
 import com.github.hu553in.invites_keycloak.util.logger
+import com.github.hu553in.invites_keycloak.util.msg
 import com.github.hu553in.invites_keycloak.util.withInviteContextInMdc
 import jakarta.mail.MessagingException
 import org.springframework.beans.factory.ObjectProvider
+import org.springframework.context.MessageSource
 import org.springframework.mail.MailException
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
@@ -21,11 +23,12 @@ class MailService(
     private val senderProvider: ObjectProvider<JavaMailSender>,
     private val templateEngine: SpringTemplateEngine,
     private val mailProps: MailProps,
+    private val messageSource: MessageSource,
 ) {
 
     private val log by logger()
 
-    fun sendInviteEmail(data: InviteMailData): MailSendStatus =
+    fun sendInviteEmail(data: InviteMailData, locale: Locale): MailSendStatus =
         withInviteContextInMdc(data.inviteId, data.realm, data.email) {
             val sender = senderProvider.ifAvailable
             if (sender == null) {
@@ -45,8 +48,8 @@ class MailService(
                                 ?.takeIf { from -> from.isNotBlank() }
                                 ?.let { from -> helper.setFrom(from.trim()) }
                             helper.setTo(data.email)
-                            helper.setSubject(resolveSubject(data.realm))
-                            helper.setText(renderBody(data), true)
+                            helper.setSubject(resolveSubject(data.realm, locale))
+                            helper.setText(renderBody(data, locale), true)
                         }
                     }
                     log.atInfo()
@@ -71,17 +74,24 @@ class MailService(
             }
         }
 
-    private fun resolveSubject(realm: String): String = runCatching { mailProps.subjectTemplate.format(realm) }
-        .getOrElse {
-            log.atWarn()
-                .setCause(it)
-                .log { "Falling back to default invite email subject template" }
-            MailMessages.defaultInviteSubject(realm)
+    private fun resolveSubject(realm: String, locale: Locale): String {
+        val template = mailProps.subjectTemplate?.trim().orEmpty()
+        if (template.isBlank()) {
+            return messageSource.msg(MessageCodes.Mail.DEFAULT_INVITE_SUBJECT, locale, realm)
         }
 
-    private fun renderBody(data: InviteMailData): String = templateEngine.process(
+        return runCatching { template.format(realm) }
+            .getOrElse {
+                log.atWarn()
+                    .setCause(it)
+                    .log { "Falling back to default invite email subject template" }
+                messageSource.msg(MessageCodes.Mail.DEFAULT_INVITE_SUBJECT, locale, realm)
+            }
+    }
+
+    private fun renderBody(data: InviteMailData, locale: Locale): String = templateEngine.process(
         "mail/invite",
-        Context().apply {
+        Context(locale).apply {
             setVariable("link", data.link)
             setVariable("target", data.realm)
             setVariable("expiresAt", data.expiresAt)

@@ -11,7 +11,6 @@ import com.github.hu553in.invites_keycloak.util.INVITE_EMAIL_KEY
 import com.github.hu553in.invites_keycloak.util.INVITE_ID_KEY
 import com.github.hu553in.invites_keycloak.util.KEYCLOAK_REALM_KEY
 import com.github.hu553in.invites_keycloak.util.MAIL_STATUS_KEY
-import com.github.hu553in.invites_keycloak.util.MailMessages
 import com.github.hu553in.invites_keycloak.util.maskSensitive
 import com.github.hu553in.invites_keycloak.util.objectProvider
 import jakarta.mail.Session
@@ -26,6 +25,7 @@ import org.mockito.BDDMockito.then
 import org.mockito.BDDMockito.willAnswer
 import org.mockito.BDDMockito.willThrow
 import org.slf4j.LoggerFactory
+import org.springframework.context.support.StaticMessageSource
 import org.springframework.mail.MailSendException
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessagePreparator
@@ -39,6 +39,9 @@ import java.util.*
 class MailServiceTest {
 
     private val clock = Clock.systemUTC()
+    private val messageSource = StaticMessageSource().apply {
+        addMessage("mail.invite.subject", Locale.ENGLISH, "Invitation to {0}")
+    }
 
     private val templateEngine = SpringTemplateEngine().apply {
         setTemplateResolver(
@@ -79,7 +82,7 @@ class MailServiceTest {
             null
         }.given(sender).send(any(MimeMessagePreparator::class.java))
 
-        val svc = MailService(objectProvider(sender), templateEngine, MailProps())
+        val svc = MailService(objectProvider(sender), templateEngine, MailProps(), messageSource)
         val data = InviteMailData(
             inviteId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
             realm = "master",
@@ -89,11 +92,11 @@ class MailServiceTest {
         )
 
         // act
-        val status = svc.sendInviteEmail(data)
+        val status = svc.sendInviteEmail(data, Locale.ENGLISH)
 
         // assert
         assertThat(status).isEqualTo(MailSendStatus.OK)
-        assertThat(msg.subject).isEqualTo(MailMessages.defaultInviteSubject("master"))
+        assertThat(msg.subject).isEqualTo("Invitation to master")
         assertThat(msg.allRecipients).hasSize(1)
         assertThat(msg.allRecipients[0].toString()).isEqualTo("user@example.com")
         assertThat(msg.content.toString()).contains(data.link)
@@ -111,7 +114,7 @@ class MailServiceTest {
     @Test
     fun `sendInviteEmail skips when sender missing`() {
         // arrange
-        val svc = MailService(objectProvider(null), templateEngine, MailProps())
+        val svc = MailService(objectProvider(null), templateEngine, MailProps(), messageSource)
 
         val data = InviteMailData(
             inviteId = null,
@@ -122,7 +125,7 @@ class MailServiceTest {
         )
 
         // act
-        val status = svc.sendInviteEmail(data)
+        val status = svc.sendInviteEmail(data, Locale.ENGLISH)
 
         // assert
         assertThat(status).isEqualTo(MailSendStatus.NOT_CONFIGURED)
@@ -138,7 +141,7 @@ class MailServiceTest {
         val sender = BDDMockito.mock(JavaMailSender::class.java)
         willThrow(MailSendException("boom")).given(sender).send(any(MimeMessagePreparator::class.java))
 
-        val svc = MailService(objectProvider(sender), templateEngine, MailProps())
+        val svc = MailService(objectProvider(sender), templateEngine, MailProps(), messageSource)
         val data = InviteMailData(
             inviteId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
             realm = "master",
@@ -148,7 +151,7 @@ class MailServiceTest {
         )
 
         // act
-        val status = svc.sendInviteEmail(data)
+        val status = svc.sendInviteEmail(data, Locale.ENGLISH)
 
         // assert
         assertThat(status).isEqualTo(MailSendStatus.FAIL)
@@ -169,7 +172,7 @@ class MailServiceTest {
             null
         }.given(sender).send(any(MimeMessagePreparator::class.java))
 
-        val svc = MailService(objectProvider(sender), templateEngine, MailProps())
+        val svc = MailService(objectProvider(sender), templateEngine, MailProps(), messageSource)
         val data = InviteMailData(
             inviteId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
             realm = "master",
@@ -179,7 +182,7 @@ class MailServiceTest {
         )
 
         // act
-        val status = svc.sendInviteEmail(data)
+        val status = svc.sendInviteEmail(data, Locale.ENGLISH)
 
         // assert
         assertThat(status).isEqualTo(MailSendStatus.FAIL)
@@ -203,6 +206,7 @@ class MailServiceTest {
             objectProvider(sender),
             templateEngine,
             MailProps(subjectTemplate = "Invitation to %q"),
+            messageSource,
         )
         val data = InviteMailData(
             inviteId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
@@ -213,11 +217,11 @@ class MailServiceTest {
         )
 
         // act
-        val status = svc.sendInviteEmail(data)
+        val status = svc.sendInviteEmail(data, Locale.ENGLISH)
 
         // assert
         assertThat(status).isEqualTo(MailSendStatus.OK)
-        assertThat(msg.subject).isEqualTo(MailMessages.defaultInviteSubject("master"))
+        assertThat(msg.subject).isEqualTo("Invitation to master")
         val fallbackEvent = listAppender.list.first {
             it.formattedMessage == "Falling back to default invite email subject template"
         }
