@@ -1,4 +1,6 @@
-# Contributors
+# Contributing
+
+## Contributors
 
 Right now it's just me here — but you could be next! 🚀<br>
 Found a bug? Fixed a typo? Added something cool?<br>
