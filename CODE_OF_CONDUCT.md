@@ -1,4 +1,4 @@
-# Code of Conduct — invites-keycloak
+# Code of Conduct
 
 ## Our Pledge
 
@@ -36,13 +36,13 @@ professional setting
 
 Project maintainers are responsible for clarifying and enforcing our standards of
 acceptable behaviour and will take appropriate and fair corrective action in
-response to any instances of unacceptable behaviour.
+response to any behaviour that they deem inappropriate,
+threatening, offensive, or harmful.
 
 Project maintainers have the right and responsibility to remove, edit, or reject
 comments, commits, code, wiki edits, issues, and other contributions that are
-not aligned to this Code of Conduct, or to ban
-temporarily or permanently any contributor for other behaviours that they deem
-inappropriate, threatening, offensive, or harmful.
+not aligned to this Code of Conduct, and will
+communicate reasons for moderation decisions when appropriate.
 
 ## Scope
 
