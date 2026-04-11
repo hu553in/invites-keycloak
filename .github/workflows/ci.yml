@@ -45,7 +45,7 @@ jobs:
           path: build/reports/detekt
           overwrite: true
 
-  publish:
+  publish-main:
     needs: check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -74,7 +74,7 @@ jobs:
           docker push ${{ steps.vars.outputs.image }}:${{ github.sha }}
           docker push ${{ steps.vars.outputs.image }}:latest
 
-  publish-tag:
+  release-tag:
     needs: check
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
