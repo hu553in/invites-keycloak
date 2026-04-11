@@ -49,12 +49,12 @@ test:
 
 .PHONY: release_patch
 release_patch: check
-	./gradlew release -Prelease.increment=patch
+	./gradlew release -Prelease.versionIncrementer=incrementPatch
 
 .PHONY: release_minor
 release_minor: check
-	./gradlew release -Prelease.increment=minor
+	./gradlew release -Prelease.versionIncrementer=incrementMinor
 
 .PHONY: release_major
 release_major: check
-	./gradlew release -Prelease.increment=major
+	./gradlew release -Prelease.versionIncrementer=incrementMajor
