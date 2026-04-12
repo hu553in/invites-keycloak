@@ -8,7 +8,6 @@ registries:
     password: '${{secrets.GITHUB_TOKEN}}'
 
 updates:
-
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
@@ -28,7 +27,6 @@ updates:
       major:
         update-types:
           - major
-
   - package-ecosystem: docker
     directories:
       - '/'
@@ -51,7 +49,6 @@ updates:
       major:
         update-types:
           - major
-
   - package-ecosystem: gradle
     directory: '/'
     schedule:
