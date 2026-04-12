@@ -276,7 +276,7 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
   - `INVITE_PUBLIC_BASE_URL`
 - Run locally (starts Postgres via Compose, then Spring Boot):
   ```
-  make run_local
+  make run-local
   ```
 - Fast dev loop:
   - keep `docker compose up -d db` running

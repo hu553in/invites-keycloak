@@ -18,7 +18,7 @@ plugins {
 
 group = "com.github.hu553in"
 version = "1.0.0"
-description = "Invites for your Keycloak"
+description = "A Spring Boot service for issuing and consuming invitation links for Keycloak."
 
 scmVersion {
     sanitizeVersion = true
@@ -147,10 +147,20 @@ tasks.named("check") {
 
 tasks.named<BootBuildImage>("bootBuildImage") {
     environment.put("BP_HEALTH_CHECKER_ENABLED", "true")
+    environment.put("BP_OCI_AUTHORS", "Ruslan Khasanshin")
+    environment.put("BP_OCI_DESCRIPTION", description.toString())
+    environment.put("BP_OCI_LICENSES", "MIT")
+    environment.put("BP_OCI_REVISION", System.getenv("GITHUB_SHA") ?: "unknown")
+    environment.put("BP_OCI_SOURCE", "https://github.com/hu553in/invites-keycloak")
+    environment.put("BP_OCI_TITLE", project.name)
+    environment.put("BP_OCI_URL", "https://github.com/hu553in/invites-keycloak")
+    environment.put("BP_OCI_VENDOR", "hu553in")
+    environment.put("BP_OCI_VERSION", project.version.toString())
     buildpacks.set(
         listOf(
             "urn:cnb:builder:paketo-buildpacks/java",
-            "docker.io/paketobuildpacks/health-checker:latest"
+            "docker.io/paketobuildpacks/health-checker:latest",
+            "docker.io/paketobuildpacks/image-labels:latest"
         )
     )
 }
