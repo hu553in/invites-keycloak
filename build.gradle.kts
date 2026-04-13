@@ -24,7 +24,7 @@ scmVersion {
     sanitizeVersion = true
     checks {
         uncommittedChanges.set(true)
-        aheadOfRemote.set(false)
+        aheadOfRemote.set(true)
         snapshotDependencies.set(true)
     }
     releaseBranchNames.set(setOf("main"))
