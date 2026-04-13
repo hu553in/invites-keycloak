@@ -14,7 +14,7 @@ x-common: &common
 services:
   db:
     <<: [ *common ]
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-invites-keycloak}
       POSTGRES_USER: ${POSTGRES_USER:-invites-keycloak}
