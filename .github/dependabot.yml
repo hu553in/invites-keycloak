@@ -27,7 +27,7 @@ updates:
       major:
         update-types:
           - major
-  - package-ecosystem: docker
+  - package-ecosystem: docker-compose
     directories:
       - '/'
     schedule:
