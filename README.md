@@ -331,7 +331,7 @@ Deployment steps:
 See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-compose.yml`.
 
 - Java 25, Kotlin 2, Gradle 9, Spring Boot 4
-- PostgreSQL 17, Flyway, Spring Data JPA
+- PostgreSQL 18, Flyway, Spring Data JPA
 - Spring Security OAuth2 Client, Thymeleaf
 - WebClient (reactive) for Keycloak admin API
 - Micrometer with Prometheus registry
