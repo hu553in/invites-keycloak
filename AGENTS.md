@@ -87,8 +87,8 @@
 - Use only standard ASCII characters instead of styled or typographic characters,
   except when the user explicitly includes styled characters in their input.<br>
   Examples:
-    - `'` instead of `’`
-    - `"` instead of `“`
+  - `'` instead of `’`
+  - `"` instead of `“`
 
 ## 🔐 Security
 
