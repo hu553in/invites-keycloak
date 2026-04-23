@@ -16,7 +16,7 @@ updates:
     assignees:
       - hu553in
     commit-message:
-      prefix: 'deps(dependabot):'
+      prefix: 'deps(github-actions):'
     allow:
       - dependency-type: all
     groups:
@@ -36,7 +36,7 @@ updates:
     assignees:
       - hu553in
     commit-message:
-      prefix: 'deps(dependabot):'
+      prefix: 'deps(docker-compose):'
     registries:
       - ghcr
     allow:
@@ -57,7 +57,7 @@ updates:
     assignees:
       - hu553in
     commit-message:
-      prefix: 'deps(dependabot):'
+      prefix: 'deps(gradle):'
     allow:
       - dependency-type: all
     groups:
