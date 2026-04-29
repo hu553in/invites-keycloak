@@ -62,18 +62,21 @@ The redeem flow (`POST`) uses **compensating actions** to stay failure-safe:
 
 - Expired invites beyond the configured retention period are removed by a daily scheduled cleanup job.
 
-## Architecture at a glance
+## Quick start
 
-- Spring Boot MVC with Thymeleaf for server-rendered admin and public views.
-- Keycloak Admin REST API accessed via reactive WebClient with retries for transient failures.
-- PostgreSQL for persistence, with Flyway-managed schema migrations.
-- Invite tokens are stored as a hash with salt (raw tokens are never persisted).
-- Strict input normalization (for example: trimming and lowercasing emails).
-- Sensitive values are masked in logs by default.
-- Structured logging via SLF4J event builders.
-- A servlet filter enriches MDC with:
-  - `current_user.id` (username or `system`)
-  - `current_user.sub` (OIDC subject when available)
+1. Copy `.env.example.local` to `.env` and replace placeholder values, especially
+   `KEYCLOAK_URL`, `KEYCLOAK_CLIENT_SECRET`, `INVITE_TOKEN_SECRET`, and `INVITE_PUBLIC_BASE_URL`.
+2. Run `make run-local` (starts PostgreSQL via Docker Compose, then the application).
+3. For dev loop, keep `docker compose up -d db` running and start the app with `./gradlew bootRun`.
+4. Run `make test` (unit + integration) or `make check` (full linting and coverage).
+
+## Architecture
+
+- Spring Boot MVC with Thymeleaf
+- Keycloak Admin REST API via reactive WebClient
+- PostgreSQL + Flyway
+- Invite tokens stored as salted hash (raw tokens never persisted)
+- Structured logging, sensitive values masked
 
 ## Configuration and environment
 
@@ -93,15 +96,8 @@ Copy one of them to `.env` and adjust it for your setup.
 
 ### Localization
 
-- User-facing localization is controlled by a single application-wide locale configured at startup. Use
-  `APP_LOCALE=en` or `APP_LOCALE=ru`; the default is `en`.
-- To add a new locale:
-  - add a new message bundle file, for example `src/main/resources/messages_de.properties`
-  - translate all user-facing message keys
-  - set `APP_LOCALE` to the target locale tag, for example `de`
-  - rebuild and redeploy the application so the new bundle is included in the deployment artifact
-- Contributions for additional locales are welcome. Open a pull request with the new message bundle file and
-  its translations.
+User-facing locale is controlled by `APP_LOCALE` (`en` or `ru`, default `en`). Add new locales via
+`messages_*.properties` files and rebuild.
 
 ### Spring profiles
 
@@ -215,11 +211,8 @@ Override using:
 
 ### Token claims
 
-- Roles must be included in the ID token.
-- Attach the built-in `roles` client scope or add a mapper for:
-  - `realm_access.roles`
-  - multivalued
-  - included in ID token, access token, and userinfo
+Roles must be included in the ID token. Attach the built-in `roles` client scope or add a
+`realm_access.roles` mapper (multivalued, included in ID/access tokens and user info).
 
 ### Service account
 
@@ -233,25 +226,8 @@ Missing roles will result in 403 errors when listing roles or creating users.
 
 ## Reverse proxy and HTTPS termination
 
-- The application respects forwarded headers.
-- `server.forward-headers-strategy=framework` is enabled.
-
-Ensure your reverse proxy sends:
-
-- `Host`
-- `X-Forwarded-Proto`
-- `X-Forwarded-Port`
-- `X-Forwarded-For`
-
-nginx example:
-
-```
-proxy_set_header Host $host;
-proxy_set_header X-Forwarded-Proto $scheme;
-proxy_set_header X-Forwarded-Port $server_port;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-```
-
+The application respects forwarded headers (`server.forward-headers-strategy=framework`).
+Ensure your reverse proxy sends `Host`, `X-Forwarded-Proto`, `X-Forwarded-Port`, and `X-Forwarded-For`.
 Without correct forwarding, OAuth redirects may downgrade to HTTP.
 
 ## Local development
@@ -266,7 +242,7 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
 ### Setup
 
 - Install git hooks once:
-  ```
+  ```bash
   pre-commit install
   ```
 - Before the first start, replace placeholder values in `.env`, especially:
@@ -275,7 +251,7 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
   - `INVITE_TOKEN_SECRET`
   - `INVITE_PUBLIC_BASE_URL`
 - Run locally (starts Postgres via Compose, then Spring Boot):
-  ```
+  ```bash
   make run-local
   ```
 - Fast dev loop:
@@ -321,7 +297,7 @@ Deployment steps:
 1. Provision a `.env` file on the VPS with Keycloak, invite, mail, and database settings.
 2. Update `docker-compose.yml` (or an override file) to reference the desired image tag.
 3. Run:
-   ```
+   ```bash
    docker compose pull && docker compose up -d --wait
    ```
 4. Verify service health at the configured health endpoint (default: `/actuator/health`).
@@ -340,54 +316,18 @@ See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-
 
 ## Observability
 
-- Actuator endpoints (these are public):
-  - `/actuator/health`
-  - `/actuator/prometheus`
-- All other actuator endpoints require the `invite-admin` role.
+- Public endpoints: `/actuator/health`, `/actuator/prometheus`
+- Other actuator endpoints require the `invite-admin` role
+- Prometheus scraping enabled by default
+- OTLP tracing available (disabled by default, enable via `MANAGEMENT_TRACING_EXPORT_ENABLED=true`)
 
-### Metrics
+### Logging
 
-- Prometheus scraping is enabled by default.
+Structured logging via SLF4J. Sensitive values masked by default. Service layer owns `INFO`-level
+audit logs for invite lifecycle. See source code for detailed log level policy.
 
-### Tracing
+## Notes
 
-- OTLP exporter dependency is present but disabled by default.
-- Enable with:
-  ```
-  MANAGEMENT_TRACING_EXPORT_ENABLED=true
-  ```
-- Configure endpoint:
-  ```
-  MANAGEMENT_OTLP_TRACING_ENDPOINT=http://otel-collector:4318/v1/traces
-  ```
-- Adjust sampling with:
-  ```
-  MANAGEMENT_TRACING_SAMPLING_PROBABILITY
-  ```
-
-### Logging conventions
-
-- Optional servlet access log:
-  - enabled with `access-logging.enabled=true`
-  - emitted once per request
-  - includes method, path, status, duration, and MDC-enriched context
-- Service layer owns `INFO`-level audit logs for invite lifecycle events
-  (create, resend, revoke, delete, use).
-- Controllers avoid duplicating success logs.
-- Keycloak admin client logs:
-  - HTTP failures with status, context, and duration
-  - retries at `DEBUG` level with retry counts
-- Controller advice enriches logs with route and status for traceability.
-- Use `log.dedupedEventForAppError(...)` when handling
-  `KeycloakAdminClientException` outside the client to avoid double-logging.
-- Log level policy:
-  - validation and client-side issues: `WARN`
-  - Keycloak 4xx (misconfiguration-like: `400/401/403/404/422`): `ERROR`
-  - other Keycloak 4xx: `WARN`
-  - server issues and unexpected failures: `ERROR`
-  - routine reads and validation: `DEBUG`
-  - state changes and audit events: `INFO`
-- Emails are always masked using `maskSensitive`.
-- MDC helpers:
-  - `withAuthDataInMdc`
-  - `withInviteContextInMdc`
+- The redeem `POST` uses compensating actions: if any step fails, the created Keycloak user
+  is deleted. Permanent errors revoke the invite; transient errors keep it usable for retry.
+- Confirmation challenges are session-scoped and expire after 10 minutes.
