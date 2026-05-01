@@ -6,14 +6,14 @@
 - [Contributing](./CONTRIBUTING.md)
 - [Code of conduct](./CODE_OF_CONDUCT.md)
 
-A Spring Boot service for issuing and consuming **invitation links for Keycloak**.
+Spring Boot service for issuing and consuming **invitation links for Keycloak**.
 
 Administrators generate invitation links with a limited lifetime and usage count.
 Recipients redeem these links to get a Keycloak account automatically provisioned with
 predefined realm roles.
 
-The service focuses on **safety, failure resilience, and operational clarity** when automating
-user onboarding in Keycloak.
+The service keeps invite redemption failure-safe with CSRF protection, one-time confirmation
+challenges, and compensating actions for failed Keycloak provisioning.
 
 ## What the service does
 
@@ -29,10 +29,10 @@ user onboarding in Keycloak.
 
 - `GET /invite/{realm}/{token}` validates the invitation token and renders a confirmation page.
 - `POST /invite/{realm}/{token}` (on form submission) performs the redeem flow:
-  - create a Keycloak user
-  - assign predefined realm roles
-  - trigger a required-actions email from Keycloak
-  - mark the invite as used
+  - creates a Keycloak user
+  - assigns predefined realm roles
+  - triggers a required-actions email from Keycloak
+  - marks the invite as used
 - Successful `POST` requests redirect to `/invite/success` (PRG) to avoid form resubmission on refresh.
 - `GET` performs **no side effects**.
 - `POST` requires:
@@ -50,17 +50,13 @@ user onboarding in Keycloak.
   or shared session state (for example, Spring Session with Redis).
 - Confirmation challenge and in-flight protections are scoped to a single HTTP session.
   They prevent re-entry and refresh races within the same browser session, but do not
-  coordinate different browsers/devices/sessions using the same invite link at the same time.
+  coordinate different browsers, devices, and sessions using the same invite link at the same time.
 
 The redeem flow (`POST`) uses **compensating actions** to stay failure-safe:
 
 - If any step fails, the created Keycloak user is deleted.
 - Permanent errors (for example: missing roles, client-side 4xx from Keycloak) revoke the invite.
 - Transient errors keep the invite usable for retry.
-
-### Housekeeping
-
-- Expired invites beyond the configured retention period are removed by a daily scheduled cleanup job.
 
 ## Quick start
 
@@ -92,7 +88,7 @@ The bundled `.env.example.local` and `.env.example.docker` files:
 - are not exhaustive lists of all available configuration options
 - contain placeholder values (for example, `KEYCLOAK_URL=https://id.example.com`) that must be replaced
 
-Copy one of them to `.env` and adjust it for your setup.
+Copy one of them to `.env` and adjust it for the target environment.
 
 ### Localization
 
@@ -112,7 +108,7 @@ Required:
 - `KEYCLOAK_URL`
 - `KEYCLOAK_CLIENT_SECRET`
 
-`KEYCLOAK_URL` must be the **Keycloak base URL** (scheme + host + optional port/base path),
+`KEYCLOAK_URL` must be the **Keycloak base URL** (scheme, host, and optional port or base path),
 without the realm suffix (do not append `/realms/{realm}`).
 
 Examples:
@@ -167,7 +163,7 @@ To disable mail entirely, set:
 ### SpringDoc configuration
 
 - API docs and Swagger UI are disabled by default.
-- Enable via:
+- Enable by setting both variables to `true`:
   - `SPRINGDOC_API_DOCS_ENABLED=true`
   - `SPRINGDOC_SWAGGER_UI_ENABLED=true`
 
@@ -212,7 +208,7 @@ Override using:
 ### Token claims
 
 Roles must be included in the ID token. Attach the built-in `roles` client scope or add a
-`realm_access.roles` mapper (multivalued, included in ID/access tokens and user info).
+`realm_access.roles` mapper (multivalued, included in ID tokens, access tokens, and user info).
 
 ### Service account
 
@@ -227,7 +223,7 @@ Missing roles will result in 403 errors when listing roles or creating users.
 ## Reverse proxy and HTTPS termination
 
 The application respects forwarded headers (`server.forward-headers-strategy=framework`).
-Ensure your reverse proxy sends `Host`, `X-Forwarded-Proto`, `X-Forwarded-Port`, and `X-Forwarded-For`.
+Ensure the reverse proxy sends `Host`, `X-Forwarded-Proto`, `X-Forwarded-Port`, and `X-Forwarded-For`.
 Without correct forwarding, OAuth redirects may downgrade to HTTP.
 
 ## Local development
@@ -250,7 +246,7 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
   - `KEYCLOAK_CLIENT_SECRET`
   - `INVITE_TOKEN_SECRET`
   - `INVITE_PUBLIC_BASE_URL`
-- Run locally (starts Postgres via Compose, then Spring Boot):
+- Run locally (starts PostgreSQL via Docker Compose, then Spring Boot):
   ```bash
   make run-local
   ```
@@ -263,21 +259,17 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
 
 ## Routes and UI
 
-- `/`<br>
-  Redirects to `/admin/invite` (authentication required).
+- `/`: redirects to `/admin/invite` (authentication required).
 
-- `/admin/invite/**`<br>
-  Admin UI for creating, resending, revoking, and deleting invites.<br>
+- `/admin/invite/**`: admin UI for creating, resending, revoking, and deleting invites.
   Protected by Keycloak OAuth2 login.
 
-- `/invite/{realm}/{token}`<br>
-  Public invite endpoint (also accepts a trailing slash for both `GET` and `POST`):
+- `/invite/{realm}/{token}`: public invite endpoint; also accepts a trailing slash for both `GET` and `POST`.
   - `GET` renders a minimal confirmation page (no side effects)
   - `POST` redeems the invite after explicit confirmation (`CSRF` + one-time challenge)
     and redirects to `/invite/success`
 
-- `/invite/success`<br>
-  Public success page used as the redirect target after successful invite redemption.
+- `/invite/success`: public success page used as the redirect target after successful invite redemption.
 
 Admin pages include a logout action that signs out of Keycloak and returns to the start page.
 
@@ -325,9 +317,3 @@ See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-
 
 Structured logging via SLF4J. Sensitive values masked by default. Service layer owns `INFO`-level
 audit logs for invite lifecycle. See source code for detailed log level policy.
-
-## Notes
-
-- The redeem `POST` uses compensating actions: if any step fails, the created Keycloak user
-  is deleted. Permanent errors revoke the invite; transient errors keep it usable for retry.
-- Confirmation challenges are session-scoped and expire after 10 minutes.

@@ -18,7 +18,7 @@ plugins {
 
 group = "com.github.hu553in"
 version = "1.0.0"
-description = "A Spring Boot service for issuing and consuming invitation links for Keycloak."
+description = "Spring Boot service for issuing and consuming invitation links for Keycloak."
 
 scmVersion {
     sanitizeVersion = true
