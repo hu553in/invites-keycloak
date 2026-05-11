@@ -233,13 +233,13 @@ Without correct forwarding, OAuth redirects may downgrade to HTTP.
 - Java 25
 - Docker
 - Docker Compose plugin
-- [pre-commit](https://pre-commit.com)
+- [prek](https://prek.j178.dev/)
 
 ### Setup
 
 - Install git hooks once:
   ```bash
-  pre-commit install
+  prek install
   ```
 - Before the first start, replace placeholder values in `.env`, especially:
   - `KEYCLOAK_URL`
