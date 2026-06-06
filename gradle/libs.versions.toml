@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.3.21"
+kotlin = "2.4.0"
 spring-boot = "4.0.6"
 spring-dependency-management = "1.1.7"
 kover = "0.9.8"
@@ -9,7 +9,7 @@ spring-dotenv = "5.1.0"
 wiremock = "3.13.2"
 testcontainers = "2.0.5"
 springdoc = "3.0.3"
-axion-release = "1.21.1"
+axion-release = "1.21.2"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
