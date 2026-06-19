@@ -73,35 +73,35 @@
     - long tables;
     - long links;
     - code blocks.
-  - headers must use sentence case (only the first letter capitalized)
-    unless explicitly requested otherwise by the user.
+  - headers must use sentence case (only the first letter capitalized) unless explicitly requested
+    otherwise by the user.
     - Correct example: `## Project rules and conventions`.
     - Incorrect example: `## Project Rules And Conventions`.
   - always put a blank line after headers (as in this file).
   - new documents should be named using **`UPPERCASE_WITH_UNDERSCORES.md`**.
-- Before making any changes to the project, check whether any existing
-  documentation can help you better understand the context.
+- Before making any changes to the project, check whether any existing documentation can help you
+  better understand the context.
 - Any meaningful change must be reflected in documentation:
   - `README.md`;
   - inline comments or additional docs when applicable.
-- Use only standard ASCII characters instead of styled or typographic characters,
-  except when the user explicitly includes styled characters in their input.<br>
-  Examples:
+- Use only standard ASCII characters instead of styled or typographic characters, except when the
+  user explicitly includes styled characters in their input.<br> Examples:
   - `'` instead of `’`
   - `"` instead of `“`
 
 ## 🔐 Security
 
 - **Never log or expose sensitive data.**
-- For security-sensitive projects, always apply **best-practice security standards appropriate to the stack**.
+- For security-sensitive projects, always apply **best-practice security standards appropriate to
+  the stack**.
 - Prefer secure defaults over convenience.
 
 ## 🧾 Logging & error handling
 
 - Use logging facilities appropriate to the current stack.
 - Prefer structured logging when supported.
-- Error handling must follow best practices of the language or framework (wrapping, propagation, contextual
-  metadata, etc.).
+- Error handling must follow best practices of the language or framework (wrapping, propagation,
+  contextual metadata, etc.).
 
 ## 🧹 Code style & conventions
 
@@ -112,18 +112,20 @@
 - Prefer **code reuse over duplication**:
   - first, check whether existing functions, modules, or utilities can be reused;
   - when duplication appears, extract shared logic to an appropriate common place;
-  - avoid forced abstraction: do not move or extract code if it adds more complexity than it removes.
+  - avoid forced abstraction: do not move or extract code if it adds more complexity than it
+    removes.
 - Ensure all quality checks pass after modifying anything.
 
 ---
 
-This file defines **stack-agnostic rules for AI agents and contributors**.
-All concrete tools, commands, and files must be selected **according to the project's technology stack
-and conventions**.
+This file defines **stack-agnostic rules for AI agents and contributors**. All concrete tools,
+commands, and files must be selected **according to the project's technology stack and
+conventions**.
 
 # Karpathy-inspired agent guidelines
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions
+as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
@@ -186,9 +188,10 @@ For multi-step tasks, state a brief plan:
 3. [Step] → verify: [check]
 ```
 
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant
+clarification.
 
 ---
 
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication,
-and clarifying questions come before implementation rather than after mistakes.
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to
+overcomplication, and clarifying questions come before implementation rather than after mistakes.
