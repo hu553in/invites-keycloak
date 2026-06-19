@@ -1,0 +1,70 @@
+version: 2
+
+registries:
+  ghcr:
+    type: docker-registry
+    url: https://ghcr.io
+    username: '${{github.repository_owner}}'
+    password: '${{secrets.GHCR_PAT}}'
+
+updates:
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: 'deps(github-actions):'
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+  - package-ecosystem: docker-compose
+    directories:
+      - '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: 'deps(docker-compose):'
+    registries:
+      - ghcr
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major
+  - package-ecosystem: gradle
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    assignees:
+      - hu553in
+    commit-message:
+      prefix: 'deps(gradle):'
+    allow:
+      - dependency-type: all
+    groups:
+      patch-and-minor:
+        update-types:
+          - patch
+          - minor
+      major:
+        update-types:
+          - major

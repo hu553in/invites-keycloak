@@ -1,0 +1,622 @@
+package com.github.hu553in.invites_keycloak.service
+
+import com.github.hu553in.invites_keycloak.InvitesKeycloakApplication
+import com.github.hu553in.invites_keycloak.config.TestcontainersConfig
+import com.github.hu553in.invites_keycloak.config.props.InviteProps
+import com.github.hu553in.invites_keycloak.exception.ActiveInviteExistsException
+import com.github.hu553in.invites_keycloak.exception.InvalidInviteException
+import com.github.hu553in.invites_keycloak.exception.InvalidInviteReason
+import com.github.hu553in.invites_keycloak.exception.InviteNotFoundException
+import com.github.hu553in.invites_keycloak.repo.InviteRepository
+import com.github.hu553in.invites_keycloak.util.SYSTEM_USER_ID
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.catchThrowableOfType
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Test
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
+import org.springframework.jdbc.core.simple.JdbcClient
+import org.springframework.test.context.TestConstructor
+import java.sql.Timestamp
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+@SpringBootTest(classes = [InvitesKeycloakApplication::class])
+@Import(TestcontainersConfig::class)
+@TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
+class InviteServiceTest(
+    private val inviteService: InviteService,
+    private val inviteRepository: InviteRepository,
+    private val inviteProps: InviteProps,
+    private val clock: Clock,
+    private val jdbcClient: JdbcClient,
+) {
+
+    @AfterEach
+    fun tearDown() {
+        inviteRepository.deleteAllInBatch()
+    }
+
+    @Test
+    fun `createInvite persists invite and validateToken succeeds`() {
+        // arrange
+        val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
+
+        // act
+        val (saved, rawToken) = inviteService.createInvite(
+            realm = "master",
+            email = "User@Example.com",
+            expiresAt = expiresAt,
+            maxUses = 2,
+            roles = emptySet(),
+            createdBy = "creator",
+        )
+
+        val validated = inviteService.validateToken("master", rawToken)
+
+        // assert
+        assertThat(saved.id).isNotNull()
+        assertThat(validated.id).isEqualTo(saved.id)
+        assertThat(validated.email).isEqualTo("user@example.com")
+        assertThat(validated.roles).containsExactlyInAnyOrderElementsOf(
+            inviteProps.realms.getValue("master").roles,
+        )
+        assertThat(validated.uses).isZero()
+        assertThat(rawToken).contains(".")
+        assertThat(rawToken).doesNotContain(saved.tokenHash)
+    }
+
+    @Test
+    fun `createInvite allows realm with empty configured roles`() {
+        // arrange
+        val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
+
+        // act
+        val (saved, rawToken) = inviteService.createInvite(
+            realm = "no-roles",
+            email = "user@example.com",
+            expiresAt = expiresAt,
+            maxUses = 2,
+            roles = emptySet(),
+            createdBy = "creator",
+        )
+
+        val validated = inviteService.validateToken("no-roles", rawToken)
+
+        // assert
+        assertThat(saved.roles).isEmpty()
+        assertThat(validated.roles).isEmpty()
+    }
+
+    @Test
+    fun `validateToken throws InvalidInviteException when invite is expired`() {
+        // arrange
+        val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
+        val (saved, rawToken) = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            expiresAt = expiresAt,
+            roles = setOf("user"),
+            createdBy = "creator",
+        )
+
+        val pastExpiresAt = clock.instant().minus(Duration.ofMinutes(20))
+
+        // column is not updatable in JPA -> use JDBC
+        jdbcClient
+            .sql("update invite set expires_at = ? where id = ?")
+            .param(pastExpiresAt.toSqlTimestamp())
+            .param(saved.id)
+            .update()
+
+        // act
+        val exception = catchThrowableOfType(
+            InvalidInviteException::class.java,
+        ) { inviteService.validateToken("master", rawToken) }
+
+        // assert
+        assertThat(exception.reason).isEqualTo(InvalidInviteReason.EXPIRED)
+    }
+
+    @Test
+    fun `validateToken throws InvalidInviteException with revoked reason`() {
+        // arrange
+        val (_, rawToken) = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        )
+        val invite = inviteService.validateToken("master", rawToken)
+        inviteService.revoke(invite.id!!)
+
+        // act
+        val exception = catchThrowableOfType(
+            InvalidInviteException::class.java,
+        ) { inviteService.validateToken("master", rawToken) }
+
+        // assert
+        assertThat(exception.reason).isEqualTo(InvalidInviteReason.REVOKED)
+    }
+
+    @Test
+    fun `validateToken throws InvalidInviteException with overused reason`() {
+        // arrange
+        val created = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+            maxUses = 1,
+        )
+        inviteService.useOnce(created.invite.id!!)
+
+        // act
+        val exception = catchThrowableOfType(
+            InvalidInviteException::class.java,
+        ) { inviteService.validateToken("master", created.rawToken) }
+
+        // assert
+        assertThat(exception.reason).isEqualTo(InvalidInviteReason.OVERUSED)
+    }
+
+    @Test
+    fun `validateToken throws InviteNotFoundException`() {
+        // arrange
+        val created = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        )
+        val missingRawToken = created.rawToken.replaceFirstChar {
+            if (it == 'A') {
+                'B'
+            } else {
+                'A'
+            }
+        }
+
+        // act
+        assertThatThrownBy { inviteService.validateToken("master", missingRawToken) }
+            // assert
+            .isInstanceOf(InviteNotFoundException::class.java)
+    }
+
+    @Test
+    fun `validateToken throws InviteNotFoundException when realm does not match invite`() {
+        // arrange
+        val created = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        )
+
+        // act
+        assertThatThrownBy { inviteService.validateToken("no-roles", created.rawToken) }
+            // assert
+            .isInstanceOf(InviteNotFoundException::class.java)
+    }
+
+    @Test
+    fun `validateToken throws InvalidInviteException with malformed reason`() {
+        // act
+        val exception = catchThrowableOfType(
+            InvalidInviteException::class.java,
+        ) { inviteService.validateToken("master", "malformed-token") }
+
+        // assert
+        assertThat(exception.reason).isEqualTo(InvalidInviteReason.MALFORMED)
+    }
+
+    @Test
+    fun `validateToken throws InvalidInviteException with malformed reason when token part is blank`() {
+        // act
+        val exception = catchThrowableOfType(
+            InvalidInviteException::class.java,
+        ) { inviteService.validateToken("master", ".salt") }
+
+        // assert
+        assertThat(exception.reason).isEqualTo(InvalidInviteReason.MALFORMED)
+    }
+
+    @Test
+    fun `validateToken throws InvalidInviteException with malformed reason when salt part is blank`() {
+        // act
+        val exception = catchThrowableOfType(
+            InvalidInviteException::class.java,
+        ) { inviteService.validateToken("master", "token.") }
+
+        // assert
+        assertThat(exception.reason).isEqualTo(InvalidInviteReason.MALFORMED)
+    }
+
+    @Test
+    fun `useOnce is atomic under concurrent access`() {
+        // arrange
+        val expiresAt = futureExpiresAt(minBuffer = Duration.ofHours(1))
+        val saved = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            expiresAt = expiresAt,
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+
+        val executor = Executors.newFixedThreadPool(2)
+        val successCount = AtomicInteger(0)
+        val startLatch = CountDownLatch(1)
+        val readyLatch = CountDownLatch(2)
+
+        try {
+            // act
+            val futures: List<Future<Result<*>>> = List(2) {
+                executor.submit<Result<*>> {
+                    readyLatch.countDown()
+                    startLatch.await(5, TimeUnit.SECONDS)
+                    runCatching { inviteService.useOnce(saved.id!!) }
+                }
+            }
+
+            readyLatch.await(5, TimeUnit.SECONDS)
+            startLatch.countDown()
+
+            // assert
+            futures.forEach { future ->
+                val result = future.get(10, TimeUnit.SECONDS)
+                if (result.isSuccess) {
+                    successCount.incrementAndGet()
+                } else {
+                    assertThat(result.exceptionOrNull()).isInstanceOf(InvalidInviteException::class.java)
+                }
+            }
+        } finally {
+            executor.shutdownNow()
+        }
+
+        val persisted = inviteRepository.findById(saved.id!!).orElseThrow()
+        assertThat(successCount.get()).isEqualTo(1)
+        assertThat(persisted.uses).isEqualTo(1)
+    }
+
+    @Test
+    fun `useOnce throws InvalidInviteException with overused reason when invite is exhausted`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+            maxUses = 1,
+        ).invite
+        inviteService.useOnce(invite.id!!)
+
+        // act
+        val exception = catchThrowableOfType(
+            InvalidInviteException::class.java,
+        ) { inviteService.useOnce(invite.id!!) }
+
+        // assert
+        assertThat(exception.reason).isEqualTo(InvalidInviteReason.OVERUSED)
+    }
+
+    @Test
+    fun `useOnce throws InviteNotFoundException when invite is missing`() {
+        // act
+        assertThatThrownBy { inviteService.useOnce(java.util.UUID.randomUUID()) }
+            // assert
+            .isInstanceOf(InviteNotFoundException::class.java)
+    }
+
+    @Test
+    fun `useOnce throws InvalidInviteException with revoked reason`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+        inviteService.revoke(invite.id!!)
+
+        // act
+        val exception = catchThrowableOfType(
+            InvalidInviteException::class.java,
+        ) { inviteService.useOnce(invite.id!!) }
+
+        // assert
+        assertThat(exception.reason).isEqualTo(InvalidInviteReason.REVOKED)
+    }
+
+    @Test
+    fun `useOnce throws InvalidInviteException with expired reason`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+            expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10)),
+        ).invite
+        val expiredAt = clock.instant().minus(Duration.ofMinutes(1))
+        jdbcClient
+            .sql("update invite set expires_at = ? where id = ?")
+            .param(expiredAt.toSqlTimestamp())
+            .param(invite.id)
+            .update()
+
+        // act
+        val exception = catchThrowableOfType(
+            InvalidInviteException::class.java,
+        ) { inviteService.useOnce(invite.id!!) }
+
+        // assert
+        assertThat(exception.reason).isEqualTo(InvalidInviteReason.EXPIRED)
+    }
+
+    @Test
+    fun `createInvite allows issuing new invite after previous expired`() {
+        // arrange
+        val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
+        val first = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            expiresAt = expiresAt,
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+
+        val pastExpiresAt = clock.instant().minus(Duration.ofMinutes(5))
+
+        // column is not updatable in JPA -> use JDBC
+        jdbcClient
+            .sql("update invite set expires_at = ? where id = ?")
+            .param(pastExpiresAt.toSqlTimestamp())
+            .param(first.id)
+            .update()
+
+        // act
+        val second = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+
+        // assert
+        val expiredOriginal = inviteRepository.findById(first.id!!).orElseThrow()
+        assertThat(second.id).isNotEqualTo(first.id)
+        assertThat(expiredOriginal.revoked).isTrue()
+        assertThat(expiredOriginal.revokedBy).isEqualTo(SYSTEM_USER_ID)
+        assertThat(expiredOriginal.revokedAt).isNotNull()
+    }
+
+    @Test
+    fun `resendInvite uses provided expiry and revokes original invite`() {
+        // arrange
+        val original = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+        val newExpiry = clock.instant().plus(Duration.ofHours(6))
+        val before = clock.instant()
+
+        // act
+        val resent = inviteService.resendInvite(
+            inviteId = original.id!!,
+            expiresAt = newExpiry,
+            createdBy = "resender",
+        )
+
+        // assert
+        val revokedOriginal = inviteRepository.findById(original.id!!).orElseThrow()
+        val after = clock.instant()
+        assertThat(revokedOriginal.revoked).isTrue()
+        assertThat(revokedOriginal.revokedAt).isNotNull()
+        assertThat(revokedOriginal.revokedAt).isBetween(before, after)
+        assertThat(revokedOriginal.revokedBy).isEqualTo("resender")
+        assertThat(resent.invite.id).isNotEqualTo(original.id)
+        assertThat(resent.invite.expiresAt).isEqualTo(newExpiry)
+        assertThat(resent.invite.email).isEqualTo(original.email)
+        assertThat(resent.invite.createdBy).isEqualTo("resender")
+    }
+
+    @Test
+    fun `resendInvite allows already revoked invite`() {
+        // arrange
+        val original = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+        inviteService.revoke(original.id!!)
+        val newExpiry = clock.instant().plus(Duration.ofHours(12))
+
+        // act
+        val resent = inviteService.resendInvite(
+            inviteId = original.id!!,
+            expiresAt = newExpiry,
+            createdBy = "resender",
+        )
+
+        // assert
+        val revokedOriginal = inviteRepository.findById(original.id!!).orElseThrow()
+        assertThat(revokedOriginal.revoked).isTrue()
+        assertThat(resent.invite.id).isNotEqualTo(original.id)
+        assertThat(resent.invite.expiresAt).isEqualTo(newExpiry)
+        assertThat(resent.invite.email).isEqualTo(original.email)
+    }
+
+    @Test
+    fun `createInvite allows new invite after max uses reached`() {
+        // arrange
+        val initial = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+            maxUses = 1,
+        ).invite
+
+        inviteService.useOnce(initial.id!!)
+
+        // act
+        val replacement = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+
+        // assert
+        val original = inviteRepository.findById(initial.id!!).orElseThrow()
+        assertThat(original.revoked).isTrue()
+        assertThat(original.revokedBy).isEqualTo(SYSTEM_USER_ID)
+        assertThat(original.revokedAt).isNotNull()
+        assertThat(replacement.id).isNotEqualTo(initial.id)
+    }
+
+    @Test
+    fun `revoke rejects overused invite`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+            maxUses = 1,
+        ).invite
+        inviteService.useOnce(invite.id!!)
+
+        // act
+        assertThatThrownBy { inviteService.revoke(invite.id!!) }
+            // assert
+            .isInstanceOf(IllegalStateException::class.java)
+    }
+
+    @Test
+    fun `revoke rejects expired invite`() {
+        // arrange
+        val expiresAt = futureExpiresAt(minBuffer = Duration.ofMinutes(10))
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+            expiresAt = expiresAt,
+        ).invite
+
+        val pastExpiresAt = clock.instant().minus(Duration.ofMinutes(5))
+
+        // column is not updatable in JPA -> use JDBC
+        jdbcClient
+            .sql("update invite set expires_at = ? where id = ?")
+            .param(pastExpiresAt.toSqlTimestamp())
+            .param(invite.id)
+            .update()
+
+        // act
+        assertThatThrownBy { inviteService.revoke(invite.id!!) }
+            // assert
+            .isInstanceOf(IllegalStateException::class.java)
+    }
+
+    @Test
+    fun `revoke stores audit metadata`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+        val before = clock.instant()
+
+        // act
+        inviteService.revoke(invite.id!!, "auditor")
+
+        // assert
+        val revoked = inviteRepository.findById(invite.id!!).orElseThrow()
+        val after = clock.instant()
+        assertThat(revoked.revoked).isTrue()
+        assertThat(revoked.revokedBy).isEqualTo("auditor")
+        assertThat(revoked.revokedAt).isNotNull()
+        assertThat(revoked.revokedAt).isBetween(before, after)
+    }
+
+    @Test
+    fun `delete removes revoked invite`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+        inviteService.revoke(invite.id!!)
+
+        // act
+        val deleted = inviteService.delete(invite.id!!)
+
+        // assert
+        assertThat(deleted.id).isEqualTo(invite.id)
+        assertThat(inviteRepository.findById(invite.id!!)).isEmpty()
+    }
+
+    @Test
+    fun `delete rejects active invite`() {
+        // arrange
+        val invite = inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        ).invite
+
+        // act
+        assertThatThrownBy { inviteService.delete(invite.id!!) }
+            // assert
+            .isInstanceOf(IllegalStateException::class.java)
+        assertThat(inviteRepository.findById(invite.id!!)).isPresent()
+    }
+
+    @Test
+    fun `createInvite rejects when active invite already exists`() {
+        // arrange
+        inviteService.createInvite(
+            realm = "master",
+            email = "user@example.com",
+            roles = setOf("user"),
+            createdBy = "creator",
+        )
+
+        // act
+        assertThatThrownBy {
+            inviteService.createInvite(
+                realm = "master",
+                email = "user@example.com",
+                roles = setOf("user"),
+                createdBy = "another",
+            )
+        }
+            // assert
+            .isInstanceOf(ActiveInviteExistsException::class.java)
+    }
+
+    private fun futureExpiresAt(minBuffer: Duration): Instant = clock.instant()
+        .plus(inviteProps.expiry.min)
+        .plus(minBuffer)
+
+    private fun Instant.toSqlTimestamp(): Timestamp = Timestamp.from(this)
+}

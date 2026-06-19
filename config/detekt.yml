@@ -1,0 +1,29 @@
+processors:
+  active: true
+
+config:
+  validation: true
+
+ktlint:
+  active: true
+  PackageName:
+    active: false
+
+naming:
+  PackageNaming:
+    active: false
+
+complexity:
+  LongParameterList:
+    active: false
+  NamedArguments:
+    active: true
+  TooManyFunctions:
+    active: false
+
+style:
+  MagicNumber:
+    ignoreAnnotation: true
+  BracesOnIfStatements:
+    active: true
+    singleLine: always

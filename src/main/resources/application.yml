@@ -1,0 +1,137 @@
+server:
+  shutdown: graceful
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+postgres:
+  hostname: db
+  port: 5432
+  db: invites-keycloak
+  user: invites-keycloak
+  password: invites-keycloak
+
+app:
+  locale: en
+
+spring:
+  profiles:
+    active: prod
+  mvc:
+    problemdetails:
+      enabled: true
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+  application:
+    name: invites-keycloak
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  datasource:
+    url: jdbc:postgresql://${postgres.hostname}:${postgres.port}/${postgres.db}
+    username: ${postgres.user}
+    password: ${postgres.password}
+  mail:
+    properties:
+      "[mail.smtp.connectiontimeout]": 10000
+      "[mail.smtp.timeout]": 10000
+      "[mail.smtp.writetimeout]": 10000
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${keycloak.client-id}
+            client-secret: ${keycloak.client-secret}
+            scope: openid, profile, email, roles
+        provider:
+          keycloak:
+            issuer-uri: ${keycloak.url}/realms/${keycloak.realm}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus, metrics, info, env, loggers, threaddump, heapdump
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        add-additional-paths: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState, db
+    prometheus:
+      enabled: true
+  health:
+    diskspace:
+      enabled: true
+    mail:
+      enabled: false
+  metrics:
+    enable:
+      all: true
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    export:
+      enabled: false
+    sampling:
+      probability: 1.0
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+invite:
+  public-base-url: # required and can't have default value
+  expiry:
+    default: 24h
+    min: 5m
+    max: 30d
+  realms:
+    master:
+      roles: [ ]
+  token:
+    secret: # required and can't have default value
+    bytes: 32
+    salt-bytes: 16
+    mac-algorithm: HmacSHA256
+  cleanup:
+    retention: 30d
+
+mail:
+  from: # not required and can't have default value
+  subject-template: # optional override; if blank, localized default subject is used
+
+keycloak:
+  url: # required and can't have default value
+  realm: master
+  client-id: invites-keycloak
+  client-secret: # required and can't have default value
+  required-role: invite-admin
+  max-attempts: 3
+  min-backoff: PT2S
+  connect-timeout: 5s
+  response-timeout: 10s
+
+logging:
+  structured:
+    format:
+      console: ecs
+      file: ecs
+    ecs:
+      service:
+        environment: ${spring.profiles.active}

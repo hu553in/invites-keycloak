@@ -1,0 +1,61 @@
+x-common: &common
+  restart: always
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "50m"
+      max-file: "4"
+      compress: "true"
+      mode: "non-blocking"
+      max-buffer-size: "4m"
+  networks:
+    - invites_keycloak_network
+
+services:
+  db:
+    <<: [ *common ]
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-invites-keycloak}
+      POSTGRES_USER: ${POSTGRES_USER:-invites-keycloak}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invites-keycloak}
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${POSTGRES_USER:-invites-keycloak}",
+          "-d",
+          "${POSTGRES_DB:-invites-keycloak}",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - invites_keycloak_db_data:/var/lib/postgresql/data
+
+  app:
+    <<: [ *common ]
+    image: hu553in/invites-keycloak:local
+    environment:
+      THC_PATH: /actuator/health
+    env_file: .env
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: [ "CMD", "/workspace/health-check" ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  invites_keycloak_db_data:
+
+networks:
+  invites_keycloak_network:
