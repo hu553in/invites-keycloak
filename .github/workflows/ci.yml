@@ -74,8 +74,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: vars
-        run: echo "image=${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER}/invites-keycloak" > ${GITHUB_OUTPUT}
-      - run: gradle bootBuildImage --imageName=${{ steps.vars.outputs.image }}:${{ github.sha }}
+        run: echo "image=${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER}/invites-keycloak" > "${GITHUB_OUTPUT}"
+      - run: ./gradlew bootBuildImage --imageName=${{ steps.vars.outputs.image }}:${{ github.sha }}
       - run: |
           docker tag ${{ steps.vars.outputs.image }}:${{ github.sha }} ${{ steps.vars.outputs.image }}:latest
           docker push ${{ steps.vars.outputs.image }}:${{ github.sha }}
@@ -104,9 +104,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: vars
         run: |
-          echo "image=${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER}/invites-keycloak" > ${GITHUB_OUTPUT}
-          echo "tag=${GITHUB_REF_NAME}" >> ${GITHUB_OUTPUT}
-      - run: gradle bootBuildImage --imageName=${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
+          echo "image=${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER}/invites-keycloak" > "${GITHUB_OUTPUT}"
+          echo "tag=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+      - run: ./gradlew bootBuildImage --imageName=${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
       - run: docker push ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
       - uses: softprops/action-gh-release@v3
         with:
