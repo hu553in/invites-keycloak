@@ -1,28 +1,20 @@
 # Contributing
 
-## Contributors
-
-Right now it's just me here — but you could be next! 🚀<br> Found a bug? Fixed a typo? Added
-something cool?<br> Congrats, you're officially a contributor.
-
 ## How to contribute
 
-Super simple:
+1. Fork the repository.
+2. Make a focused change.
+3. Follow the existing code style and project conventions.
+4. Run the relevant checks for the stack.
+5. Open a pull request with a clear description.
 
-1. Fork the repo
-2. Make your change
-3. Test your change
-4. Follow code-style conventions
-5. Open a PR
-6. Celebrate with snacks 🎉
+## Expectations
 
-Nothing special here.<br> If the change makes the project better, it's welcome.
+- Keep pull requests scoped to one topic.
+- Update documentation when behavior, commands, setup, or configuration changes.
+- Include tests when the change affects behavior.
+- Do not include secrets, generated local files, or unrelated formatting changes.
 
 ## Need help?
 
-Open an issue and say hi 👋
-
-## Thanks!
-
-Every contribution — big or tiny — helps this project grow.<br> If you end up in this list, please
-brag about it. You deserve it.
+Open an issue with enough context to reproduce or understand the problem.
