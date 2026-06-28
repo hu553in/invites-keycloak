@@ -31,8 +31,8 @@ Recipients redeem those links to get a Keycloak account, required-actions email,
 ## Setup
 
 1. Copy `.env.example.local` to `.env`.
-2. Replace placeholders, especially `KEYCLOAK_URL`, `KEYCLOAK_CLIENT_SECRET`,
-   `INVITE_TOKEN_SECRET`, and `INVITE_PUBLIC_BASE_URL`.
+2. Replace placeholders, especially `KEYCLOAK_URL`, `KEYCLOAK_CLIENT_SECRET`, `INVITE_TOKEN_SECRET`,
+   and `INVITE_PUBLIC_BASE_URL`.
 3. Run `make run-local`.
 4. Run `make test` for tests or `make check` for the full lint/test/coverage gate.
 
@@ -103,8 +103,7 @@ SPRINGDOC_SWAGGER_UI_ENABLED=true
 - Grant `invite-admin` to users who should access the admin UI.
 - Include realm roles in the ID token via the built-in `roles` client scope or a
   `realm_access.roles` mapper.
-- Grant the service account `manage-users`, `view-realm`, and `manage-realm` realm-management
-  roles.
+- Grant the service account `manage-users`, `view-realm`, and `manage-realm` realm-management roles.
 
 Missing service-account roles result in 403 errors when listing roles or creating users.
 
