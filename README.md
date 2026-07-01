@@ -2,10 +2,6 @@
 
 [![CI](https://github.com/hu553in/invites-keycloak/actions/workflows/ci.yml/badge.svg)](https://github.com/hu553in/invites-keycloak/actions/workflows/ci.yml)
 
-- [License](./LICENSE)
-- [Contributing](./CONTRIBUTING.md)
-- [Code of conduct](./CODE_OF_CONDUCT.md)
-
 Spring Boot service for issuing and consuming invitation links for Keycloak.
 
 Administrators create invite links with limited lifetime, usage count, and predefined realm roles.
