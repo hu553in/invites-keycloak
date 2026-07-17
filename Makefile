@@ -1,3 +1,9 @@
+.DEFAULT_GOAL := check
+
+PRETTIER := bunx prettier -u
+ACTIONLINT := bunx github-actionlint
+TAPLO := bunx @taplo/cli
+
 .PHONY: build-image
 build-image:
 	./gradlew bootBuildImage \
@@ -35,13 +41,36 @@ run-local:
 	docker compose up -d --wait db
 	./gradlew bootRun
 
+.PHONY: lint
+lint:
+	$(PRETTIER) -c .
+	$(TAPLO) fmt --check
+	./gradlew detekt
+
+.PHONY: lint-fix
+lint-fix:
+	$(PRETTIER) -w .
+	$(TAPLO) fmt
+	./gradlew detekt -PdetektAutoCorrect
+
+.PHONY: check-config
+check-config:
+	docker compose config --quiet --no-interpolate --no-env-resolution
+
+.PHONY: check-workflows
+check-workflows:
+	$(ACTIONLINT)
+
 .PHONY: check
-check:
+check: check-workflows
+	$(PRETTIER) -c .
+	$(TAPLO) fmt --check
+	$(MAKE) check-config
 	./gradlew check
 
 .PHONY: check-fix
-check-fix:
-	./gradlew check -PdetektAutoCorrect
+check-fix: lint-fix
+	$(MAKE) check
 
 .PHONY: test
 test:

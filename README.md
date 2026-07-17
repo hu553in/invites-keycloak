@@ -9,17 +9,18 @@ Recipients redeem those links to get a Keycloak account, required-actions email,
 
 ## What it does
 
-- Admin UI for creating, resending, revoking, and deleting invites.
-- Invite status tracking: active, expired, overused, or revoked.
-- Daily cleanup of expired invites after the configured retention period.
-- Public invite confirmation page with no `GET` side effects.
-- CSRF-protected redeem flow with one-time confirmation challenge.
-- Failure-safe Keycloak provisioning with compensating user deletion.
-- Localized UI and mail text via `APP_LOCALE` and message bundles.
+- Admin UI for creating, resending, revoking, and deleting invites
+- Invite status tracking: active, expired, overused, or revoked
+- Daily cleanup of expired invites after the configured retention period
+- Public invite confirmation page with no `GET` side effects
+- CSRF-protected redeem flow with one-time confirmation challenge
+- Failure-safe Keycloak provisioning with compensating user deletion
+- Localized UI and mail text via `APP_LOCALE` and message bundles
 
 ## Requirements
 
 - Java 25
+- Bun for repository tooling
 - Docker
 - Docker Compose plugin
 - [prek](https://prek.j178.dev/)
@@ -66,7 +67,8 @@ Useful defaults:
 - PostgreSQL host/database/user/password: `db` / `invites-keycloak`
 
 Docker Compose accepts `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` overrides for the
-database container.
+database container. Local app connections can override the default database host with
+`POSTGRES_HOSTNAME`.
 
 `KEYCLOAK_URL` must be the Keycloak base URL without `/realms/{realm}`, for example
 `https://sso.example.com` or `https://sso.example.com/auth`.
@@ -79,8 +81,8 @@ INVITE_REALMS_MASTER_ROLES_1=another-role
 INVITE_REALMS_PARTNERS_ROLES_0=partner-user
 ```
 
-Mail is enabled by setting `SPRING_MAIL_HOST` and related `SPRING_MAIL_*` variables. API docs and
-Swagger UI are disabled by default; enable them with:
+Mail is enabled by setting `SPRING_MAIL_HOST` and related `SPRING_MAIL_*` variables. `MAIL_FROM`
+sets the optional sender address. API docs and Swagger UI are disabled by default; enable them with:
 
 ```bash
 SPRINGDOC_API_DOCS_ENABLED=true
@@ -109,8 +111,12 @@ Missing service-account roles result in 403 errors when listing roles or creatin
 - `make run-local` starts PostgreSQL with Docker Compose and runs Spring Boot.
 - `docker compose up -d db && ./gradlew bootRun` is the faster dev loop after `.env` exists.
 - `make test` runs tests.
+- `make lint` runs formatting checks and Detekt.
+- `make lint-fix` applies formatting and Detekt fixes.
+- `make check-config` validates the Docker Compose model without resolving environment values.
 - `make check` runs the full local gate.
-- `make check-fix` runs the full gate with Detekt autocorrect.
+- `make check-fix` runs the full gate with automatic fixes.
+- GitHub Dependabot alerts and security updates monitor dependency vulnerabilities.
 - `make build-image` builds `hu553in/invites-keycloak:local`.
 - `make run-docker` starts the full Docker Compose stack.
 - `make stop-docker` stops it.
@@ -131,7 +137,7 @@ because the app uses forwarded headers for OAuth redirects.
 
 CI publishes `ghcr.io/hu553in/invites-keycloak`:
 
-- `latest` and commit SHA on pushes to `main`
+- `latest` and immutable `sha-*` tags on pushes to `main`
 - git tag name on tags matching `v*`
 
 Release helpers run the full local gate before creating a tag:
@@ -145,7 +151,7 @@ make release-major
 Deployment steps:
 
 1. Provision `.env` with Keycloak, invite, mail, and database settings.
-2. Point `docker-compose.yml` or an override file at the desired image tag.
+2. Point `compose.yaml` or an override file at the desired image tag.
 3. Run:
    ```bash
    docker compose pull && docker compose up -d --wait
@@ -154,7 +160,7 @@ Deployment steps:
 
 ## Tech stack
 
-See exact versions in `gradle/libs.versions.toml` and service wiring in `docker-compose.yml`.
+See exact versions in `gradle/libs.versions.toml` and service wiring in `compose.yaml`.
 
 - Java, Kotlin, Gradle, Spring Boot
 - PostgreSQL, Flyway, Spring Data JPA

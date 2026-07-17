@@ -1,0 +1,2 @@
+# Current Paketo runtime helpers are built with Go 1.26.4; upstream fixes require Go 1.26.5.
+CVE-2026-39822 exp:2026-08-16

@@ -4,7 +4,6 @@ spring-boot = "4.1.0"
 spring-dependency-management = "1.1.7"
 kover = "0.9.8"
 detekt = "2.0.0-alpha.5"
-versions = "0.54.0"
 spring-dotenv = "5.1.0"
 wiremock = "3.13.2"
 testcontainers = "2.0.5"
@@ -21,7 +20,6 @@ spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
-versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 axion-release = { id = "pl.allegro.tech.build.axion-release", version.ref = "axion-release" }
 
 [libraries]

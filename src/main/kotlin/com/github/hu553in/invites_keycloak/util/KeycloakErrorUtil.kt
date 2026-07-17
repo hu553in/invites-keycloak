@@ -25,7 +25,7 @@ fun keycloakStatusFrom(error: Throwable): HttpStatusCode? {
 fun isKeycloakMisconfiguration(statusCode: HttpStatusCode?): Boolean = statusCode?.let { status ->
     status.isSameCodeAs(HttpStatus.BAD_REQUEST) ||
         status.isSameCodeAs(HttpStatus.NOT_FOUND) ||
-        status.isSameCodeAs(HttpStatus.UNPROCESSABLE_ENTITY) ||
+        status.isSameCodeAs(HttpStatus.UNPROCESSABLE_CONTENT) ||
         status.isSameCodeAs(HttpStatus.UNAUTHORIZED) ||
         status.isSameCodeAs(HttpStatus.FORBIDDEN)
 } ?: false

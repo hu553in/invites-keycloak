@@ -8,5 +8,8 @@ build/
 *.iws
 *.iml
 *.ipr
+*.hprof
 out/
-.env
+.env*
+!.env.example
+!.env.example.*

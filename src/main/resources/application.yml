@@ -40,9 +40,9 @@ spring:
     password: ${postgres.password}
   mail:
     properties:
-      "[mail.smtp.connectiontimeout]": 10000
-      "[mail.smtp.timeout]": 10000
-      "[mail.smtp.writetimeout]": 10000
+      '[mail.smtp.connectiontimeout]': 10000
+      '[mail.smtp.timeout]': 10000
+      '[mail.smtp.writetimeout]': 10000
   security:
     oauth2:
       client:
@@ -103,7 +103,7 @@ invite:
     max: 30d
   realms:
     master:
-      roles: [ ]
+      roles: []
   token:
     secret: # required and can't have default value
     bytes: 32

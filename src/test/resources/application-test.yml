@@ -16,7 +16,7 @@ invite:
     secret: example-very-long-secret
   realms:
     no-roles:
-      roles: [ ]
+      roles: []
 
 keycloak:
   url: https://id.example.com

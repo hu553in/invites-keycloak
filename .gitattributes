@@ -3,3 +3,24 @@
 *.bat -text
 *.cmd -text
 *.ps1 -text
+
+*.avif binary
+*.gif binary
+*.glb binary
+*.hdr binary
+*.ico binary
+*.jar binary
+*.jpeg binary
+*.jpg binary
+*.mp3 binary
+*.mp4 binary
+*.pdf binary
+*.png binary
+*.swf binary
+*.ttf binary
+*.wasm binary
+*.webm binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.wvd binary

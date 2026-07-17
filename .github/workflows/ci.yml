@@ -7,8 +7,6 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches:
-      - '**'
   workflow_dispatch:
 
 jobs:
@@ -20,10 +18,13 @@ jobs:
       GRADLE_JVMARGS: -Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
+      - uses: oven-sh/setup-bun@v2
       - uses: gradle/actions/setup-gradle@v6
       - run: |
           {
@@ -31,6 +32,15 @@ jobs:
             echo "org.gradle.daemon=false"
           } > "$GRADLE_USER_HOME/gradle.properties"
       - run: make check
+      - run: ./gradlew bootBuildImage --imageName=invites-keycloak:check
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: invites-keycloak:check
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          scanners: vuln
       - if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -39,23 +49,37 @@ jobs:
             build/reports/tests/test
             build/test-results/test
           overwrite: true
+          retention-days: 14
       - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: kover-reports
           path: build/reports/kover
           overwrite: true
+          retention-days: 14
       - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: detekt-reports
           path: build/reports/detekt
           overwrite: true
+          retention-days: 14
 
-  publish-main:
+  dependency-submission:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    uses: hu553in/common-things/.github/workflows/submit-gradle-dependencies.yml@main
+    with:
+      java_version: '25'
+
+  publish:
     needs: check
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.vars.outputs.image }}
+      digest: ${{ steps.push.outputs.digest }}
     permissions:
       contents: read
       packages: write
@@ -63,40 +87,14 @@ jobs:
       REGISTRY: ghcr.io
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v6
-      - uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - id: vars
-        run: echo "image=${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER}/invites-keycloak" > "${GITHUB_OUTPUT}"
-      - run: ./gradlew bootBuildImage --imageName=${{ steps.vars.outputs.image }}:${{ github.sha }}
-      - run: |
-          docker tag ${{ steps.vars.outputs.image }}:${{ github.sha }} ${{ steps.vars.outputs.image }}:latest
-          docker push ${{ steps.vars.outputs.image }}:${{ github.sha }}
-          docker push ${{ steps.vars.outputs.image }}:latest
-
-  release-tag:
-    needs: check
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-    env:
-      REGISTRY: ghcr.io
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '25'
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
@@ -105,9 +103,57 @@ jobs:
       - id: vars
         run: |
           echo "image=${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER}/invites-keycloak" > "${GITHUB_OUTPUT}"
-          echo "tag=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
-      - run: ./gradlew bootBuildImage --imageName=${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
-      - run: docker push ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "tag=sha-${GITHUB_SHA::7}" >> "${GITHUB_OUTPUT}"
+          fi
+      - env:
+          IMAGE: ${{ steps.vars.outputs.image }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: ./gradlew bootBuildImage --imageName="$IMAGE:$TAG"
+      - id: push
+        env:
+          IMAGE: ${{ steps.vars.outputs.image }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          docker push "$IMAGE:$TAG"
+          digest=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest}}' | jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))')
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - if: github.ref == 'refs/heads/main'
+        env:
+          IMAGE: ${{ steps.vars.outputs.image }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          docker tag "$IMAGE:$TAG" "$IMAGE:latest"
+          docker push "$IMAGE:latest"
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.vars.outputs.image }}@${{ steps.push.outputs.digest }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          scanners: vuln
+
+  attest:
+    needs: publish
+    uses: hu553in/common-things/.github/workflows/attest-docker.yml@main
+    permissions:
+      packages: write
+      id-token: write
+      attestations: write
+    with:
+      image: ${{ needs.publish.outputs.image }}
+      digest: ${{ needs.publish.outputs.digest }}
+
+  release:
+    needs: [publish, attest]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
       - uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true

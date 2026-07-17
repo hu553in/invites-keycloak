@@ -1,5 +1,5 @@
 import dev.detekt.gradle.plugin.getSupportedKotlinVersion
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.api.tasks.bundling.Jar
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
 plugins {
@@ -12,12 +12,11 @@ plugins {
     alias(libs.plugins.kotlin.allopen)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kover)
-    alias(libs.plugins.versions)
     alias(libs.plugins.axion.release)
 }
 
 group = "com.github.hu553in"
-version = "1.0.0"
+version = scmVersion.version
 description = "Spring Boot service for issuing and consuming invitation links for Keycloak."
 
 scmVersion {
@@ -29,12 +28,6 @@ scmVersion {
     }
     releaseBranchNames.set(setOf("main"))
     releaseOnlyOnReleaseBranches = true
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
 }
 
 dependencies {
@@ -80,7 +73,6 @@ kotlin {
     jvmToolchain(25)
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
-        jvmTarget.set(JvmTarget.JVM_25)
     }
 }
 
@@ -99,6 +91,17 @@ noArg {
 tasks.withType<Test> {
     useJUnitPlatform()
     systemProperty("spring.profiles.active", "test")
+}
+
+tasks.withType<Jar>().configureEach {
+    manifest {
+        attributes(
+            "Implementation-Description" to project.description.toString(),
+            "Implementation-Title" to project.name,
+            "Implementation-Vendor" to "Ruslan Khasanshin",
+            "Implementation-Version" to project.version.toString(),
+        )
+    }
 }
 
 detekt {
@@ -142,15 +145,12 @@ kover {
 tasks.named("check") {
     dependsOn("detekt")
     dependsOn("koverVerify")
-    dependsOn("koverHtmlReport")
-    dependsOn("koverXmlReport")
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
     environment.put("BP_HEALTH_CHECKER_ENABLED", "true")
     environment.put("BP_OCI_AUTHORS", "Ruslan Khasanshin")
-    environment.put("BP_OCI_DESCRIPTION", description.toString())
-    environment.put("BP_OCI_LICENSES", "MIT")
+    environment.put("BP_OCI_DESCRIPTION", project.description.toString())
     environment.put("BP_OCI_REVISION", System.getenv("GITHUB_SHA") ?: "unknown")
     environment.put("BP_OCI_SOURCE", "https://github.com/hu553in/invites-keycloak")
     environment.put("BP_OCI_TITLE", project.name)
@@ -160,8 +160,8 @@ tasks.named<BootBuildImage>("bootBuildImage") {
     buildpacks.set(
         listOf(
             "urn:cnb:builder:paketo-buildpacks/java",
-            "docker.io/paketobuildpacks/health-checker:latest",
-            "docker.io/paketobuildpacks/image-labels:latest"
+            "docker.io/paketobuildpacks/health-checker:2.13.4",
+            "docker.io/paketobuildpacks/image-labels:4.12.4"
         )
     )
 }
