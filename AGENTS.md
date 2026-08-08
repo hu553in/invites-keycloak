@@ -33,8 +33,18 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
   a rung. A tiny change in the wrong place is a second bug, not efficiency.
 - Fix bugs at the root cause: a report names a symptom; find all callers and fix once in the shared
   path instead of patching only the path the report mentions.
+- Backward compatibility is not a default requirement. When current requirements replace an old
+  path, remove it instead of adding a compatibility layer, fallback, or migration path. Preserve
+  compatibility only when required by an explicit public contract, existing persisted data, a staged
+  rollout, or a user requirement.
 - No unrequested abstractions: no interface with one implementation, no factory for one product, no
   config knob for a value that never changes, no scaffolding "for later".
+- Build new capabilities as the smallest working end-to-end slice, then extend them without
+  replacing working behavior with unfinished scaffolding.
+- Keep components modular and concerns separated at natural boundaries; do not add abstraction
+  layers merely to appear modular.
+- Make architectural choices for the long term; do not knowingly implement a stopgap that only works
+  for now and is meant to be replaced later.
 - Prefer deletion over addition and boring over clever; clever is what someone has to decode during
   an incident.
 - Between two equally simple options, take the one that is correct on edge cases; simple means less
@@ -106,6 +116,8 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
 - After renames and refactors, grep the whole repository for the old names, including docs, configs,
   CI, and error messages.
 - Check what should exist but does not: license, ignore entries, docs for every option.
+- Propose concrete best-practice or architectural improvements even when they require refactoring.
+  Explain their benefit and scope, but do not propose churn without a demonstrated payoff.
 
 ## Dependencies
 
@@ -114,6 +126,9 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
 - Verify compatibility, license fit, and security impact.
 - Replace custom code with a library or a ready-made tool whenever that reduces total complexity;
   prefer tools already present in the dependency tree.
+- Before working around an installed dependency or adding another one, check its current official
+  documentation, public API, and types when available; do not assume from memory that it lacks the
+  required capability.
 - Judge a dependency by the obligations it adds (maintenance, majors, vulnerabilities), not by lines
   saved; one whose whole value is a line or two rarely pays for itself, and unmaintained wrappers
   never do.
