@@ -19,7 +19,7 @@ Recipients redeem those links to get a Keycloak account, required-actions email,
 
 ## Requirements
 
-- Java 25
+- JDK
 - Bun for repository tooling
 - Docker
 - Docker Compose plugin
@@ -116,7 +116,8 @@ Missing service-account roles result in 403 errors when listing roles or creatin
 - `make check-config` validates the Docker Compose model without resolving environment values.
 - `make check` runs the full local gate.
 - `make check-fix` runs the full gate with automatic fixes.
-- GitHub Dependabot alerts and security updates monitor dependency vulnerabilities.
+- GitHub Dependabot alerts report dependency vulnerabilities; Renovate opens remediation pull
+  requests.
 - `make build-image` builds `hu553in/invites-keycloak:local`.
 - `make run-docker` starts the full Docker Compose stack.
 - `make stop-docker` stops it.
@@ -138,7 +139,7 @@ because the app uses forwarded headers for OAuth redirects.
 CI publishes `ghcr.io/hu553in/invites-keycloak`:
 
 - `latest` and immutable `sha-*` tags on pushes to `main`
-- git tag name on tags matching `v*`
+- git tag name on tags matching `v*.*.*`
 
 Release helpers run the full local gate before creating a tag:
 

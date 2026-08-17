@@ -111,8 +111,8 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
   manufacturing findings.
 - Verify cross-file invariants held together only by comments or convention ("keep in sync
   with..."); no tool checks them.
-- Internal consistency review cannot catch staleness: compare pinned versions of dependencies,
-  actions, and tools against current upstream releases as a separate step.
+- Check updater coverage for pinned dependencies, actions, runtimes, and tools. Compare versions
+  with upstream manually only when no updater owns them.
 - After renames and refactors, grep the whole repository for the old names, including docs, configs,
   CI, and error messages.
 - Check what should exist but does not: license, ignore entries, docs for every option.
@@ -183,10 +183,8 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
 
 ## CI and automation
 
-- Add concurrency guards and timeouts to workflows; scheduled and push-triggered runs must not
-  overlap.
-- Pin toolchain and action versions; use an update bot (Dependabot, Renovate) so automation catches
-  staleness instead of review luck.
+- Follow the repository's existing version policy for toolchains and actions. Preserve intentional
+  floating major tags and internal reusable-workflow branch refs; rely on Renovate for updates.
 - When the project is itself a tool or action, run it on itself in CI; dogfooding is the cheapest
   end-to-end test.
 

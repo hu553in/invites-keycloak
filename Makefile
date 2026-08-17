@@ -3,6 +3,7 @@
 PRETTIER := bunx prettier -u
 ACTIONLINT := bunx github-actionlint
 TAPLO := bunx @taplo/cli
+PREK ?= prek
 
 .PHONY: build-image
 build-image:
@@ -61,8 +62,16 @@ check-config:
 check-workflows:
 	$(ACTIONLINT)
 
+.PHONY: check-renovate
+check-renovate:
+	bunx --package renovate renovate-config-validator --strict --no-global renovate.json
+
+.PHONY: check-hooks
+check-hooks:
+	$(PREK) validate-config prek.toml
+
 .PHONY: check
-check: check-workflows
+check: check-hooks check-renovate check-workflows
 	$(PRETTIER) -c .
 	$(TAPLO) fmt --check
 	$(MAKE) check-config

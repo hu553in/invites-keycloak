@@ -1,2 +1,9 @@
-# Current Paketo runtime helpers are built with Go 1.26.4; upstream fixes require Go 1.26.5.
-CVE-2026-39822 exp:2026-08-16
+# Current Paketo lifecycle and helper binaries are built with Go 1.26.5; upstream fixes require Go 1.26.6.
+CVE-2026-33818 exp:2026-09-16
+CVE-2026-39821 exp:2026-09-16
+CVE-2026-46600 exp:2026-09-16
+CVE-2026-56853 exp:2026-09-16
+CVE-2026-56858 exp:2026-09-16
+CVE-2026-56859 exp:2026-09-16
+CVE-2026-56860 exp:2026-09-16
+CVE-2026-56862 exp:2026-09-16
