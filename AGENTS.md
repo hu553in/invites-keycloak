@@ -84,6 +84,9 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
 
 - Run the relevant checks after meaningful changes when feasible.
 - Place tests according to the project's language, framework, and directory conventions.
+- Test observable behavior and contracts, not source text or implementation details. Do not assert
+  that a source file contains the code meant to produce the behavior; that test passes without
+  proving the behavior works.
 - Report any check you could not run.
 - Verify behavior on the real artifact: run it, render it, or measure it. Types and linters passing
   is not verification.
