@@ -9,6 +9,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -35,36 +39,21 @@ jobs:
       - run: make check
         env:
           PREK: uvx prek
-      - run: ./gradlew bootBuildImage --imageName=invites-keycloak:check
-      - uses: aquasecurity/trivy-action@v0.36.0
+      - if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
+        run: ./gradlew bootBuildImage --imageName=invites-keycloak:check
+      - if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
+        uses: hu553in/common-things/.github/actions/scan-docker@main
         with:
           image-ref: invites-keycloak:check
-          format: table
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: HIGH,CRITICAL
-          scanners: vuln
       - if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-reports
+          name: reports
           path: |
             build/reports/tests/test
             build/test-results/test
-          overwrite: true
-          retention-days: 14
-      - if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: kover-reports
-          path: build/reports/kover
-          overwrite: true
-          retention-days: 14
-      - if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: detekt-reports
-          path: build/reports/detekt
+            build/reports/kover
+            build/reports/detekt
           overwrite: true
           retention-days: 14
 
@@ -123,6 +112,9 @@ jobs:
           docker push "$IMAGE:$TAG"
           digest=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest}}' | jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))')
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - uses: hu553in/common-things/.github/actions/scan-docker@main
+        with:
+          image-ref: ${{ steps.vars.outputs.image }}@${{ steps.push.outputs.digest }}
       - if: github.ref == 'refs/heads/main'
         env:
           IMAGE: ${{ steps.vars.outputs.image }}
@@ -130,14 +122,6 @@ jobs:
         run: |
           docker tag "$IMAGE:$TAG" "$IMAGE:latest"
           docker push "$IMAGE:latest"
-      - uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ steps.vars.outputs.image }}@${{ steps.push.outputs.digest }}
-          format: table
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: HIGH,CRITICAL
-          scanners: vuln
 
   attest:
     needs: publish

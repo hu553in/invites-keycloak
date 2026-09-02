@@ -107,6 +107,8 @@ Missing service-account roles result in 403 errors when listing roles or creatin
 
 ## Development
 
+CI keeps test, coverage, and Detekt reports in the `reports` artifact for 14 days.
+
 - `prek install` installs git hooks.
 - `make run-local` starts PostgreSQL with Docker Compose and runs Spring Boot.
 - `docker compose up -d db && ./gradlew bootRun` is the faster dev loop after `.env` exists.
@@ -140,6 +142,8 @@ CI publishes `ghcr.io/hu553in/invites-keycloak`:
 
 - `latest` and immutable `sha-*` tags on pushes to `main`
 - git tag name on tags matching `v*.*.*`
+
+The `latest` tag is updated only after the published image passes the blocking Trivy scan.
 
 Release helpers run the full local gate before creating a tag:
 
