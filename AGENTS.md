@@ -1,17 +1,27 @@
 # Common agent rules
 
-These rules apply to any stack. Project-local instructions, tooling, and conventions win.
+These rules apply to any stack. Project-local instructions, tooling, and conventions win. Explicit
+user instructions take precedence over repository and skill guidelines, subject to the host's system
+instructions and permissions.
 
 ## General rules
 
 - Read the relevant project docs before changing files.
-- Ask whenever real doubt remains between ways to implement something, or an obstacle blocks
-  progress.
+- Resolve routine implementation choices from the code, docs, and established project patterns. Ask
+  when missing information would materially change the result and cannot be established
+  independently. Continue independent work while waiting for an answer.
 - Keep changes focused on the requested task.
 - Prefer the repository's existing patterns over custom workflows.
 - Before editing any file, read it first. Before modifying a function, grep for all callers.
-- When the user asks a question or thinks out loud, answer it; do not start implementing until
-  asked.
+- Treat requests such as "can you fix this?" as instructions to act. Answer explanatory questions
+  and brainstorming without implementing; explicit research and read-only requests remain read-only.
+- Carry authorized work through to completion. Answer follow-up questions, incorporate corrections,
+  then continue the active task unless the user pauses, stops, or replaces it.
+- Authorization persists within the agreed scope until completed or revoked. Prepare the work
+  already authorized before asking for a decision on a remaining action; do not expand permission to
+  unrelated work or unrequested publication.
+- If a repository or skill rule blocks the requested work, link the file, quote the relevant rule,
+  and explain why it applies. Distinguish an explicit requirement from your interpretation.
 - When a fix that should have worked changes nothing, question your model of the system instead of
   retrying variations of the same fix.
 - Revert changes made for a theory that proved wrong; the final diff must contain only what the
@@ -25,10 +35,10 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
 - Before writing a solution, climb this ladder and stop at the first rung that holds: the need is
   speculative, so skip it (say so in one line); already exists in this codebase; covered by the
   standard library; covered by a native platform feature (a database constraint, a built-in control,
-  plain styling); covered by an already-installed dependency; covered by a new well-maintained
-  dependency whose adoption cost fits the destination (weight matters in artifacts shipped to end
-  users, far less in code running on your own infrastructure); expressible as a line or two; only
-  then the minimum new code that works.
+  plain styling); covered by an already-installed dependency. If none fits, compare a small direct
+  implementation with a well-maintained dependency by total complexity, maintenance, and adoption
+  cost. Give dependency size more weight in artifacts shipped to users than in code running on your
+  own infrastructure. Choose the simplest option that fully meets the requirements.
 - The ladder shortens the solution, never the reading: trace the real flow end to end before picking
   a rung. A tiny change in the wrong place is a second bug, not efficiency.
 - Fix bugs at the root cause: a report names a symptom; find all callers and fix once in the shared
@@ -53,22 +63,24 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
   the upgrade path.
 - Never simplify away input validation at trust boundaries, error handling that prevents data loss,
   security measures, accessibility basics, or anything explicitly requested.
-- Non-trivial new logic leaves behind one minimal runnable check that fails if the logic breaks;
-  trivial one-liners need none.
+- Add focused regression coverage for changed behavior when the risk warrants it, regardless of line
+  count. Reuse existing coverage when it already proves the changed contract.
 
 ## Commands and project tasks
 
 - Prefer existing project commands from files such as `Makefile`, `package.json`, build configs, or
   CI configs.
-- Ask before adding a new command or task runner entry when the project lacks one.
+- Add a command or task runner entry only when needed for the authorized task; reuse the project's
+  tooling and avoid introducing another runner without a concrete need.
 - Use stack-appropriate tools for tests, linting, formatting, static analysis, and config
   validation.
 - When the project defines one command that runs all its checks with autofixes, prefer it over
   running individual tools and fixing their output by hand; let the project's own tooling apply the
-  fixes it can.
-- Every generated artifact must be reproducible by a checked-in script; if you repeated a manual
-  action, propose scripting it. External side effects (uploads, publishing) count as steps to
-  script.
+  fixes it can within the authorized edit scope. In read-only work, use non-mutating checks. Narrow
+  autofixes when a broad command would modify unrelated user work.
+- Maintained generated artifacts and recurring build/release processes must be reproducible through
+  checked-in tooling. One-off reports, screenshots, and diagnostic output do not need permanent
+  scripts. Propose automation for recurring manual work, including uploads and publishing.
 - Keep producing an artifact and publishing it as separate steps: builds are cheap and repeatable,
   publishing is a decision.
 
@@ -83,13 +95,17 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
 ## Testing and verification
 
 - Run the relevant checks after meaningful changes when feasible.
+- Scale verification to the changed behavior and risk, and complete required project checks. Once
+  they pass, repeat or broaden them only for new changes, failures, or a specific unresolved
+  concern. Do not add tests for low-impact changes when they would only mirror the implementation.
 - Place tests according to the project's language, framework, and directory conventions.
 - Test observable behavior and contracts, not source text or implementation details. Do not assert
   that a source file contains the code meant to produce the behavior; that test passes without
   proving the behavior works.
 - Report any check you could not run.
-- Verify behavior on the real artifact: run it, render it, or measure it. Types and linters passing
-  is not verification.
+- Verify behavioral changes on the real artifact: run it, render it, or measure it. Static checks
+  alone do not prove runtime behavior; for type-only or non-behavioral changes, use checks that
+  directly establish the affected contract.
 - Prove every new mode, flag, or option by running it at least once before handoff.
 - Place boundary tests where the signal exists; a negative test on an empty case proves nothing.
 - In negative tests, make the absence explicit; environments auto-inject config (env files,
@@ -110,8 +126,13 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
 
 ## Reviews
 
-- Review in passes until a full pass finds nothing; report an empty pass honestly instead of
-  manufacturing findings.
+- Review the requested scope completely, fix actionable issues when authorized, and check the final
+  result for consistency. After a fix, recheck affected behavior and dependencies; reopen cleared
+  areas only when new evidence warrants it. An explicitly requested new full pass covers the full
+  scope again. Report an empty pass honestly instead of manufacturing findings.
+- Delegate independent parts of substantial work when available tools make it worthwhile. Give each
+  agent the same scope and mutation boundaries, avoid overlapping edits, and reconcile its findings.
+  Keep small or tightly coupled tasks together.
 - Verify cross-file invariants held together only by comments or convention ("keep in sync
   with..."); no tool checks them.
 - Check updater coverage for pinned dependencies, actions, runtimes, and tools. Compare versions
@@ -165,13 +186,16 @@ These rules apply to any stack. Project-local instructions, tooling, and convent
   active voice over passive, an everyday term over jargon or a stock phrase, and no word that can be
   cut without losing meaning. This governs prose only; code and technical terms stay exact, and
   everyday wording substitutes only where precision survives.
+- Lead with the main point and use connected, concise paragraphs. Use lists or tables when they
+  clarify parallel facts, steps, or comparisons. Avoid stock recap headings, repeated conclusions,
+  and contrastive filler; preserve technical precision and meaningful uncertainty.
 - Break any prose rule sooner than write something awkward; check prose output against these rules
   before delivering.
 
 ## Configuration and inputs
 
-- Validate external input with bounds and formats, not policy; guard against nonsense (size limits,
-  count limits), then get out of the way.
+- Validate external input against required formats, resource bounds, domain rules, and access
+  constraints. Do not invent product restrictions beyond the project's requirements.
 - Give every option a sane default so the minimal config works; personal or stylistic behavior is
   opt-in, defaults follow least surprise for a third-party user.
 - Reject known foot-guns with messages that point to the correct option.
