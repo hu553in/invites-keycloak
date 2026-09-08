@@ -165,7 +165,8 @@ Deployment steps:
 
 ## Tech stack
 
-See exact versions in `gradle/libs.versions.toml` and service wiring in `compose.yaml`.
+See exact versions in `gradle/libs.versions.toml`, temporary security overrides in
+`gradle.properties`, and service wiring in `compose.yaml`.
 
 - Java, Kotlin, Gradle, Spring Boot
 - PostgreSQL, Flyway, Spring Data JPA

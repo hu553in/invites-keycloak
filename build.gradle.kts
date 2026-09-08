@@ -8,8 +8,6 @@ plugins {
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.kotlin.jpa)
-    alias(libs.plugins.kotlin.noarg)
-    alias(libs.plugins.kotlin.allopen)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kover)
     alias(libs.plugins.axion.release)
@@ -76,18 +74,6 @@ kotlin {
     }
 }
 
-allOpen {
-    annotation("jakarta.persistence.Entity")
-    annotation("jakarta.persistence.MappedSuperclass")
-    annotation("jakarta.persistence.Embeddable")
-}
-
-noArg {
-    annotation("jakarta.persistence.Entity")
-    annotation("jakarta.persistence.MappedSuperclass")
-    annotation("jakarta.persistence.Embeddable")
-}
-
 tasks.withType<Test> {
     useJUnitPlatform()
     systemProperty("spring.profiles.active", "test")
@@ -123,12 +109,6 @@ configurations.matching { it.name == "detekt" }.all {
 
 kover {
     reports {
-        filters {
-            excludes {
-                classes("InvitesKeycloakApplication")
-            }
-        }
-
         total {
             xml { onCheck = true }
             html { onCheck = true }
@@ -160,8 +140,10 @@ tasks.named<BootBuildImage>("bootBuildImage") {
     buildpacks.set(
         listOf(
             "urn:cnb:builder:paketo-buildpacks/java",
-            "docker.io/paketobuildpacks/health-checker:2.13.4",
-            "docker.io/paketobuildpacks/image-labels:4.12.4"
+            // renovate: datasource=docker
+            "docker.io/paketobuildpacks/health-checker:2.13.7",
+            // renovate: datasource=docker
+            "docker.io/paketobuildpacks/image-labels:4.12.7"
         )
     )
 }
