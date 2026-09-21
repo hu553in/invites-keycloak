@@ -7,6 +7,8 @@ Spring Boot service for issuing and consuming invitation links for Keycloak.
 Administrators create invite links with limited lifetime, usage count, and predefined realm roles.
 Recipients redeem those links to get a Keycloak account, required-actions email, and assigned roles.
 
+Used in production to manage invitations for an admin panel with dozens of users.
+
 ## What it does
 
 - Admin UI for creating, resending, revoking, and deleting invites
