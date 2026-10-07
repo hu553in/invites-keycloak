@@ -68,7 +68,7 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(25)
+    jvmToolchain(26)
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
     }
@@ -141,9 +141,9 @@ tasks.named<BootBuildImage>("bootBuildImage") {
         listOf(
             "urn:cnb:builder:paketo-buildpacks/java",
             // renovate: datasource=docker
-            "docker.io/paketobuildpacks/health-checker:2.13.7",
+            "docker.io/paketobuildpacks/health-checker:2.14.0",
             // renovate: datasource=docker
-            "docker.io/paketobuildpacks/image-labels:4.12.7"
+            "docker.io/paketobuildpacks/image-labels:4.14.2"
         )
     )
 }

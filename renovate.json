@@ -1,4 +1,23 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>hu553in/common-things//presets/renovate/gradle"]
+  "extends": ["github>hu553in/common-things//presets/renovate/gradle"],
+  "ignorePaths": ["**/node_modules/**"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track Testcontainers images",
+      "managerFilePatterns": ["/^src/test/.*\\.kt$/"],
+      "matchStrings": [
+        "DockerImageName\\.parse\\(\"(?<depName>[^\"\\s]+):(?<currentValue>[^\"\\s:]+)\"\\)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Keep Java compatible with Kotlin's supported JVM targets",
+      "matchPackageNames": ["eclipse-temurin", "java", "java-jdk"],
+      "allowedVersions": "<27"
+    }
+  ]
 }
