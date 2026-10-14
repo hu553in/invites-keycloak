@@ -21,11 +21,13 @@ Used in production to manage invitations for an admin panel with dozens of users
 
 ## Requirements
 
-- JDK
-- Bun for repository tooling
+- JDK available through `JAVA_HOME` to run Gradle
+- Make and Bun for repository tooling
 - Docker
 - Docker Compose plugin
 - [prek](https://prek.j178.dev/)
+
+Gradle downloads the JDK configured in `build.gradle.kts` automatically if it is missing locally.
 
 ## Setup
 
@@ -142,10 +144,12 @@ because the app uses forwarded headers for OAuth redirects.
 
 CI publishes `ghcr.io/hu553in/invites-keycloak`:
 
-- `latest` and immutable `sha-*` tags on pushes to `main`
+- `latest` and `sha-*` tags on pushes to `main`
 - git tag name on tags matching `v*.*.*`
 
-The `latest` tag is updated only after the published image passes the blocking Trivy scan.
+The `sha-*` tag identifies the source commit; rebuilding that commit can replace the tagged image.
+Pin the image by its `@sha256:...` digest when an immutable reference is required. The `latest` tag
+is updated only after the published image passes the blocking Trivy scan.
 
 Release helpers run the full local gate before creating a tag:
 
