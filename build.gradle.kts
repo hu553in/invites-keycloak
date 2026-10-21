@@ -143,7 +143,7 @@ tasks.named<BootBuildImage>("bootBuildImage") {
             // renovate: datasource=docker
             "docker.io/paketobuildpacks/health-checker:2.14.0",
             // renovate: datasource=docker
-            "docker.io/paketobuildpacks/image-labels:4.14.3"
+            "docker.io/paketobuildpacks/image-labels:4.14.4"
         )
     )
 }
