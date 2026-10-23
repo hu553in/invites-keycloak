@@ -36,3 +36,14 @@ vulnerabilities:
     statement: >-
       Temporary exception for Paketo launch binaries: no TLS handshake with ECH processing was
       identified on these launch paths. The affected Go code is outside the Java application.
+  - id: CVE-2026-111943
+    paths:
+      - layers/paketo-buildpacks_bellsoft-liberica/helper/helper
+      - layers/paketo-buildpacks_ca-certificates/helper/helper
+      - layers/paketo-buildpacks_spring-boot/helper/helper
+    expired_at: 2026-10-29
+    statement: >-
+      Temporary risk acceptance for Paketo launch helpers built with unpatched Go. Published
+      ca-certificates and spring-boot helpers still use Go 1.27.2. Certificate verification is
+      linked in these helpers; the vulnerable path has not been ruled out. Remove once all listed
+      helpers are built with Go 1.27.3 or another patched release.
