@@ -128,6 +128,11 @@ tasks.named("check") {
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
+    builder.set(
+        // renovate: datasource=docker
+        "docker.io/paketobuildpacks/builder-noble-java-tiny:0.0.200"
+    )
+    imagePlatform.set("linux/amd64")
     environment.put("BP_HEALTH_CHECKER_ENABLED", "true")
     environment.put("BP_OCI_AUTHORS", "Ruslan Khasanshin")
     environment.put("BP_OCI_DESCRIPTION", project.description.toString())
