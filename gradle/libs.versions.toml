@@ -7,7 +7,7 @@ detekt = "2.0.0-alpha.6"
 spring-dotenv = "5.1.0"
 wiremock = "3.13.2"
 testcontainers = "2.0.5"
-springdoc = "3.1.1"
+springdoc = "3.2.0"
 axion-release = "1.21.4"
 
 [plugins]
