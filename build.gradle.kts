@@ -130,7 +130,7 @@ tasks.named("check") {
 tasks.named<BootBuildImage>("bootBuildImage") {
     builder.set(
         // renovate: datasource=docker
-        "docker.io/paketobuildpacks/builder-noble-java-tiny:0.0.204"
+        "docker.io/paketobuildpacks/builder-noble-java-tiny:0.0.205"
     )
     imagePlatform.set("linux/amd64")
     environment.put("BP_HEALTH_CHECKER_ENABLED", "true")
