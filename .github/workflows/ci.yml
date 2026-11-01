@@ -15,47 +15,13 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      GRADLE_JVMARGS: -Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '26'
-      - uses: astral-sh/setup-uv@v7
-      - uses: oven-sh/setup-bun@v2
-      - uses: gradle/actions/setup-gradle@v6
-      - run: |
-          {
-            echo "org.gradle.jvmargs=${GRADLE_JVMARGS}"
-            echo "org.gradle.daemon=false"
-          } > "$GRADLE_USER_HOME/gradle.properties"
-      - env:
-          PREK: uvx prek
-        run: make check
-      - if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
-        run: ./gradlew bootBuildImage --imageName=invites-keycloak:check
-      - if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
-        uses: hu553in/common-things/.github/actions/scan-docker@main
-        with:
-          image-ref: invites-keycloak:check
-      - if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: reports
-          path: |
-            build/reports/tests/test
-            build/test-results/test
-            build/reports/kover
-            build/reports/detekt
-          overwrite: true
-          retention-days: 14
+    uses: hu553in/common-things/.github/workflows/check-gradle.yml@main
+    with:
+      java_version: '26'
+      gradle_jvmargs: -Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
+      image_ref: invites-keycloak:check
 
   dependency-submission:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -67,7 +33,7 @@ jobs:
 
   publish:
     needs: check
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    if: github.ref == 'refs/heads/main' || github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -75,8 +41,6 @@ jobs:
     outputs:
       image: ${{ steps.vars.outputs.image }}
       digest: ${{ steps.push.outputs.digest }}
-    env:
-      REGISTRY: ghcr.io
     steps:
       - uses: actions/checkout@v7
         with:
@@ -89,16 +53,16 @@ jobs:
       - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v4
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
       - id: vars
         run: |
-          echo "image=${{ env.REGISTRY }}/${GITHUB_REPOSITORY_OWNER}/invites-keycloak" > "${GITHUB_OUTPUT}"
+          echo "image=ghcr.io/$GITHUB_REPOSITORY" >> "$GITHUB_OUTPUT"
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            echo "tag=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=sha-${GITHUB_SHA::7}" >> "${GITHUB_OUTPUT}"
+            echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
       - env:
           IMAGE: ${{ steps.vars.outputs.image }}
@@ -126,9 +90,9 @@ jobs:
   attest:
     needs: publish
     permissions:
-      packages: write
-      id-token: write
       attestations: write
+      id-token: write
+      packages: write
     uses: hu553in/common-things/.github/workflows/attest-docker.yml@main
     with:
       image: ${{ needs.publish.outputs.image }}
@@ -136,7 +100,7 @@ jobs:
 
   release:
     needs: [publish, attest]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: write
