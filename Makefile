@@ -1,19 +1,18 @@
 .DEFAULT_GOAL := check
 
-PRETTIER := bunx prettier -u
 ACTIONLINT := bunx github-actionlint
 TAPLO := bunx @taplo/cli
 PREK ?= prek
 
 .PHONY: lint
 lint:
-	$(PRETTIER) -c .
+	bun fmt --check
 	$(TAPLO) fmt --check
 	./gradlew detekt
 
 .PHONY: lint-fix
 lint-fix:
-	$(PRETTIER) -w .
+	bun fmt
 	$(TAPLO) fmt
 	./gradlew detekt -PdetektAutoCorrect
 
@@ -35,7 +34,7 @@ check-config:
 
 .PHONY: check
 check: check-hooks check-renovate check-workflows
-	$(PRETTIER) -c .
+	bun fmt --check
 	$(TAPLO) fmt --check
 	$(MAKE) check-config
 	./gradlew check
