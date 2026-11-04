@@ -130,7 +130,7 @@ tasks.named("check") {
 tasks.named<BootBuildImage>("bootBuildImage") {
     builder.set(
         // renovate: datasource=docker
-        "docker.io/paketobuildpacks/builder-noble-java-tiny:0.0.206"
+        "docker.io/paketobuildpacks/builder-noble-java-tiny:0.0.207"
     )
     imagePlatform.set("linux/amd64")
     environment.put("BP_HEALTH_CHECKER_ENABLED", "true")
@@ -146,9 +146,9 @@ tasks.named<BootBuildImage>("bootBuildImage") {
         listOf(
             "urn:cnb:builder:paketo-buildpacks/java",
             // renovate: datasource=docker
-            "docker.io/paketobuildpacks/health-checker:2.14.1",
+            "docker.io/paketobuildpacks/health-checker:2.14.2",
             // renovate: datasource=docker
-            "docker.io/paketobuildpacks/image-labels:4.14.5"
+            "docker.io/paketobuildpacks/image-labels:4.14.6"
         )
     )
 }
