@@ -146,9 +146,9 @@ tasks.named<BootBuildImage>("bootBuildImage") {
         listOf(
             "urn:cnb:builder:paketo-buildpacks/java",
             // renovate: datasource=docker
-            "docker.io/paketobuildpacks/health-checker:2.14.2",
+            "docker.io/paketobuildpacks/health-checker:2.14.3",
             // renovate: datasource=docker
-            "docker.io/paketobuildpacks/image-labels:4.14.6"
+            "docker.io/paketobuildpacks/image-labels:4.14.7"
         )
     )
 }
