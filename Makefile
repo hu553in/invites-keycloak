@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := check
 
-ACTIONLINT := bunx github-actionlint
-TAPLO := bunx @taplo/cli
+ACTIONLINT := bunx --minimum-release-age 259200 github-actionlint
+TAPLO := bunx --minimum-release-age 259200 @taplo/cli
 PREK ?= prek
 
 .PHONY: lint
@@ -20,10 +20,6 @@ lint-fix:
 check-hooks:
 	$(PREK) validate-config prek.toml
 
-.PHONY: check-renovate
-check-renovate:
-	bunx --package renovate renovate-config-validator --strict --no-global renovate.json
-
 .PHONY: check-workflows
 check-workflows:
 	$(ACTIONLINT)
@@ -33,7 +29,7 @@ check-config:
 	docker compose config --quiet --no-interpolate --no-env-resolution
 
 .PHONY: check
-check: check-hooks check-renovate check-workflows
+check: check-hooks check-workflows
 	bun fmt --check
 	$(TAPLO) fmt --check
 	$(MAKE) check-config

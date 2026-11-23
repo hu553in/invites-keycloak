@@ -122,8 +122,7 @@ CI keeps test, coverage, and Detekt reports in the `reports` artifact for 14 day
 - `make check-config` validates the Docker Compose model without resolving environment values.
 - `make check` runs the full local gate.
 - `make check-fix` runs the full gate with automatic fixes.
-- GitHub Dependabot alerts report dependency vulnerabilities; Renovate opens remediation pull
-  requests.
+- GitHub Dependabot alerts report dependency vulnerabilities.
 - `make build-image` builds `hu553in/invites-keycloak:local`.
 - `make run-docker` starts the full Docker Compose stack.
 - `make stop-docker` stops it.

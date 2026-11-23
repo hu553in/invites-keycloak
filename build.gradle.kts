@@ -129,7 +129,6 @@ tasks.named("check") {
 
 tasks.named<BootBuildImage>("bootBuildImage") {
     builder.set(
-        // renovate: datasource=docker
         "docker.io/paketobuildpacks/builder-noble-java-tiny:0.0.221"
     )
     imagePlatform.set("linux/amd64")
@@ -145,9 +144,7 @@ tasks.named<BootBuildImage>("bootBuildImage") {
     buildpacks.set(
         listOf(
             "urn:cnb:builder:paketo-buildpacks/java",
-            // renovate: datasource=docker
             "docker.io/paketobuildpacks/health-checker:2.14.4",
-            // renovate: datasource=docker
             "docker.io/paketobuildpacks/image-labels:4.14.8"
         )
     )
