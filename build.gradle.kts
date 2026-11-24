@@ -114,17 +114,13 @@ kover {
             html { onCheck = true }
 
             verify {
+                onCheck = true
                 rule {
                     minBound(80)
                 }
             }
         }
     }
-}
-
-tasks.named("check") {
-    dependsOn("detekt")
-    dependsOn("koverVerify")
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {

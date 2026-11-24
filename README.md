@@ -21,17 +21,23 @@ Used in production to manage invitations for an admin panel with dozens of users
 
 ## Requirements
 
-- JDK available through `JAVA_HOME` to run Gradle
+- JDK on `PATH` or configured through `JAVA_HOME`
 - Make and Bun for repository tooling
 - Docker
 - Docker Compose plugin
-- [prek](https://prek.j178.dev/)
 
 Gradle downloads the JDK configured in `build.gradle.kts` automatically if it is missing locally.
 
 ## Setup
 
-1. Copy `.env.example.local` to `.env`.
+1. Create `.env` for local development if needed.
+
+   ```sh
+   if [ ! -e .env ] && [ ! -L .env ]; then
+     (umask 077 && cp .env.example.local .env)
+   fi
+   ```
+
 2. Replace placeholders, especially `KEYCLOAK_URL`, `KEYCLOAK_CLIENT_SECRET`, `INVITE_TOKEN_SECRET`,
    and `INVITE_PUBLIC_BASE_URL`.
 3. Run `make run-local`.
@@ -74,6 +80,9 @@ Docker Compose accepts `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` o
 database container. Local app connections can override the default database host with
 `POSTGRES_HOSTNAME`.
 
+Both run targets reuse `.env`. When switching between them with the bundled database, set
+`POSTGRES_HOSTNAME` to `localhost` for `make run-local` or `db` for `make run-docker`.
+
 `KEYCLOAK_URL` must be the Keycloak base URL without `/realms/{realm}`, for example
 `https://sso.example.com` or `https://sso.example.com/auth`.
 
@@ -113,9 +122,8 @@ Missing service-account roles result in 403 errors when listing roles or creatin
 
 CI keeps test, coverage, and Detekt reports in the `reports` artifact for 14 days.
 
-- `prek install` installs git hooks.
+- `bunx lefthook install` installs git hooks.
 - `make run-local` starts PostgreSQL with Docker Compose and runs Spring Boot.
-- `docker compose up -d db && ./gradlew bootRun` is the faster dev loop after `.env` exists.
 - `make test` runs tests.
 - `make lint` runs formatting checks and Detekt.
 - `make lint-fix` applies formatting and Detekt fixes.
@@ -124,7 +132,8 @@ CI keeps test, coverage, and Detekt reports in the `reports` artifact for 14 day
 - `make check-fix` runs the full gate with automatic fixes.
 - GitHub Dependabot alerts report dependency vulnerabilities.
 - `make build-image` builds `hu553in/invites-keycloak:local`.
-- `make run-docker` starts the full Docker Compose stack.
+- `make run-docker-rebuild` builds the image and starts the Docker Compose stack.
+- `make run-docker` starts the stack with an existing local image.
 - `make stop-docker` stops it.
 
 ## Routes
@@ -146,17 +155,21 @@ CI publishes `ghcr.io/hu553in/invites-keycloak`:
 - `latest` and `sha-*` tags on pushes to `main`
 - git tag name on tags matching `v*.*.*`
 
+Manual CI runs check the image by default. Set `publish` when dispatching CI on `main` or a tag to
+publish the image. A publishing run on a tag also creates a GitHub release.
+
 The `sha-*` tag identifies the source commit; rebuilding that commit can replace the tagged image.
 Pin the image by its `@sha256:...` digest when an immutable reference is required. The `latest` tag
 is updated only after the published image passes the blocking Trivy scan.
 
-Release helpers run the full local gate before creating a tag:
+Run a release helper on `main`. It runs all local checks, then creates and pushes the release tag to
+`origin`. The tag starts the publishing workflow.
 
 ```bash
 make release-patch
-make release-minor
-make release-major
 ```
+
+Use `make release-minor` or `make release-major` instead for a larger version change.
 
 Deployment steps:
 

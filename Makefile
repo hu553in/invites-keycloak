@@ -1,24 +1,20 @@
 .DEFAULT_GOAL := check
 
 ACTIONLINT := bunx --minimum-release-age 259200 github-actionlint
-TAPLO := bunx --minimum-release-age 259200 @taplo/cli
-PREK ?= prek
 
 .PHONY: lint
 lint:
 	bun fmt --check
-	$(TAPLO) fmt --check
 	./gradlew detekt
 
 .PHONY: lint-fix
 lint-fix:
 	bun fmt
-	$(TAPLO) fmt
 	./gradlew detekt -PdetektAutoCorrect
 
 .PHONY: check-hooks
 check-hooks:
-	$(PREK) validate-config prek.toml
+	bunx --minimum-release-age 259200 lefthook validate
 
 .PHONY: check-workflows
 check-workflows:
@@ -26,13 +22,11 @@ check-workflows:
 
 .PHONY: check-config
 check-config:
-	docker compose config --quiet --no-interpolate --no-env-resolution
+	docker compose --env-file /dev/null -f compose.yaml config --quiet --no-interpolate --no-env-resolution
 
 .PHONY: check
-check: check-hooks check-workflows
+check: check-hooks check-workflows check-config
 	bun fmt --check
-	$(TAPLO) fmt --check
-	$(MAKE) check-config
 	./gradlew check
 
 .PHONY: check-fix
@@ -50,23 +44,26 @@ build-image:
 
 .PHONY: run-docker
 run-docker:
-	@if [ ! -e .env ]; then \
-	    cp .env.example.docker .env; \
+	@if [ ! -e .env ] && [ ! -L .env ]; then \
+	    (umask 077 && cp .env.example.docker .env); \
 	fi
 	docker compose up -d --wait
 
 .PHONY: run-docker-rebuild
-run-docker-rebuild: build-image run-docker
+run-docker-rebuild: build-image
+	$(MAKE) run-docker
 
 .PHONY: stop-docker
 stop-docker:
 	docker compose down
 
 .PHONY: restart-docker
-restart-docker: stop-docker run-docker
+restart-docker: stop-docker
+	$(MAKE) run-docker
 
 .PHONY: restart-docker-rebuild
-restart-docker-rebuild: stop-docker run-docker-rebuild
+restart-docker-rebuild: stop-docker
+	$(MAKE) run-docker-rebuild
 
 .PHONY: logs-docker
 logs-docker:
@@ -74,8 +71,8 @@ logs-docker:
 
 .PHONY: run-local
 run-local:
-	@if [ ! -e .env ]; then \
-	    cp .env.example.local .env; \
+	@if [ ! -e .env ] && [ ! -L .env ]; then \
+	    (umask 077 && cp .env.example.local .env); \
 	fi
 	docker compose up -d --wait db
 	./gradlew bootRun
